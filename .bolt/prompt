@@ -1,0 +1,21 @@
+This project is a production SaaS application (Formactive / FormFlow) focused on high-conversion UX and polished UI.
+
+For all designs, prioritize:
+- Clear marketing hierarchy (hero → problem → solution → proof → CTA)
+- Conversion-focused copy (concise, benefit-driven, non-generic)
+- Professional, premium SaaS aesthetic (similar quality to Formless, Linear, Stripe)
+- Pages should feel investor-ready and customer-ready, not like a demo.
+
+All pages must be fully featured, production-worthy, and visually refined — not cookie-cutter.
+
+Technical rules:
+- When using client-side hooks (useState, useEffect) in components treated as Server Components by Next.js, always add "use client" at the top of the file.
+- Do not write code that triggers hydration warnings such as: "Warning: Extra attributes from the server: %s%s".
+- Use JSX with Tailwind CSS classes.
+- Use shadcn/ui components and lucide-react icons.
+- Do not install additional UI libraries unless explicitly requested.
+
+Design intent:
+- Favor simplicity over cleverness.
+- Prefer realistic SaaS layouts over experimental UI.
+- Marketing sections may use mock or static data if functionality is not required.
