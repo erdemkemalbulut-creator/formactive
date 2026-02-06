@@ -6,7 +6,6 @@ import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Table,
   TableBody,
@@ -23,7 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { MessageSquare, LogOut, Share2, Eye, ArrowLeft, Lock } from 'lucide-react';
+import { MessageSquare, LogOut, Share2, Eye, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 type ConversationWithForm = {
@@ -41,19 +40,12 @@ type Form = {
   name: string;
 };
 
-type Subscription = {
-  plan: string;
-  responses_limit: number;
-  current_period_responses: number;
-};
-
 export default function ConversationsPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [conversations, setConversations] = useState<ConversationWithForm[]>([]);
   const [forms, setForms] = useState<Form[]>([]);
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loadingData, setLoadingData] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('completed');
   const [formFilter, setFormFilter] = useState<string>('all');
@@ -73,26 +65,16 @@ export default function ConversationsPage() {
 
   const loadData = async () => {
     try {
-      // Load subscription, forms, and conversations in parallel
-      const [subscriptionResult, formsResult] = await Promise.all([
-        supabase
-          .from('subscriptions')
-          .select('plan, responses_limit, current_period_responses')
-          .eq('user_id', user!.id)
-          .maybeSingle(),
-        supabase
-          .from('forms')
-          .select('id, name')
-          .eq('user_id', user!.id)
-          .order('name', { ascending: true }),
-      ]);
+      const formsResult = await supabase
+        .from('forms')
+        .select('id, name')
+        .eq('user_id', user!.id)
+        .order('name', { ascending: true });
 
-      if (subscriptionResult.error) throw subscriptionResult.error;
       if (formsResult.error) throw formsResult.error;
 
       const userFormIds = (formsResult.data || []).map(f => f.id);
 
-      // Only fetch conversations for the user's forms
       const conversationsResult = await supabase
         .from('conversations')
         .select('*, forms!inner(name, slug)')
@@ -113,7 +95,6 @@ export default function ConversationsPage() {
 
       setConversations(conversationsWithForms);
       setForms(formsResult.data || []);
-      setSubscription(subscriptionResult.data);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -169,15 +150,12 @@ export default function ConversationsPage() {
   };
 
   const filteredConversations = conversations.filter((conv) => {
-    // Handle status filter
     if (statusFilter !== 'all' && conv.status !== statusFilter) {
       return false;
     }
 
-    // Handle form filter
     if (formFilter !== 'all' && conv.form_id !== formFilter) return false;
 
-    // Handle date filter
     if (dateFilter !== 'all') {
       const convDate = new Date(conv.started_at);
       const now = new Date();
@@ -191,21 +169,7 @@ export default function ConversationsPage() {
     return true;
   });
 
-  const isOverGrace = () => {
-    if (!subscription) return false;
-    const graceLimit = subscription.responses_limit * 1.1;
-    return subscription.current_period_responses > graceLimit;
-  };
-
   const handleViewConversation = (conversationId: string) => {
-    if (isOverGrace()) {
-      toast({
-        title: 'Access Restricted',
-        description: 'Please upgrade your plan to view conversation details.',
-        variant: 'destructive',
-      });
-      return;
-    }
     router.push(`/dashboard/conversations/${conversationId}`);
   };
 
@@ -266,26 +230,6 @@ export default function ConversationsPage() {
               </p>
             </div>
           </div>
-
-          {isOverGrace() && (
-            <Alert className="mb-6 border-red-200 bg-red-50">
-              <Lock className="h-5 w-5 text-red-600" />
-              <AlertTitle className="text-red-900 font-semibold">
-                Conversation Access Restricted
-              </AlertTitle>
-              <AlertDescription className="text-red-800">
-                You've exceeded your monthly limit. Your forms continue accepting submissions, but detailed conversation data is restricted. Upgrade your plan to restore full access.
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-3 bg-white border-red-300 text-red-900 hover:bg-red-50"
-                  onClick={() => router.push('/dashboard/subscription')}
-                >
-                  View Plans
-                </Button>
-              </AlertDescription>
-            </Alert>
-          )}
 
           {conversations.length === 0 ? (
             <Card className="border-slate-200">
@@ -394,10 +338,9 @@ export default function ConversationsPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleViewConversation(conversation.id)}
-                              className={isOverGrace() ? 'text-slate-400 cursor-not-allowed' : 'text-slate-600 hover:text-slate-900'}
-                              disabled={isOverGrace()}
+                              className="text-slate-600 hover:text-slate-900"
                             >
-                              {isOverGrace() ? <Lock className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              <Eye className="w-4 h-4" />
                             </Button>
                             <Button
                               variant="ghost"

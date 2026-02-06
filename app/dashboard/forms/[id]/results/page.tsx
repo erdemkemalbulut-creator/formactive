@@ -6,9 +6,8 @@ import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Download, Eye, Lock } from 'lucide-react';
+import { ArrowLeft, Download, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -31,12 +30,6 @@ type Message = {
   created_at: string;
 };
 
-type Subscription = {
-  plan: string;
-  responses_limit: number;
-  current_period_responses: number;
-};
-
 export default function ResultsPage() {
   const params = useParams();
   const formId = params.id as string;
@@ -46,7 +39,6 @@ export default function ResultsPage() {
 
   const [formName, setFormName] = useState('');
   const [responses, setResponses] = useState<Response[]>([]);
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loadingData, setLoadingData] = useState(true);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [conversationMessages, setConversationMessages] = useState<Message[]>([]);
@@ -66,12 +58,7 @@ export default function ResultsPage() {
 
   const loadResults = async () => {
     try {
-      const [subscriptionResult, formResult, responsesResult] = await Promise.all([
-        supabase
-          .from('subscriptions')
-          .select('plan, responses_limit, current_period_responses')
-          .eq('user_id', user!.id)
-          .maybeSingle(),
+      const [formResult, responsesResult] = await Promise.all([
         supabase
           .from('forms')
           .select('name')
@@ -85,11 +72,9 @@ export default function ResultsPage() {
           .order('completed_at', { ascending: false }),
       ]);
 
-      if (subscriptionResult.error) throw subscriptionResult.error;
       if (formResult.error) throw formResult.error;
       if (responsesResult.error) throw responsesResult.error;
 
-      setSubscription(subscriptionResult.data);
       setFormName(formResult.data.name);
       setResponses(responsesResult.data || []);
     } catch (error: any) {
@@ -103,22 +88,7 @@ export default function ResultsPage() {
     }
   };
 
-  const isOverGrace = () => {
-    if (!subscription) return false;
-    const graceLimit = subscription.responses_limit * 1.1;
-    return subscription.current_period_responses > graceLimit;
-  };
-
   const viewConversation = async (conversationId: string) => {
-    if (isOverGrace()) {
-      toast({
-        title: 'Access Restricted',
-        description: 'Please upgrade your plan to view conversation details.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     setSelectedConversation(conversationId);
     setLoadingMessages(true);
 
@@ -144,15 +114,6 @@ export default function ResultsPage() {
   };
 
   const exportToCSV = () => {
-    if (isOverGrace()) {
-      toast({
-        title: 'Access Restricted',
-        description: 'Please upgrade your plan to export conversation data.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     if (responses.length === 0) {
       toast({
         title: 'No Data',
@@ -240,26 +201,6 @@ export default function ResultsPage() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {isOverGrace() && (
-          <Alert className="mb-6 border-red-200 bg-red-50">
-            <Lock className="h-5 w-5 text-red-600" />
-            <AlertTitle className="text-red-900 font-semibold">
-              Data Access Restricted
-            </AlertTitle>
-            <AlertDescription className="text-red-800">
-              You've exceeded your monthly limit. Your forms continue accepting submissions, but detailed data viewing and exports are restricted. Upgrade your plan to restore full access.
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-3 bg-white border-red-300 text-red-900 hover:bg-red-50"
-                onClick={() => router.push('/dashboard/subscription')}
-              >
-                View Plans
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
-
         {responses.length === 0 ? (
           <Card>
             <CardContent className="py-16">
@@ -306,10 +247,8 @@ export default function ResultsPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => viewConversation(response.conversation_id)}
-                            disabled={isOverGrace()}
-                            className={isOverGrace() ? 'text-slate-400 cursor-not-allowed' : ''}
                           >
-                            {isOverGrace() ? <Lock className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
+                            <Eye className="w-4 h-4 mr-2" />
                             View Chat
                           </Button>
                         </TableCell>

@@ -6,7 +6,6 @@ import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Download, FileText, Printer } from 'lucide-react';
@@ -43,12 +42,6 @@ type DataField = {
   required: boolean;
 };
 
-type Subscription = {
-  plan: string;
-  responses_limit: number;
-  current_period_responses: number;
-};
-
 export default function ConversationDetailPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -58,7 +51,6 @@ export default function ConversationDetailPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [response, setResponse] = useState<Response | null>(null);
   const [dataFields, setDataFields] = useState<DataField[]>([]);
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
@@ -77,12 +69,7 @@ export default function ConversationDetailPage() {
     try {
       const conversationId = params.id as string;
 
-      const [subscriptionResult, conversationResult, messagesResult, responseResult] = await Promise.all([
-        supabase
-          .from('subscriptions')
-          .select('plan, responses_limit, current_period_responses')
-          .eq('user_id', user!.id)
-          .maybeSingle(),
+      const [conversationResult, messagesResult, responseResult] = await Promise.all([
         supabase
           .from('conversations')
           .select('*, forms!inner(name, slug, data_fields, user_id)')
@@ -101,25 +88,8 @@ export default function ConversationDetailPage() {
           .maybeSingle(),
       ]);
 
-      if (subscriptionResult.error) throw subscriptionResult.error;
       if (conversationResult.error) throw conversationResult.error;
       if (messagesResult.error) throw messagesResult.error;
-
-      setSubscription(subscriptionResult.data);
-
-      // Check if over grace limit
-      if (subscriptionResult.data) {
-        const graceLimit = subscriptionResult.data.responses_limit * 1.1;
-        if (subscriptionResult.data.current_period_responses > graceLimit) {
-          toast({
-            title: 'Access Restricted',
-            description: 'Please upgrade your plan to view conversation details.',
-            variant: 'destructive',
-          });
-          router.push('/dashboard/conversations');
-          return;
-        }
-      }
 
       if (!conversationResult.data) {
         toast({
@@ -207,38 +177,14 @@ export default function ConversationDetailPage() {
     return `${minutes} minute${minutes !== 1 ? 's' : ''} ${seconds} second${seconds !== 1 ? 's' : ''}`;
   };
 
-  const isOverGrace = () => {
-    if (!subscription) return false;
-    const graceLimit = subscription.responses_limit * 1.1;
-    return subscription.current_period_responses > graceLimit;
-  };
-
   const handleExportPDF = () => {
     if (!conversation || !response) return;
-
-    if (isOverGrace()) {
-      toast({
-        title: 'Access Restricted',
-        description: 'Please upgrade your plan to export conversation data.',
-        variant: 'destructive',
-      });
-      return;
-    }
 
     window.print();
   };
 
   const handleExportCSV = () => {
     if (!conversation || !response) return;
-
-    if (isOverGrace()) {
-      toast({
-        title: 'Access Restricted',
-        description: 'Please upgrade your plan to export conversation data.',
-        variant: 'destructive',
-      });
-      return;
-    }
 
     const headers = ['Field', 'Value'];
     const rows = Object.entries(response.extracted_data).map(([key, value]) => [

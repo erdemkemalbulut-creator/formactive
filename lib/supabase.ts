@@ -55,23 +55,6 @@ export type Database = {
           created_at: string;
         };
       };
-      subscriptions: {
-        Row: {
-          id: string;
-          user_id: string;
-          plan: string;
-          status: string;
-          stripe_customer_id: string | null;
-          stripe_subscription_id: string | null;
-          forms_limit: number;
-          responses_limit: number;
-          current_period_responses: number;
-          period_start: string;
-          period_end: string;
-          created_at: string;
-          updated_at: string;
-        };
-      };
     };
   };
 };

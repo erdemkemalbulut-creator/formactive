@@ -6,8 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Plus, FileText, Users, LogOut, AlertTriangle, Info, XCircle } from 'lucide-react';
+import { Plus, FileText, Users, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 type Form = {
@@ -19,19 +18,11 @@ type Form = {
   _count?: { responses: number };
 };
 
-type Subscription = {
-  plan: string;
-  forms_limit: number;
-  responses_limit: number;
-  current_period_responses: number;
-};
-
 export default function DashboardPage() {
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [forms, setForms] = useState<Form[]>([]);
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
@@ -48,22 +39,16 @@ export default function DashboardPage() {
 
   const loadDashboardData = async () => {
     try {
-      const [formsResult, subscriptionResult, responsesResult] = await Promise.all([
+      const [formsResult, responsesResult] = await Promise.all([
         supabase
           .from('forms')
           .select('*')
           .eq('user_id', user?.id)
           .order('created_at', { ascending: false }),
-        supabase
-          .from('subscriptions')
-          .select('*')
-          .eq('user_id', user?.id)
-          .maybeSingle(),
         supabase.from('responses').select('form_id'),
       ]);
 
       if (formsResult.error) throw formsResult.error;
-      if (subscriptionResult.error) throw subscriptionResult.error;
 
       const responseCounts = (responsesResult.data || []).reduce((acc: any, r: any) => {
         acc[r.form_id] = (acc[r.form_id] || 0) + 1;
@@ -76,7 +61,6 @@ export default function DashboardPage() {
       }));
 
       setForms(formsWithCounts);
-      setSubscription(subscriptionResult.data);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -89,102 +73,12 @@ export default function DashboardPage() {
   };
 
   const createNewForm = () => {
-    if (!subscription) return;
-
-    if (forms.length >= subscription.forms_limit) {
-      toast({
-        title: 'Limit Reached',
-        description: `You've reached your plan's limit of ${subscription.forms_limit} forms. Upgrade to create more.`,
-        variant: 'destructive',
-      });
-      return;
-    }
-
     router.push('/dashboard/forms/new');
   };
 
   const handleSignOut = async () => {
     await signOut();
     router.push('/');
-  };
-
-  const getUsagePercentage = () => {
-    if (!subscription) return 0;
-    return Math.min(
-      100,
-      (subscription.current_period_responses / subscription.responses_limit) * 100
-    );
-  };
-
-  const getRemainingText = () => {
-    if (!subscription) return '';
-    const remaining = subscription.responses_limit - subscription.current_period_responses;
-    if (remaining <= 0) {
-      const overage = Math.abs(remaining);
-      return overage > 0
-        ? `${overage.toLocaleString()} over limit (grace period active)`
-        : 'Limit reached';
-    }
-    return `${remaining.toLocaleString()} remaining this period`;
-  };
-
-  const renderUsageAlert = () => {
-    if (!subscription) return null;
-
-    const percentage = getUsagePercentage();
-    const isOverLimit = subscription.current_period_responses > subscription.responses_limit;
-    const isAtLimit = subscription.current_period_responses >= subscription.responses_limit;
-    const isApproaching = percentage >= 80 && percentage < 100;
-
-    const graceLimit = subscription.responses_limit * 1.1;
-    const isOverGrace = subscription.current_period_responses > graceLimit;
-
-    if (isOverGrace) {
-      return (
-        <Alert className="mb-6 border-red-200 bg-red-50">
-          <XCircle className="h-5 w-5 text-red-600" />
-          <AlertTitle className="text-red-900 font-semibold">
-            Access Restricted
-          </AlertTitle>
-          <AlertDescription className="text-red-800">
-            You've exceeded your monthly limit and grace allowance. New form submissions are currently paused.
-            Please upgrade your plan to restore access.
-          </AlertDescription>
-        </Alert>
-      );
-    }
-
-    if (isOverLimit) {
-      return (
-        <Alert className="mb-6 border-amber-200 bg-amber-50">
-          <AlertTriangle className="h-5 w-5 text-amber-600" />
-          <AlertTitle className="text-amber-900 font-semibold">
-            Monthly Limit Reached
-          </AlertTitle>
-          <AlertDescription className="text-amber-800">
-            You've reached your monthly conversation limit. You have a 10% grace allowance, but we recommend
-            upgrading your plan to avoid service interruption.
-          </AlertDescription>
-        </Alert>
-      );
-    }
-
-    if (isApproaching) {
-      return (
-        <Alert className="mb-6 border-blue-200 bg-blue-50">
-          <Info className="h-5 w-5 text-blue-600" />
-          <AlertTitle className="text-blue-900 font-semibold">
-            Approaching Monthly Limit
-          </AlertTitle>
-          <AlertDescription className="text-blue-800">
-            You're at {Math.round(percentage)}% of your monthly conversation limit. Consider upgrading
-            to avoid interruptions.
-          </AlertDescription>
-        </Alert>
-      );
-    }
-
-    return null;
   };
 
   if (loading || loadingData) {
@@ -205,13 +99,6 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-slate-900">FormFlow</h1>
             <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push('/dashboard/subscription')}
-              >
-                <span className="font-medium">{subscription?.plan || 'Free'}</span> Plan
-              </Button>
               <Button variant="ghost" size="sm" onClick={handleSignOut}>
                 <LogOut className="w-4 h-4 mr-2" />
                 Sign Out
@@ -222,69 +109,12 @@ export default function DashboardPage() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {subscription && (
-          <>
-            {renderUsageAlert()}
-
-            <Card className="mb-8">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg font-semibold text-slate-900">
-                      Monthly Usage
-                    </CardTitle>
-                    <CardDescription className="mt-1">
-                      Current billing period
-                    </CardDescription>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => router.push('/dashboard/subscription')}
-                  >
-                    View Plans
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-slate-700">
-                        Completed Conversations
-                      </span>
-                      <span className="text-sm font-semibold text-slate-900">
-                        {subscription.current_period_responses.toLocaleString()} / {subscription.responses_limit.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
-                      <div
-                        className={`h-full transition-all rounded-full ${
-                          getUsagePercentage() >= 100
-                            ? 'bg-red-600'
-                            : getUsagePercentage() >= 80
-                            ? 'bg-amber-600'
-                            : 'bg-blue-600'
-                        }`}
-                        style={{ width: `${getUsagePercentage()}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-slate-600 mt-2">
-                      {getRemainingText()}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </>
-        )}
-
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-3xl font-bold text-slate-900">Your Forms</h2>
               <p className="text-slate-600 mt-1">
-                {forms.length} of {subscription?.forms_limit || 0} forms created
+                {forms.length} form{forms.length !== 1 ? 's' : ''} created
               </p>
             </div>
             <Button onClick={createNewForm}>

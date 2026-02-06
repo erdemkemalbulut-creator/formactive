@@ -51,9 +51,6 @@ export default function Home() {
               <a href="#benefits" className="text-sm text-slate-600 hover:text-slate-900 transition-colors">
                 Benefits
               </a>
-              <a href="#pricing" className="text-sm text-slate-600 hover:text-slate-900 transition-colors">
-                Pricing
-              </a>
             </nav>
           </div>
         </div>
@@ -73,7 +70,7 @@ export default function Home() {
                 <div className="flex flex-col sm:flex-row gap-4">
                   <a href="#get-started">
                     <Button size="lg" className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800">
-                      Start free trial
+                      Get started
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                   </a>
@@ -84,7 +81,7 @@ export default function Home() {
                   </a>
                 </div>
                 <p className="text-sm text-slate-500 mt-4">
-                  No credit card required. 100 conversations included.
+                  Get started in minutes. No technical skills required.
                 </p>
               </div>
 
@@ -318,7 +315,7 @@ export default function Home() {
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div>
                 <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-4">
-                  Start your free trial today
+                  Get started today
                 </h2>
                 <p className="text-lg text-slate-600 mb-6">
                   Join travel professionals who are already using FormFlow to connect better with their clients.
@@ -326,15 +323,15 @@ export default function Home() {
                 <ul className="space-y-3 mb-8">
                   <li className="flex items-center gap-3 text-slate-700">
                     <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
-                    <span>100 conversations included</span>
+                    <span>All templates and features included</span>
                   </li>
                   <li className="flex items-center gap-3 text-slate-700">
                     <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
-                    <span>All templates and features</span>
+                    <span>Set up in minutes</span>
                   </li>
                   <li className="flex items-center gap-3 text-slate-700">
                     <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
-                    <span>No credit card required</span>
+                    <span>Works on all devices</span>
                   </li>
                 </ul>
               </div>
@@ -361,9 +358,6 @@ export default function Home() {
                 </a>
                 <a href="#benefits" className="hover:text-slate-900 transition-colors">
                   Benefits
-                </a>
-                <a href="/pricing" className="hover:text-slate-900 transition-colors">
-                  Pricing
                 </a>
               </div>
               <p className="text-sm text-slate-500">

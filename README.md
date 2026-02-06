@@ -15,7 +15,6 @@ A complete full-stack SaaS application for creating and publishing intelligent c
 - **Data Extraction** - Automatically structures responses into your defined fields
 - **Results Dashboard** - View all responses in a table with conversation history
 - **CSV Export** - Download all form responses for analysis
-- **Subscription Management** - Built-in plans (Free, Starter, Pro, Enterprise)
 
 ### Technical Features
 - Built with Next.js 13 (App Router)
@@ -56,7 +55,6 @@ The development server starts automatically. Access the application at:
 - Visit the homepage
 - Click "Don't have an account? Sign up"
 - Enter your email and password
-- You'll automatically be enrolled in the Free plan
 
 ### 2. Create Your First Form
 - Click "Create New Form" from the dashboard
@@ -98,12 +96,6 @@ The development server starts automatically. Access the application at:
 - Click "View Chat" to see full transcripts
 - Export to CSV for analysis
 
-### 5. Manage Subscription
-- Click your plan name in the header
-- View available plans
-- Monitor usage statistics
-- Upgrade for more forms and responses
-
 ## Project Structure
 
 ```
@@ -113,7 +105,6 @@ The development server starts automatically. Access the application at:
   /dashboard           # Main dashboard
     /forms/[id]        # Form builder
     /forms/[id]/results # Results viewer
-    /subscription      # Plan management
   /f/[slug]           # Public form interface
 /components
   /auth               # Login/signup forms
@@ -130,7 +121,6 @@ The application uses 5 main tables:
 - **conversations** - Individual form submission sessions
 - **messages** - Chat messages in each conversation
 - **responses** - Extracted structured data
-- **subscriptions** - User plans and limits
 
 All tables have Row Level Security (RLS) enabled for data isolation.
 
@@ -142,40 +132,6 @@ Handles AI conversation logic:
 - Generates AI responses
 - Extracts structured data
 - Determines conversation completion
-
-## Subscription Plans
-
-**Free Plan**
-- 3 forms
-- 100 responses/month
-- Basic analytics
-- CSV export
-
-**Starter Plan ($29/month)**
-- 10 forms
-- 1,000 responses/month
-- Advanced analytics
-- Priority support
-
-**Pro Plan ($79/month)**
-- 50 forms
-- 10,000 responses/month
-- Custom branding
-- Priority support
-
-**Enterprise Plan (Custom)**
-- Unlimited forms
-- Unlimited responses
-- Dedicated support
-- SLA guarantee
-
-## Stripe Integration
-
-To enable payment processing:
-1. Set up your Stripe account
-2. Get your Stripe API keys
-3. Visit: https://bolt.new/setup/stripe
-4. Follow the integration guide
 
 ## AI Configuration
 
