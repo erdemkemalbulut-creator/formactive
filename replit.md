@@ -4,6 +4,7 @@
 FormActive is a Next.js 13 application that helps travel and service businesses collect the right details through structured, conversational intake. It replaces long forms with guided conversations. Uses Supabase for authentication and database, with optional OpenAI integration for AI-powered responses.
 
 ## Recent Changes
+- 2026-02-08: Functional UX pass — Google sign-in via Supabase OAuth, redesigned login/signup form, smart post-login routing (empty → onboarding, forms → list), richer dashboard empty state with 3-step explainer, pulsing "Live preview" indicator in builder, minimal sign-out
 - 2026-02-08: Rebrand — "FormFlow" → "FormActive"; updated hero copy, tagline, CTAs, metadata, footer, and all dashboard headers
 - 2026-02-08: Thoughtful empty states — dashboard (no forms), results page (no responses), wizard Questions step (no questions), builder Data Fields tab (no fields); dashed borders, circle icons, calm copy, single primary action
 - 2026-02-08: UX refinement pass — added "How would you like to start?" entry step, typing indicator + fade animations in ChatPreview, calmer copy/hierarchy, "Template" → "Starting point", radio-style selection indicators

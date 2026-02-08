@@ -197,8 +197,8 @@ export function ChatPreview({
               />
             </div>
           )}
-          <h4 className="text-lg font-bold text-slate-900 mb-1">
-            {formName || 'Your Form'}
+          <h4 className="text-lg font-bold text-slate-900 mb-1 transition-all duration-300">
+            {formName || 'Your conversation'}
           </h4>
 
           <div className="max-w-[200px] mx-auto mt-2">

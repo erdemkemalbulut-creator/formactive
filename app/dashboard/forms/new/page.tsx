@@ -293,10 +293,13 @@ export default function NewFormPage() {
   const previewPane = (
     <div className="flex flex-col">
       <div className="flex items-center gap-1.5 mb-3">
-        <Eye className="w-3.5 h-3.5 text-slate-400" />
-        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Live guest preview</span>
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+        </span>
+        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Live preview</span>
       </div>
-      <p className="text-xs text-slate-400 mb-2">This is what your guest will see.</p>
+      <p className="text-xs text-slate-400 mb-2">Updates as you make changes — this is what your guest will see.</p>
       <div className="lg:sticky lg:top-4">
         <ChatPreview
           dataFields={dataFields}
@@ -319,8 +322,11 @@ export default function NewFormPage() {
         className="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
       >
         <span className="flex items-center gap-2">
-          <Eye className="w-4 h-4 text-slate-400" />
-          {mobilePreviewOpen ? 'Hide preview' : 'Show guest preview'}
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+          </span>
+          {mobilePreviewOpen ? 'Hide preview' : 'Show live preview'}
         </span>
         {mobilePreviewOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
       </button>
