@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
@@ -15,6 +15,8 @@ import {
   FileText,
   BarChart3,
   Globe,
+  MoreVertical,
+  Trash2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -33,6 +35,10 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const [forms, setForms] = useState<Form[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<Form | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -83,6 +89,44 @@ export default function DashboardPage() {
 
   const createNewForm = () => {
     router.push('/dashboard/forms/new');
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null);
+      }
+    };
+    if (openMenuId) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [openMenuId]);
+
+  const handleDeleteForm = async () => {
+    if (!deleteTarget || !user) return;
+    setIsDeleting(true);
+    try {
+      const { error: responsesError } = await supabase
+        .from('responses')
+        .delete()
+        .eq('form_id', deleteTarget.id);
+      if (responsesError) throw responsesError;
+
+      const { error } = await supabase
+        .from('forms')
+        .delete()
+        .eq('id', deleteTarget.id)
+        .eq('user_id', user.id);
+      if (error) throw error;
+      setForms((prev) => prev.filter((f) => f.id !== deleteTarget.id));
+      toast({ title: 'Deleted', description: `"${deleteTarget.name}" has been removed.` });
+    } catch (error: any) {
+      toast({ title: 'Error', description: 'Failed to delete the form. Please try again.', variant: 'destructive' });
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
+    }
   };
 
   if (loading || loadingData) {
@@ -185,21 +229,51 @@ export default function DashboardPage() {
               {forms.map((form) => (
                 <Card
                   key={form.id}
-                  className="hover:shadow-md transition-all cursor-pointer border-slate-200 hover:border-slate-300"
+                  className="hover:shadow-md transition-all cursor-pointer border-slate-200 hover:border-slate-300 relative group"
                   onClick={() => router.push(`/dashboard/forms/${form.id}`)}
                 >
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-2">
                       <CardTitle className="text-base leading-snug">{form.name}</CardTitle>
-                      {form.is_published ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200 flex-shrink-0">
-                          Live
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-50 text-slate-500 border border-slate-200 flex-shrink-0">
-                          Draft
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {form.is_published ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                            Live
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-50 text-slate-500 border border-slate-200">
+                            Draft
+                          </span>
+                        )}
+                        <div className="relative" ref={openMenuId === form.id ? menuRef : undefined}>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuId(openMenuId === form.id ? null : form.id);
+                            }}
+                            className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+                          {openMenuId === form.id && (
+                            <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-20">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuId(null);
+                                  setDeleteTarget(form);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                Delete
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="pt-0">
@@ -217,6 +291,39 @@ export default function DashboardPage() {
               ))}
             </div>
           </>
+        )}
+
+        {deleteTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="fixed inset-0 bg-black/50" onClick={() => !isDeleting && setDeleteTarget(null)} />
+            <div className="relative bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 p-6">
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">Delete conversation</h3>
+              <p className="text-sm text-slate-600 mb-1">
+                Are you sure you want to delete <strong>{deleteTarget.name}</strong>?
+              </p>
+              <p className="text-sm text-slate-500 mb-6">
+                This will permanently remove the form and all {deleteTarget._count?.responses || 0} response{(deleteTarget._count?.responses || 0) !== 1 ? 's' : ''}. This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDeleteTarget(null)}
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleDeleteForm}
+                  disabled={isDeleting}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete'}
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
       </main>
     </div>
