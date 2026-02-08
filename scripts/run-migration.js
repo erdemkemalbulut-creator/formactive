@@ -3,51 +3,43 @@ const fs = require('fs');
 const path = require('path');
 
 async function runMigration() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const dbPassword = process.env.SUPABASE_DB_PASSWORD;
+  const connString = process.env.SUPABASE_DB_URL;
 
-  if (!supabaseUrl || !dbPassword) {
-    console.error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_DB_PASSWORD');
+  if (!connString) {
+    console.error('Missing SUPABASE_DB_URL');
     process.exit(1);
   }
-
-  const projectRef = supabaseUrl.replace('https://', '').replace('.supabase.co', '');
-  console.log('Project ref:', projectRef);
-  
-  const regions = ['eu-central-1', 'us-east-1', 'eu-west-1', 'us-west-1', 'ap-southeast-1', 'ap-northeast-1', 'us-east-2', 'us-west-2', 'eu-west-2', 'ap-south-1'];
-  
-  const connectionConfigs = [];
-  
-  for (const region of regions) {
-    connectionConfigs.push({
-      name: `Pooler ${region} port 6543 (session)`,
-      connectionString: `postgresql://postgres.${projectRef}:${encodeURIComponent(dbPassword)}@aws-0-${region}.pooler.supabase.com:6543/postgres`,
-    });
-    connectionConfigs.push({
-      name: `Pooler ${region} port 5432 (transaction)`,
-      connectionString: `postgresql://postgres.${projectRef}:${encodeURIComponent(dbPassword)}@aws-0-${region}.pooler.supabase.com:5432/postgres`,
-    });
-  }
-
-  connectionConfigs.push({
-    name: 'Direct connection (standard)',
-    connectionString: `postgresql://postgres:${encodeURIComponent(dbPassword)}@db.${projectRef}.supabase.co:5432/postgres`,
-  });
-  connectionConfigs.push({
-    name: 'Direct connection (port 6543)',
-    connectionString: `postgresql://postgres:${encodeURIComponent(dbPassword)}@db.${projectRef}.supabase.co:6543/postgres`,
-  });
-  connectionConfigs.push({
-    name: 'Direct via project host',
-    connectionString: `postgresql://postgres:${encodeURIComponent(dbPassword)}@${projectRef}.supabase.co:5432/postgres`,
-  });
 
   const migrationSQL = fs.readFileSync(
     path.join(__dirname, '..', 'supabase', 'migrations', '20260208200000_form_builder_v2_schema.sql'),
     'utf8'
   );
 
-  for (const config of connectionConfigs) {
+  const url = new URL(connString);
+  const password = url.password;
+  const projectRef = url.hostname.replace('db.', '').replace('.supabase.co', '');
+  
+  console.log('Project ref:', projectRef);
+  console.log('Original host:', url.hostname);
+
+  const configs = [];
+  
+  configs.push({ name: 'Original URL as-is', connectionString: connString });
+
+  const regions = ['eu-central-1', 'us-east-1', 'eu-west-1', 'us-west-1', 'ap-southeast-1', 'ap-northeast-1', 'us-east-2', 'us-west-2', 'eu-west-2', 'ap-south-1', 'sa-east-1', 'ca-central-1', 'eu-north-1'];
+  
+  for (const region of regions) {
+    configs.push({
+      name: `Pooler ${region} :6543`,
+      connectionString: `postgresql://postgres.${projectRef}:${encodeURIComponent(password)}@aws-0-${region}.pooler.supabase.com:6543/postgres`,
+    });
+    configs.push({
+      name: `Pooler ${region} :5432`,
+      connectionString: `postgresql://postgres.${projectRef}:${encodeURIComponent(password)}@aws-0-${region}.pooler.supabase.com:5432/postgres`,
+    });
+  }
+
+  for (const config of configs) {
     const client = new Client({ 
       connectionString: config.connectionString, 
       ssl: { rejectUnauthorized: false },
@@ -55,7 +47,7 @@ async function runMigration() {
     });
     
     try {
-      process.stdout.write(`Trying ${config.name}... `);
+      process.stdout.write(`${config.name}... `);
       await client.connect();
       console.log('CONNECTED!');
       
@@ -71,22 +63,22 @@ async function runMigration() {
       console.log('Forms table columns:', rows.map(r => r.column_name).join(', '));
       
       await client.end();
-      console.log('\nDone! Your database is ready.');
+      console.log('\nDone! Database is ready.');
       process.exit(0);
     } catch (error) {
       await client.end().catch(() => {});
-      const msg = error.message.substring(0, 60);
-      if (!msg.includes('ENOTFOUND') && !msg.includes('Tenant or user not found')) {
-        console.log(`FAILED: ${error.message}`);
+      const msg = error.message.substring(0, 80);
+      if (msg.includes('ENOTFOUND') || msg.includes('Tenant or user not found') || msg.includes('timeout')) {
+        console.log('skip');
       } else {
-        console.log(`skip (${msg})`);
+        console.log(`FAILED: ${msg}`);
       }
     }
   }
   
-  console.error('\n--- Could not connect ---');
-  console.error('Please provide the full database connection string from:');
-  console.error('Supabase Dashboard > Settings > Database > Connection string > URI');
+  console.error('\nCould not connect with any method.');
+  console.error('Please make sure you copied the "Session mode" pooler connection string from:');
+  console.error('Supabase Dashboard > Settings > Database > Connection string > select "Session pooler" or "Transaction pooler"');
   process.exit(1);
 }
 
