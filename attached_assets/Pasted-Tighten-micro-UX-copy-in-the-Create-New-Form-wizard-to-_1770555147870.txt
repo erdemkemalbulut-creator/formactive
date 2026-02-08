@@ -1,0 +1,98 @@
+Tighten micro-UX copy in the “Create New Form” wizard to feel like a modern travel advisor tool (warm, expert, reassuring). Scope: text-only changes (labels, helper text, button text, empty states). Do NOT change layout, schema, API routes, or validation logic.
+
+Where:
+
+app/dashboard/forms/new/page.tsx
+
+components/chat-preview.tsx (and any small related UI components)
+
+Voice guidelines:
+
+Sound like a professional travel advisor: warm, confident, service-oriented.
+
+Avoid jargon like “schema/field/required”. Use human phrasing.
+
+Reduce anxiety: clarify what clients will see vs what’s dashboard-only.
+
+Keep sentences short and clear.
+
+Apply these copy updates (or equivalent where exact strings differ):
+
+Global
+
+“Create New Form” -> “Create a conversational intake”
+
+Subtitle -> “Collect trip details naturally — like a great first consultation.”
+
+Step 1 (Basics)
+
+Form name label -> “Internal name”
+Helper -> “Only you see this in your dashboard.”
+
+If there’s a public-facing title, label -> “Client-facing title”
+Helper -> “This appears at the top of the conversation.”
+
+Disabled Next hint -> “Add an internal name to continue.”
+
+Step 2 (Questions)
+
+Section title -> “What should we ask your client?”
+Subtext -> “We’ll ask these one at a time — just like a quick consultation.”
+
+“Question text” -> “Question”
+Placeholder -> “e.g. Where would you love to go?”
+
+“Help text (optional)” helper -> “Shown under the question to guide your client.”
+
+“Example answer (optional)” helper -> “Used only for the preview.”
+
+“Required” toggle label -> “Must be answered”
+
+“Add another question” button -> “Add a question”
+
+Any generic “Continue” -> “Next: Review questions”
+
+Preview (right pane)
+
+Header -> “Live client preview”
+Subtext -> “This is exactly what your client will see.”
+
+Step 3 (Brand & tone)
+
+Title -> “Set your tone & branding”
+Subtext -> “Make the conversation feel like your brand.”
+
+Company name helper -> “Shown to clients during the conversation.”
+
+“Primary color” -> “Brand color”
+Helper -> “Used for buttons and highlights.”
+
+Logo helper -> “Optional — displayed at the top of the conversation.”
+Invalid logo hint -> “We couldn’t load that image.”
+
+Contact email helper -> “Clients can use this if they need help.”
+Email error -> “Enter a valid email address.”
+
+Tone cards (travel advisor feel)
+
+Professional -> “Clear, confident, consultation-style”
+
+Friendly (Recommended badge) -> “Warm, welcoming, easy to answer”
+
+Luxury -> “Polished, elevated, premium experience”
+
+Step 4 (Review)
+
+Title -> “Ready to share?”
+Subtext -> “Quick check before you send it to clients.”
+
+Final CTA -> “Create intake”
+Loading -> “Creating…”
+
+Acceptance:
+
+TypeScript passes.
+
+Only text changes.
+
+Summarize strings changed and files touched.

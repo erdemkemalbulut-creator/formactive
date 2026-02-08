@@ -29,12 +29,12 @@ function getGreeting(tone: string, companyName: string): string {
   const name = companyName || 'us';
   switch (tone) {
     case 'professional':
-      return `Thank you for reaching out to ${name}. I'll guide you through a few questions to assist you.`;
+      return `Thank you for reaching out to ${name}. I'll walk you through a few quick questions so we can start planning your trip.`;
     case 'luxury':
-      return `Welcome to ${name}. We're delighted to begin curating your experience. Let's get started.`;
+      return `Welcome to ${name}. We're delighted to begin curating your experience. Let's start with a few details.`;
     case 'friendly':
     default:
-      return `Hi there! Welcome to ${name}. I'd love to help you out — let's get started!`;
+      return `Hi there! Welcome to ${name}. I'd love to help plan your perfect trip — let's get started!`;
   }
 }
 
@@ -42,9 +42,9 @@ function getQuestionPrompt(tone: string, label: string, helpText: string): strin
   const hint = helpText ? ` (${helpText})` : '';
   switch (tone) {
     case 'professional':
-      return `Could you please provide your ${label.toLowerCase()}?${hint}`;
+      return `Could you please share your ${label.toLowerCase()}?${hint}`;
     case 'luxury':
-      return `May I have the pleasure of knowing your ${label.toLowerCase()}?${hint}`;
+      return `May I kindly ask for your ${label.toLowerCase()}?${hint}`;
     case 'friendly':
     default:
       return `What's your ${label.toLowerCase()}?${hint}`;

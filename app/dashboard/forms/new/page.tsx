@@ -112,9 +112,9 @@ const presets: Preset[] = [
 ];
 
 const toneOptions = [
-  { id: 'professional', name: 'Professional', description: 'Clear, polished, business-appropriate' },
-  { id: 'friendly', name: 'Friendly', description: 'Warm, conversational, approachable', recommended: true },
-  { id: 'luxury', name: 'Luxury', description: 'Refined, elegant, premium service' },
+  { id: 'professional', name: 'Professional', description: 'Clear, confident, consultation-style' },
+  { id: 'friendly', name: 'Friendly', description: 'Warm, welcoming, easy to answer', recommended: true },
+  { id: 'luxury', name: 'Luxury', description: 'Polished, elevated, premium experience' },
 ];
 
 function isValidEmail(email: string): boolean {
@@ -218,7 +218,7 @@ export default function NewFormPage() {
       setCreatedFormSlug(data.slug);
       setIsPublished(false);
     } catch (error: any) {
-      toast({ title: 'Error creating form', description: error.message, variant: 'destructive' });
+      toast({ title: 'Something went wrong', description: error.message, variant: 'destructive' });
     } finally {
       setIsCreating(false);
     }
@@ -231,9 +231,9 @@ export default function NewFormPage() {
       const { error } = await supabase.from('forms').update({ is_published: true }).eq('id', createdFormId);
       if (error) throw error;
       setIsPublished(true);
-      toast({ title: 'Form published', description: 'Your form is now live and ready to receive responses.' });
+      toast({ title: 'You\'re live!', description: 'Your intake is ready to receive client responses.' });
     } catch (error: any) {
-      toast({ title: 'Error publishing form', description: error.message, variant: 'destructive' });
+      toast({ title: 'Something went wrong', description: error.message, variant: 'destructive' });
     } finally {
       setIsPublishing(false);
     }
@@ -259,7 +259,7 @@ export default function NewFormPage() {
   const step2HasEmptyLabels = dataFields.some((f) => !f.label.trim());
 
   const step3MissingFields: string[] = [];
-  if (!formName.trim()) step3MissingFields.push('Form name');
+  if (!formName.trim()) step3MissingFields.push('Internal name');
   if (!companyName.trim()) step3MissingFields.push('Company name');
   if (!contactEmail.trim()) step3MissingFields.push('Contact email');
   else if (!isValidEmail(contactEmail)) step3MissingFields.push('Valid contact email');
@@ -267,14 +267,15 @@ export default function NewFormPage() {
   const canProceedToStep3 = !step2HasEmptyLabels;
   const canProceedToStep4 = step3MissingFields.length === 0;
 
-  const stepLabels = ['Basics', 'Questions', 'Brand & tone', 'Review'];
+  const stepLabels = ['Basics', 'Questions', 'Tone & branding', 'Review'];
 
   const previewPane = (
     <div className="flex flex-col">
       <div className="flex items-center gap-1.5 mb-3">
         <Eye className="w-3.5 h-3.5 text-slate-400" />
-        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Preview</span>
+        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Live client preview</span>
       </div>
+      <p className="text-xs text-slate-500 mb-2">This is exactly what your client will see.</p>
       <div className="lg:sticky lg:top-4">
         <ChatPreview
           dataFields={dataFields}
@@ -321,7 +322,7 @@ export default function NewFormPage() {
                 Back
               </Button>
               <div>
-                <h1 className="text-xl font-bold text-slate-900">Create New Form</h1>
+                <h1 className="text-xl font-bold text-slate-900">Create a conversational intake</h1>
                 <p className="text-sm text-slate-600">Step {step} of 4 — {stepLabels[step - 1]}</p>
               </div>
             </div>
@@ -357,6 +358,7 @@ export default function NewFormPage() {
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-slate-900 mb-2">Start from a preset</h2>
               <p className="text-slate-600">Choose a template designed for your use case</p>
+              <p className="text-sm text-slate-500 mt-1">Collect trip details naturally — like a great first consultation.</p>
             </div>
 
             <div className="space-y-4 mb-6">
@@ -431,14 +433,14 @@ export default function NewFormPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div>
               <div className="mb-6">
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">Questions</h2>
-                <p className="text-slate-600">Customize how each question is asked during the conversation</p>
+                <h2 className="text-2xl font-bold text-slate-900 mb-2">What should we ask your client?</h2>
+                <p className="text-slate-600">We'll ask these one at a time — just like a quick consultation.</p>
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                 <p className="text-sm text-blue-900">
-                  <strong>You can edit:</strong> Question text, helper text, and example answers.{' '}
-                  <strong>Locked in v1:</strong> Field names, types, and required/optional status ensure data consistency.
+                  <strong>You can edit:</strong> Question wording, helper text, and example answers.{' '}
+                  <strong>Coming soon:</strong> Adding or removing questions and changing answer types.
                 </p>
               </div>
 
@@ -474,18 +476,18 @@ export default function NewFormPage() {
                       <div className="space-y-4 mt-4 border-t border-slate-100 pt-4">
                         <div>
                           <Label htmlFor={`label-${index}`}>
-                            Question text <span className="text-red-500">*</span>
+                            Question <span className="text-red-500">*</span>
                           </Label>
                           <Input
                             id={`label-${index}`}
                             value={field.label}
                             onChange={(e) => handleFieldUpdate(index, 'label', e.target.value)}
                             onBlur={() => markTouched(`label-${index}`)}
-                            placeholder="Write the question exactly as you want clients to see it."
+                            placeholder="e.g. Where would you love to go?"
                             className="mt-1.5"
                           />
                           {touched[`label-${index}`] && !field.label.trim() && (
-                            <p className="text-xs text-red-500 mt-1">Question text is required</p>
+                            <p className="text-xs text-red-500 mt-1">Question is required</p>
                           )}
                           <p className="text-xs text-slate-500 mt-1">This is the main question the AI will ask</p>
                         </div>
@@ -499,7 +501,7 @@ export default function NewFormPage() {
                             className="mt-1.5"
                             rows={2}
                           />
-                          <p className="text-xs text-slate-500 mt-1">Guides the AI on how to frame or explain the question</p>
+                          <p className="text-xs text-slate-500 mt-1">Shown under the question to guide your client.</p>
                         </div>
                         <div>
                           <Label htmlFor={`example-${index}`}>Example answer</Label>
@@ -510,7 +512,7 @@ export default function NewFormPage() {
                             placeholder="Optional: show a sample answer to guide clients."
                             className="mt-1.5"
                           />
-                          <p className="text-xs text-slate-500 mt-1">Shows users what format you expect</p>
+                          <p className="text-xs text-slate-500 mt-1">Used only for the preview.</p>
                         </div>
                       </div>
                     )}
@@ -548,11 +550,11 @@ export default function NewFormPage() {
                 </Button>
                 <div className="flex flex-col items-end gap-1.5">
                   <Button size="lg" disabled={!canProceedToStep3} onClick={() => changeStep(3)}>
-                    Next: Brand & tone
+                    Next: Tone & branding
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                   {step2HasEmptyLabels && (
-                    <p className="text-xs text-amber-600">Fill in all question texts to continue</p>
+                    <p className="text-xs text-amber-600">Fill in all questions to continue.</p>
                   )}
                 </div>
               </div>
@@ -566,8 +568,8 @@ export default function NewFormPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div>
               <div className="mb-6">
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">Brand & tone</h2>
-                <p className="text-slate-600">Customize your form's appearance and conversation style</p>
+                <h2 className="text-2xl font-bold text-slate-900 mb-2">Set your tone & branding</h2>
+                <p className="text-slate-600">Make the conversation feel like your brand.</p>
               </div>
 
               <div className="space-y-6">
@@ -576,7 +578,7 @@ export default function NewFormPage() {
                   <div className="space-y-6">
                     <div>
                       <Label htmlFor="form-name">
-                        Form name <span className="text-red-500">*</span>
+                        Internal name <span className="text-red-500">*</span>
                       </Label>
                       <Input
                         id="form-name"
@@ -587,9 +589,9 @@ export default function NewFormPage() {
                         className={`mt-1.5 ${touched.formName && !formName.trim() ? 'border-red-300 focus-visible:ring-red-200' : ''}`}
                       />
                       {touched.formName && !formName.trim() ? (
-                        <p className="text-xs text-red-500 mt-1">Form name is required</p>
+                        <p className="text-xs text-red-500 mt-1">Add an internal name to continue.</p>
                       ) : (
-                        <p className="text-xs text-slate-500 mt-1">For your reference in the dashboard</p>
+                        <p className="text-xs text-slate-500 mt-1">Only you see this in your dashboard.</p>
                       )}
                     </div>
 
@@ -608,7 +610,7 @@ export default function NewFormPage() {
                       {touched.companyName && !companyName.trim() ? (
                         <p className="text-xs text-red-500 mt-1">Company name is required</p>
                       ) : (
-                        <p className="text-xs text-slate-500 mt-1">Shown to customers during the conversation</p>
+                        <p className="text-xs text-slate-500 mt-1">Shown to clients during the conversation.</p>
                       )}
                     </div>
                   </div>
@@ -640,11 +642,11 @@ export default function NewFormPage() {
                           </div>
                         )}
                       </div>
-                      <p className="text-xs text-slate-500 mt-1">PNG or JPG. Recommended: 512×512.</p>
+                      <p className="text-xs text-slate-500 mt-1">Optional — displayed at the top of the conversation.</p>
                     </div>
 
                     <div>
-                      <Label htmlFor="primary-color">Primary color</Label>
+                      <Label htmlFor="primary-color">Brand color</Label>
                       <div className="flex gap-3 mt-1.5 items-center">
                         <input
                           type="color"
@@ -664,7 +666,7 @@ export default function NewFormPage() {
                           style={{ backgroundColor: primaryColor }}
                         />
                       </div>
-                      <p className="text-xs text-slate-500 mt-1">Used for buttons and accents</p>
+                      <p className="text-xs text-slate-500 mt-1">Used for buttons and highlights.</p>
                     </div>
                   </div>
                 </Card>
@@ -757,9 +759,9 @@ export default function NewFormPage() {
                       {touched.contactEmail && !contactEmail.trim() ? (
                         <p className="text-xs text-red-500 mt-1">Contact email is required</p>
                       ) : touched.contactEmail && !isValidEmail(contactEmail) ? (
-                        <p className="text-xs text-red-500 mt-1">Please enter a valid email address</p>
+                        <p className="text-xs text-red-500 mt-1">Enter a valid email address.</p>
                       ) : (
-                        <p className="text-xs text-slate-500 mt-1">For customer support inquiries</p>
+                        <p className="text-xs text-slate-500 mt-1">Clients can use this if they need help.</p>
                       )}
                     </div>
 
@@ -787,7 +789,7 @@ export default function NewFormPage() {
                 </Button>
                 <div className="flex flex-col items-end gap-1.5">
                   <Button size="lg" disabled={!canProceedToStep4} onClick={() => changeStep(4)}>
-                    Next: Review & publish
+                    Next: Review
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                   {step3MissingFields.length > 0 && (
@@ -809,32 +811,32 @@ export default function NewFormPage() {
               <div className="flex items-center justify-center py-20">
                 <div className="text-center">
                   <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 mb-4"></div>
-                  <p className="text-slate-600">Creating your form...</p>
+                  <p className="text-slate-600">Creating...</p>
                 </div>
               </div>
             ) : (
               <>
                 <div className="mb-8">
                   <div className="flex items-center justify-between mb-2">
-                    <h2 className="text-2xl font-bold text-slate-900">Review & publish</h2>
+                    <h2 className="text-2xl font-bold text-slate-900">Ready to share?</h2>
                     <Badge variant={isPublished ? 'default' : 'secondary'}>
                       {isPublished ? 'Published' : 'Draft'}
                     </Badge>
                   </div>
                   <p className="text-slate-600">
                     {isPublished
-                      ? 'Your form is live and accepting responses'
-                      : 'Review your form and publish to make it live'}
+                      ? 'Your intake is live and accepting responses.'
+                      : 'Quick check before you send it to clients.'}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <div className="space-y-6">
                     <Card className="p-6">
-                      <h3 className="font-semibold text-slate-900 mb-4">Form details</h3>
+                      <h3 className="font-semibold text-slate-900 mb-4">Intake details</h3>
                       <div className="space-y-3">
                         <div className="flex justify-between">
-                          <span className="text-sm text-slate-600">Form name</span>
+                          <span className="text-sm text-slate-600">Internal name</span>
                           <span className="text-sm font-medium text-slate-900">{formName}</span>
                         </div>
                         <div className="flex justify-between">
@@ -857,7 +859,7 @@ export default function NewFormPage() {
                     </Card>
 
                     <Card className="p-6">
-                      <h3 className="font-semibold text-slate-900 mb-4">Data to collect</h3>
+                      <h3 className="font-semibold text-slate-900 mb-4">Questions to ask</h3>
                       <div className="space-y-3">
                         {dataFields.map((field, index) => (
                           <div key={index} className="flex items-start gap-3 text-sm">
@@ -882,7 +884,7 @@ export default function NewFormPage() {
 
                     <Card className="p-6">
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold text-slate-900">Public link</h3>
+                      <h3 className="font-semibold text-slate-900">Share link</h3>
                         {!isPublished && (
                           <TooltipProvider>
                             <Tooltip>
@@ -890,7 +892,7 @@ export default function NewFormPage() {
                                 <Info className="w-4 h-4 text-slate-400 cursor-help" />
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Publish your form to activate the public link</p>
+                                <p>Create your intake to activate the share link</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -898,7 +900,7 @@ export default function NewFormPage() {
                       </div>
                       <div className={`flex gap-2 ${!isPublished ? 'opacity-50' : ''}`}>
                         <Input
-                          value={isPublished ? getFormUrl() : 'Publish to activate link'}
+                          value={isPublished ? getFormUrl() : 'Create intake to activate link'}
                           readOnly
                           disabled={!isPublished}
                           className="flex-1 font-mono text-sm"
@@ -908,7 +910,7 @@ export default function NewFormPage() {
                         </Button>
                       </div>
                       {!isPublished && (
-                        <p className="text-xs text-slate-500 mt-2">Your form is saved as a draft. Publish to make it accessible.</p>
+                        <p className="text-xs text-slate-500 mt-2">Your intake is saved as a draft. Publish to share it with clients.</p>
                       )}
                     </Card>
                   </div>
@@ -917,7 +919,7 @@ export default function NewFormPage() {
                     <Card className="p-6 bg-slate-50 border-slate-200">
                       <div className="flex items-center gap-2 mb-4">
                         <Eye className="w-4 h-4 text-slate-600" />
-                        <h3 className="font-semibold text-slate-900">Conversation preview</h3>
+                        <h3 className="font-semibold text-slate-900">Client preview</h3>
                       </div>
                       <ChatPreview
                         dataFields={dataFields}
@@ -929,7 +931,7 @@ export default function NewFormPage() {
                         formName={formName}
                       />
                       <p className="text-xs text-slate-500 mt-3">
-                        This shows how the conversation starts. The AI will naturally guide users through all required fields.
+                        This shows how the conversation starts. The AI will naturally guide clients through each question.
                       </p>
                     </Card>
                   </div>
@@ -942,7 +944,7 @@ export default function NewFormPage() {
                       Back
                     </Button>
                     <Button size="lg" onClick={handlePublishForm} disabled={isPublishing}>
-                      {isPublishing ? 'Publishing...' : 'Publish form'}
+                      {isPublishing ? 'Creating...' : 'Create intake'}
                       <CheckCircle2 className="w-4 h-4 ml-2" />
                     </Button>
                   </div>
@@ -953,9 +955,9 @@ export default function NewFormPage() {
                         <CheckCircle2 className="w-6 h-6 text-green-600" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-semibold text-slate-900 mb-2">Form published successfully!</h3>
+                        <h3 className="font-semibold text-slate-900 mb-2">Intake published successfully!</h3>
                         <p className="text-sm text-slate-600 mb-4">
-                          Your form is now live. Share it with your audience or embed it on your website.
+                          Your intake is now live. Share it with clients or embed it on your website.
                         </p>
                         <div className="flex flex-wrap gap-3">
                           <Button variant="default" onClick={() => router.push('/dashboard')}>
@@ -972,7 +974,7 @@ export default function NewFormPage() {
                           </Button>
                           <Button variant="outline" onClick={() => window.open(getFormUrl(), '_blank')}>
                             <ExternalLink className="w-4 h-4 mr-2" />
-                            View form
+                            View intake
                           </Button>
                           <Button variant="outline" onClick={() => router.push(`/dashboard/forms/${createdFormId}/results`)}>
                             <BarChart3 className="w-4 h-4 mr-2" />
