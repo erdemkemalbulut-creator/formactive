@@ -68,10 +68,10 @@ export default function Home() {
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               <div>
                 <h1 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-6 leading-tight">
-                  Build forms, preview live, publish instantly
+                  Forms that feel like conversations
                 </h1>
                 <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                  FormActive is the all-in-one form builder where you create questions, see a live preview, and publish — all from a single page. No wizards, no clutter.
+                  FormActive turns your questions into a friendly chat experience. One question at a time, no overwhelming walls of fields. Build, preview, and publish — all from a single page.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <a href="#get-started">
@@ -92,34 +92,66 @@ export default function Home() {
               </div>
 
               <div className="relative">
-                <Card className="p-6 bg-white border-slate-200 shadow-lg overflow-hidden">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-slate-900">Travel Inquiry</span>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200">Live</span>
+                <Card className="p-0 bg-white border-slate-200 shadow-lg overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center">
+                        <span className="text-xs font-bold text-white">T</span>
                       </div>
-                      <span className="text-xs text-slate-400">formactive.io/f/travel-inquiry</span>
+                      <span className="text-sm font-medium text-slate-900">Travel Inquiry</span>
                     </div>
-                    <div className="space-y-3 py-2">
-                      <div>
-                        <label className="text-xs font-medium text-slate-700">Your name</label>
-                        <div className="mt-1 h-8 bg-slate-50 border border-slate-200 rounded-md px-3 flex items-center text-sm text-slate-400">Jane Doe</div>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200">Live</span>
+                  </div>
+                  <div className="p-4 space-y-3 min-h-[280px]">
+                    <div className="flex items-start gap-2">
+                      <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-[10px] font-bold text-white">T</span>
                       </div>
-                      <div>
-                        <label className="text-xs font-medium text-slate-700">Where are you dreaming of going?</label>
-                        <div className="mt-1 h-8 bg-slate-50 border border-slate-200 rounded-md px-3 flex items-center text-sm text-slate-400">Santorini, Greece</div>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-slate-700">How many travelers?</label>
-                        <div className="mt-1 h-8 bg-slate-50 border border-slate-200 rounded-md px-3 flex items-center text-sm text-slate-400">4</div>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-slate-700">Preferred travel dates</label>
-                        <div className="mt-1 h-8 bg-slate-50 border border-slate-200 rounded-md px-3 flex items-center text-sm text-slate-400">Sep 15–22, 2026</div>
+                      <div className="bg-slate-100 rounded-2xl rounded-tl-sm px-3.5 py-2 max-w-[75%]">
+                        <p className="text-sm text-slate-800">What's your name?</p>
                       </div>
                     </div>
-                    <button className="w-full h-9 bg-slate-900 text-white text-sm font-medium rounded-md">Submit</button>
+                    <div className="flex justify-end">
+                      <div className="bg-blue-600 text-white rounded-2xl rounded-tr-sm px-3.5 py-2 max-w-[75%]">
+                        <p className="text-sm">Jane Doe</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-[10px] font-bold text-white">T</span>
+                      </div>
+                      <div className="bg-slate-100 rounded-2xl rounded-tl-sm px-3.5 py-2 max-w-[75%]">
+                        <p className="text-sm text-slate-800">Where are you dreaming of going?</p>
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <div className="bg-blue-600 text-white rounded-2xl rounded-tr-sm px-3.5 py-2 max-w-[75%]">
+                        <p className="text-sm">Santorini, Greece</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-[10px] font-bold text-white">T</span>
+                      </div>
+                      <div className="bg-slate-100 rounded-2xl rounded-tl-sm px-3.5 py-2 max-w-[75%]">
+                        <p className="text-sm text-slate-800">How many travelers?</p>
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <div className="bg-blue-600 text-white rounded-2xl rounded-tr-sm px-3.5 py-2 max-w-[75%]">
+                        <p className="text-sm">4</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="px-4 py-3 border-t border-slate-100 bg-white">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-9 bg-slate-50 border border-slate-200 rounded-full px-4 flex items-center text-sm text-slate-400">
+                        Type your answer...
+                      </div>
+                      <div className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center">
+                        <Send className="w-4 h-4 text-white" />
+                      </div>
+                    </div>
                   </div>
                 </Card>
                 <div className="absolute -top-4 -right-4 w-24 h-24 bg-blue-100 rounded-full opacity-50 blur-2xl" />
@@ -138,7 +170,7 @@ export default function Home() {
                 How it works
               </h2>
               <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                Build and publish forms from a single page. No multi-step wizards or separate preview screens.
+                Build conversational forms from a single page. Your respondents get a friendly chat experience.
               </p>
             </div>
 
@@ -160,10 +192,10 @@ export default function Home() {
                   <span className="text-lg font-bold text-slate-900">2</span>
                 </div>
                 <h3 className="text-xl font-semibold text-slate-900 mb-3">
-                  Preview in real-time
+                  Preview the conversation
                 </h3>
                 <p className="text-slate-600 leading-relaxed">
-                  See exactly how your form looks as you build it. The live preview updates instantly — no save or refresh needed.
+                  See exactly how the chat experience looks as you build it. The live preview plays through the conversation — updating instantly as you edit.
                 </p>
               </div>
 
@@ -201,23 +233,23 @@ export default function Home() {
                   <Eye className="w-6 h-6 text-blue-600" />
                 </div>
                 <h3 className="text-xl font-semibold text-slate-900 mb-3">
-                  Live preview as you build
+                  Conversational chat experience
                 </h3>
                 <p className="text-slate-600 leading-relaxed mb-4">
-                  No guessing. The right panel shows your form exactly as visitors will see it, updating in real-time.
+                  Your respondents answer one question at a time in a friendly chat flow. Higher completion rates, better experience.
                 </p>
                 <ul className="space-y-2">
                   <li className="flex items-start gap-2 text-sm text-slate-600">
                     <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Instant visual feedback</span>
+                    <span>One question at a time, like a chat</span>
                   </li>
                   <li className="flex items-start gap-2 text-sm text-slate-600">
                     <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Test validation before publishing</span>
+                    <span>Higher completion rates vs classic forms</span>
                   </li>
                   <li className="flex items-start gap-2 text-sm text-slate-600">
                     <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Welcome and end screens included</span>
+                    <span>Welcome message and thank-you screens</span>
                   </li>
                 </ul>
               </Card>

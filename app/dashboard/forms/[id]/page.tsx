@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import { FormConfig, Question, QuestionType, QUESTION_TYPES } from '@/lib/types';
+import { ConversationalForm } from '@/components/conversational-form';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -848,109 +849,48 @@ function FormPreview({
   previewMode: 'welcome' | 'form' | 'end';
   onPreviewModeChange: (mode: 'welcome' | 'form' | 'end') => void;
 }) {
-  const spacingClass = config.theme.spacing === 'compact' ? 'space-y-3' : config.theme.spacing === 'relaxed' ? 'space-y-8' : 'space-y-5';
-  const btnClass =
-    config.theme.buttonStyle === 'pill'
-      ? 'rounded-full'
-      : config.theme.buttonStyle === 'square'
-      ? 'rounded-none'
-      : 'rounded-md';
+  const [previewKey, setPreviewKey] = useState(0);
+
+  const restartPreview = () => {
+    setPreviewKey(k => k + 1);
+  };
 
   return (
-    <div className="p-6 flex flex-col items-center min-h-full">
-      <div className="flex items-center gap-2 mb-4">
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-        </span>
-        <span className="text-xs text-slate-400 uppercase tracking-wider font-medium">Live preview</span>
-      </div>
-
-      <div className="flex items-center gap-1 mb-4">
-        {config.welcomeEnabled && (
-          <button
-            onClick={() => onPreviewModeChange('welcome')}
-            className={`px-3 py-1 text-xs rounded-full transition-colors ${
-              previewMode === 'welcome'
-                ? 'bg-white text-slate-900'
-                : 'bg-slate-800 text-slate-400 hover:text-white'
-            }`}
-          >
-            Welcome
-          </button>
-        )}
+    <div className="flex flex-col min-h-full">
+      <div className="flex items-center justify-center gap-4 py-3 px-4 border-b border-slate-800">
+        <div className="flex items-center gap-2">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+          </span>
+          <span className="text-xs text-slate-400 uppercase tracking-wider font-medium">Live preview</span>
+        </div>
         <button
-          onClick={() => onPreviewModeChange('form')}
-          className={`px-3 py-1 text-xs rounded-full transition-colors ${
-            previewMode === 'form'
-              ? 'bg-white text-slate-900'
-              : 'bg-slate-800 text-slate-400 hover:text-white'
-          }`}
+          onClick={restartPreview}
+          className="px-3 py-1 text-xs rounded-full bg-slate-800 text-slate-400 hover:text-white transition-colors"
+          title="Restart preview"
         >
-          Form
-        </button>
-        <button
-          onClick={() => onPreviewModeChange('end')}
-          className={`px-3 py-1 text-xs rounded-full transition-colors ${
-            previewMode === 'end'
-              ? 'bg-white text-slate-900'
-              : 'bg-slate-800 text-slate-400 hover:text-white'
-          }`}
-        >
-          End
+          Restart
         </button>
       </div>
 
-      <div className="w-full max-w-lg">
-        <div className="bg-white rounded-xl shadow-2xl p-8">
-          {previewMode === 'welcome' && config.welcomeEnabled && (
-            <div className="text-center space-y-4">
-              <h2 className="text-2xl font-bold text-slate-900">
-                {config.welcomeTitle || formName || 'Welcome'}
-              </h2>
-              {config.welcomeMessage && (
-                <p className="text-slate-600">{config.welcomeMessage}</p>
-              )}
-              <Button className={`mt-4 ${btnClass}`}>
-                {config.welcomeCta || 'Start'}
-              </Button>
-            </div>
-          )}
-
-          {previewMode === 'form' && (
-            <div className={spacingClass}>
-              {config.questions.length === 0 ? (
-                <div className="text-center py-12 text-slate-400">
-                  <MessageSquare className="w-8 h-8 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm">No questions yet</p>
-                  <p className="text-xs mt-1">Add questions in the editor</p>
-                </div>
-              ) : (
-                config.questions.map((q) => (
-                  <PreviewQuestion key={q.id} question={q} btnClass={btnClass} />
-                ))
-              )}
-
-              {config.questions.length > 0 && (
-                <Button className={`w-full ${btnClass}`}>Submit</Button>
-              )}
-            </div>
-          )}
-
-          {previewMode === 'end' && (
-            <div className="text-center space-y-4 py-8">
-              <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mx-auto">
-                <Check className="w-6 h-6 text-emerald-600" />
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full bg-white rounded-t-xl mx-2 mt-2 overflow-hidden">
+          {config.questions.length === 0 ? (
+            <div className="flex items-center justify-center h-full text-slate-400">
+              <div className="text-center">
+                <MessageSquare className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                <p className="text-sm">No questions yet</p>
+                <p className="text-xs mt-1">Add questions in the editor to see the conversation</p>
               </div>
-              <p className="text-lg font-medium text-slate-900">
-                {config.endMessage || 'Thank you!'}
-              </p>
-              {config.endRedirectEnabled && config.endRedirectUrl && (
-                <p className="text-xs text-slate-400">
-                  Redirects to: {config.endRedirectUrl}
-                </p>
-              )}
             </div>
+          ) : (
+            <ConversationalForm
+              key={previewKey}
+              config={config}
+              formName={formName || 'Form'}
+              isPreview={true}
+            />
           )}
         </div>
       </div>
@@ -958,244 +898,3 @@ function FormPreview({
   );
 }
 
-function PreviewQuestion({ question, btnClass }: { question: Question; btnClass: string }) {
-  const labelEl = (
-    <label className="block text-sm font-medium text-slate-700 mb-1">
-      {question.label || 'Untitled question'}
-      {question.required && <span className="text-red-500 ml-1">*</span>}
-    </label>
-  );
-
-  const helpEl = question.helpText ? (
-    <p className="text-xs text-slate-400 mt-1">{question.helpText}</p>
-  ) : null;
-
-  switch (question.type) {
-    case 'short_text':
-      return (
-        <div>
-          {labelEl}
-          <input
-            type="text"
-            placeholder={question.placeholder || 'Your answer'}
-            className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white"
-            readOnly
-          />
-          {helpEl}
-        </div>
-      );
-
-    case 'long_text':
-      return (
-        <div>
-          {labelEl}
-          <textarea
-            placeholder={question.placeholder || 'Your answer'}
-            className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white min-h-[80px]"
-            readOnly
-          />
-          {helpEl}
-        </div>
-      );
-
-    case 'email':
-      return (
-        <div>
-          {labelEl}
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="email"
-              placeholder={question.placeholder || 'email@example.com'}
-              className="w-full border border-slate-200 rounded-md pl-9 pr-3 py-2 text-sm bg-white"
-              readOnly
-            />
-          </div>
-          {helpEl}
-        </div>
-      );
-
-    case 'phone':
-      return (
-        <div>
-          {labelEl}
-          <div className="relative">
-            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="tel"
-              placeholder={question.placeholder || '+1 (555) 000-0000'}
-              className="w-full border border-slate-200 rounded-md pl-9 pr-3 py-2 text-sm bg-white"
-              readOnly
-            />
-          </div>
-          {helpEl}
-        </div>
-      );
-
-    case 'number':
-      return (
-        <div>
-          {labelEl}
-          <div className="relative">
-            <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="number"
-              placeholder={question.placeholder || '0'}
-              className="w-full border border-slate-200 rounded-md pl-9 pr-3 py-2 text-sm bg-white"
-              readOnly
-            />
-          </div>
-          {helpEl}
-        </div>
-      );
-
-    case 'date':
-      return (
-        <div>
-          {labelEl}
-          <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="date"
-              className="w-full border border-slate-200 rounded-md pl-9 pr-3 py-2 text-sm bg-white"
-              readOnly
-            />
-          </div>
-          {helpEl}
-        </div>
-      );
-
-    case 'time':
-      return (
-        <div>
-          {labelEl}
-          <div className="relative">
-            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="time"
-              className="w-full border border-slate-200 rounded-md pl-9 pr-3 py-2 text-sm bg-white"
-              readOnly
-            />
-          </div>
-          {helpEl}
-        </div>
-      );
-
-    case 'dropdown':
-      return (
-        <div>
-          {labelEl}
-          <select className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white">
-            <option value="">{question.placeholder || 'Select an option'}</option>
-            {question.options.map((opt) => (
-              <option key={opt.id} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-          {helpEl}
-        </div>
-      );
-
-    case 'multi_select':
-      return (
-        <div>
-          {labelEl}
-          <div className="space-y-2">
-            {question.options.map((opt) => (
-              <label key={opt.id} className="flex items-center gap-2 text-sm">
-                <input type="checkbox" className="rounded border-slate-300" readOnly />
-                {opt.label}
-              </label>
-            ))}
-            {question.options.length === 0 && (
-              <p className="text-xs text-slate-400">No options defined</p>
-            )}
-          </div>
-          {helpEl}
-        </div>
-      );
-
-    case 'checkbox':
-      return (
-        <div>
-          <label className="flex items-start gap-2">
-            <input type="checkbox" className="mt-1 rounded border-slate-300" readOnly />
-            <span className="text-sm text-slate-700">
-              {question.label || 'Untitled checkbox'}
-              {question.required && <span className="text-red-500 ml-1">*</span>}
-            </span>
-          </label>
-          {helpEl}
-        </div>
-      );
-
-    case 'yes_no':
-      return (
-        <div>
-          {labelEl}
-          <div className="flex gap-3">
-            <button className={`flex-1 border border-slate-200 rounded-md py-2 text-sm hover:bg-slate-50 ${btnClass}`}>
-              Yes
-            </button>
-            <button className={`flex-1 border border-slate-200 rounded-md py-2 text-sm hover:bg-slate-50 ${btnClass}`}>
-              No
-            </button>
-          </div>
-          {helpEl}
-        </div>
-      );
-
-    case 'rating':
-      return (
-        <div>
-          {labelEl}
-          <div className="flex gap-1">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <Star key={n} className="w-6 h-6 text-slate-300 hover:text-amber-400 cursor-pointer" />
-            ))}
-          </div>
-          {helpEl}
-        </div>
-      );
-
-    case 'file_upload':
-      return (
-        <div>
-          {labelEl}
-          <div className="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center">
-            <Upload className="w-6 h-6 text-slate-400 mx-auto mb-2" />
-            <p className="text-sm text-slate-500">Click to upload or drag and drop</p>
-            <p className="text-xs text-slate-400 mt-1">{question.placeholder || 'Max file size: 10MB'}</p>
-          </div>
-          {helpEl}
-        </div>
-      );
-
-    case 'consent':
-      return (
-        <div>
-          <label className="flex items-start gap-2">
-            <input type="checkbox" className="mt-1 rounded border-slate-300" readOnly />
-            <span className="text-sm text-slate-700">
-              {question.label || 'I agree to the terms and conditions'}
-              {question.required && <span className="text-red-500 ml-1">*</span>}
-            </span>
-          </label>
-          {helpEl}
-        </div>
-      );
-
-    default:
-      return (
-        <div>
-          {labelEl}
-          <input
-            type="text"
-            placeholder={question.placeholder || 'Your answer'}
-            className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white"
-            readOnly
-          />
-          {helpEl}
-        </div>
-      );
-  }
-}

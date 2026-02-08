@@ -1,20 +1,18 @@
-# FormActive - Single-Page Form Builder
+# FormActive - Conversational Form Builder
 
 ## Overview
-FormActive is a Next.js 13 application that provides an all-in-one form builder with live preview. Users create forms with predefined questions, see a real-time preview, and publish — all from a single page. Uses Supabase for authentication and database. No AI-driven conversations — the form is a classic structured form with 14 question types.
+FormActive is a Next.js 13 application that provides a conversational form builder with live preview. Users create forms with predefined questions using a single-page editor, see a real-time conversational preview, and publish. Public forms display as a chat-style conversation — one question at a time with message bubbles. Uses Supabase for authentication and database. No AI — the conversation is structured with 14 question types.
 
 ## Recent Changes
-- 2026-02-08: **Major rebuild** — Replaced multi-step wizard + conversational AI approach with a single-page form builder (Formless-inspired layout)
-- 2026-02-08: New single-page builder at /dashboard/forms/[id] with left editor panels + right live preview
+- 2026-02-08: **Conversational UI** — Public forms and builder preview now use chat-style conversation (one question at a time, message bubbles, typing indicator)
+- 2026-02-08: New `components/conversational-form.tsx` — Reusable chat UI component used in both public form and builder preview
+- 2026-02-08: Updated landing page with conversational hero mockup and updated copy
+- 2026-02-08: Added `/setup` page for database migration guidance
+- 2026-02-08: Refactored API routes to use authenticated Supabase client (no service role key needed)
+- 2026-02-08: **Major rebuild** — Single-page form builder with left editor + right live preview
 - 2026-02-08: New API routes: POST /api/forms, GET/PATCH /api/forms/[id], POST /api/forms/[id]/publish, GET/POST /api/forms/[id]/submissions
 - 2026-02-08: Publish/republish workflow with version snapshots and dirty detection
-- 2026-02-08: Public form renderer at /f/:slug renders published forms as classic forms (not chat)
 - 2026-02-08: Submissions page with table view, expandable rows, and CSV export
-- 2026-02-08: Updated dashboard — "New form" creates via API and redirects to builder, submission counts
-- 2026-02-08: Updated landing page copy to match form builder concept
-- 2026-02-08: Removed old wizard, chat preview, conversation pages/APIs
-- 2026-02-08: New database migration for published_config, form_versions, submissions tables
-- 2026-02-08: Shared types in lib/types.ts (Question, FormConfig, QuestionType, etc.)
 
 ## Project Architecture
 - **Framework**: Next.js 13.5.1 (App Router)
@@ -26,18 +24,19 @@ FormActive is a Next.js 13 application that provides an all-in-one form builder 
 - `app/` - Next.js App Router pages and API routes
 - `app/api/forms/` - Form CRUD, publish, submissions API routes
 - `app/dashboard/forms/[id]/` - Single-page form builder
-- `app/f/[slug]/` - Public form renderer
-- `components/` - React components (ui/, auth/)
+- `app/f/[slug]/` - Public conversational form renderer
+- `components/` - React components (ui/, auth/, conversational-form)
 - `lib/` - Shared utilities (supabase client, auth context, types)
 - `hooks/` - Custom React hooks
 - `supabase/migrations/` - Database migration SQL files
 
 ### Key Files
+- `components/conversational-form.tsx` - Reusable conversational chat form UI (used in public form + builder preview)
 - `lib/types.ts` - Shared TypeScript types (Question, FormConfig, QuestionType, etc.)
-- `lib/supabase.ts` - Supabase client + getServiceClient()
+- `lib/supabase.ts` - Supabase client helpers (createServerClient, getAnonClient)
 - `lib/auth-context.tsx` - Auth context provider
-- `app/dashboard/forms/[id]/page.tsx` - Main form builder (editor + live preview)
-- `app/f/[slug]/page.tsx` - Public form renderer
+- `app/dashboard/forms/[id]/page.tsx` - Main form builder (editor + conversational preview)
+- `app/f/[slug]/page.tsx` - Public conversational form renderer
 
 ### Data Model
 - **forms** table: id, user_id, name, slug, status (draft/live), current_config (JSON), published_config (JSON), version, published_at
@@ -48,8 +47,8 @@ FormActive is a Next.js 13 application that provides an all-in-one form builder 
 ### Environment Variables Required
 - `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anonymous key
-- `SUPABASE_SERVICE_ROLE_KEY` (or `SERVICE_ROLE_KEY`) - Supabase service role key (server-only)
-- `OPENAI_API_KEY` - Optional, for future AI suggestions feature
+- `SUPABASE_DB_URL` - Supabase database connection string (for migrations)
+- `SUPABASE_DB_PASSWORD` - Supabase database password
 
 ### Running
 - Dev: `npm run dev` (runs on port 5000)
@@ -60,10 +59,18 @@ FormActive is a Next.js 13 application that provides an all-in-one form builder 
 - Forms have `current_config` (editing state) and `published_config` (live state)
 - "Publish" copies current_config → published_config, sets status to 'live', creates version snapshot
 - "Republish" when current_config differs from published_config after editing a live form
-- Public URL: /f/:slug serves published_config only
+- Public URL: /f/:slug serves published_config as conversational chat
+
+### Conversational Form Component
+- `ConversationalForm` component renders questions one at a time in chat bubbles
+- Bot messages (questions) on left with avatar, user answers on right in blue bubbles
+- Typing indicator between questions for natural feel
+- Input area adapts to question type (text, pills, stars, date picker, etc.)
+- `isPreview` mode auto-plays first 3 questions with sample answers
+- `onSubmit` callback for real submissions, omitted for preview mode
 
 ## User Preferences
 - No pricing/monetisation features
-- No AI-driven conversations — forms are classic with predefined questions
+- Conversational chat-style forms (not classic all-at-once forms)
 - App name: FormActive
 - Single-page builder approach (no multi-step wizards)
