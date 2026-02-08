@@ -4,6 +4,7 @@
 FormFlow is a Next.js 13 application that creates intelligent conversational forms for businesses. It replaces long booking forms with natural conversations to collect trip details, preferences, and requirements. Uses Supabase for authentication and database, with optional OpenAI integration for AI-powered responses.
 
 ## Recent Changes
+- 2026-02-08: UX overhaul of "Create New Form" wizard — split-pane layout for Steps 2 & 3 with live ChatPreview, inline validation, tone card accessibility, scroll-to-top on step change
 - 2026-02-06: Removed all pricing, billing, subscription, and monetisation pages/components/references
 - 2026-02-06: Initial Replit setup - configured port 5000, added graceful Supabase fallback for missing env vars
 
@@ -15,7 +16,7 @@ FormFlow is a Next.js 13 application that creates intelligent conversational for
 
 ### Key Directories
 - `app/` - Next.js App Router pages and API routes
-- `components/` - React components (ui/, auth/)
+- `components/` - React components (ui/, auth/, chat-preview.tsx)
 - `lib/` - Shared utilities (supabase client, auth context)
 - `hooks/` - Custom React hooks
 - `supabase/migrations/` - Database migration SQL files

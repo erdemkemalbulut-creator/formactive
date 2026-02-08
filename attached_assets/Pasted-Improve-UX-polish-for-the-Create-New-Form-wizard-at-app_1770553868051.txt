@@ -1,0 +1,91 @@
+Improve UX polish for the “Create New Form” wizard at app/dashboard/forms/new/page.tsx (Next.js App Router + shadcn/ui). Scope is strictly UI/UX polish + light state/validation. Do not change database schema or API routes.
+
+Primary goal:
+Implement a split-pane builder (left editor / right preview) ONLY for:
+
+Step 2: Questions
+
+Step 3: Brand & tone
+Keep Step 1 and Step 4 single-column.
+
+Hard requirements:
+
+Split-pane layout (Step 2 & 3 only)
+
+Desktop: 2 columns (left editor, right preview).
+
+Mobile: stack (editor first, preview collapsible under it).
+
+Keep existing Next/Back wizard behavior and state persistence.
+
+Preview must match the real product UI
+
+The right pane should reuse or visually match the existing “public conversational form/chat” components/styles (do not invent a new look).
+
+Preview is deterministic + read-only (no persistence, no AI).
+
+Shows ONLY the current question and an input matching field type (text/email/number/select/date/boolean).
+
+Live-updates as the user edits:
+
+Step 2: question text + helper text + example answer
+
+Step 3: company name, logo URL preview, primary color, tone
+
+Navigation polish
+
+On step change, smooth scroll to top.
+
+Disable Next when required fields are invalid for that step.
+
+Show clear inline hint near the Next button explaining what’s missing (not just a toast).
+
+Brand & tone (Step 3) polish
+
+Tone options (Professional/Friendly/Luxury) as accessible selectable cards:
+
+clear selected state
+
+keyboard accessible (Enter/Space)
+
+proper aria-pressed / aria-selected
+
+“Recommended” badge on Friendly (default)
+
+Company name + Contact email required:
+
+inline validation + helper text
+
+contact email format validation
+
+Logo URL:
+
+show small image preview if valid
+
+non-blocking hint if invalid
+
+Primary color:
+
+keep hex input + color picker synced
+
+show small preview chip
+
+Keep changes minimal
+
+Prefer adding a small ChatPreview component under components/ and importing it into the page.
+
+Avoid broad refactors; only touch files needed.
+
+No new libraries.
+
+Acceptance checklist (must pass):
+
+TypeScript builds with no errors.
+
+Step 2 & 3 show split-pane + live preview.
+
+Next button gating works with inline hints.
+
+Preview visually matches existing chat UI.
+
+Summarize files changed and what was improved.
