@@ -87,7 +87,7 @@ function getInputType(fieldType: string): string {
 function TypingIndicator({ color }: { color?: string }) {
   return (
     <div className="flex justify-start">
-      <div className="max-w-[85%] rounded-lg px-4 py-3 bg-slate-100">
+      <div className="max-w-[85%] rounded-lg px-4 py-3 bg-slate-800">
         <div className="flex items-center gap-1.5">
           <span
             className="w-1.5 h-1.5 rounded-full animate-bounce"
@@ -193,8 +193,8 @@ export function ChatPreview({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg border border-slate-200 flex flex-col overflow-hidden h-full">
-        <div className="text-center px-4 pt-5 pb-3 border-b border-slate-100">
+      <div className="bg-slate-950 flex flex-col overflow-hidden h-full">
+        <div className="text-center px-4 pt-5 pb-3 border-b border-slate-800">
           {logoUrl && (
             <div className="flex justify-center mb-2">
               <img
@@ -207,16 +207,16 @@ export function ChatPreview({
               />
             </div>
           )}
-          <h4 className="text-lg font-bold text-slate-900 mb-1 transition-all duration-300">
+          <h4 className="text-lg font-bold text-white mb-1 transition-all duration-300">
             {formName || 'Your conversation'}
           </h4>
 
           <div className="max-w-[200px] mx-auto mt-2">
-            <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+            <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
               <span>Step {progressCurrent} of {progressTotal}</span>
               <span className="font-medium">{progressPct}%</span>
             </div>
-            <div className="w-full bg-slate-200 rounded-full h-1.5">
+            <div className="w-full bg-slate-800 rounded-full h-1.5">
               <div
                 className="h-1.5 rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${progressPct}%`, backgroundColor: userBubbleColor }}
@@ -238,7 +238,7 @@ export function ChatPreview({
                 >
                   {msg.type === 'assistant' ? (
                     <div className="flex justify-start">
-                      <div className="max-w-[85%] rounded-lg px-4 py-3 bg-slate-100 text-slate-900">
+                      <div className="max-w-[85%] rounded-lg px-4 py-3 bg-slate-800 text-slate-200">
                         <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
                       </div>
                     </div>
@@ -265,13 +265,13 @@ export function ChatPreview({
         </div>
 
         {currentField && (
-          <div className="px-4 pb-4 pt-2 border-t border-slate-100">
+          <div className="px-4 pb-4 pt-2 border-t border-slate-800">
             <div className="flex gap-2">
               <Input
                 type={getInputType(currentField.type)}
                 placeholder={getInputPlaceholder(currentField)}
                 disabled
-                className="flex-1 bg-white text-sm"
+                className="flex-1 bg-slate-800 text-slate-200 border-slate-700 placeholder:text-slate-500 text-sm"
               />
               <Button
                 size="icon"

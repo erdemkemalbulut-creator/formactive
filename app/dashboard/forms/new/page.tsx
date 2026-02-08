@@ -163,6 +163,8 @@ export default function NewFormPage() {
   const [welcomeMessage, setWelcomeMessage] = useState('');
   const [endMessage, setEndMessage] = useState('Thanks for sharing those details! We\'ll be in touch soon.');
 
+  const [openSection, setOpenSection] = useState<number>(1);
+
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const markTouched = useCallback((field: string) => {
@@ -310,13 +312,13 @@ export default function NewFormPage() {
 
   const previewPane = (
     <div className="flex flex-col h-full">
-      <div className="sticky top-0 z-10 bg-white rounded-t-xl border border-b-0 border-slate-200">
+      <div className="sticky top-0 z-10 bg-slate-900 rounded-t-xl">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 mb-1">
-                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isDraft ? 'bg-slate-400' : 'bg-emerald-500'}`} />
-                <span className="text-xs font-medium text-slate-600">
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isDraft ? 'bg-slate-500' : 'bg-emerald-400'}`} />
+                <span className="text-xs font-medium text-slate-300">
                   Live form · {isDraft ? 'Draft' : 'Published'}
                 </span>
               </div>
@@ -327,9 +329,9 @@ export default function NewFormPage() {
                       href={formUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="group flex items-center gap-1 text-xs text-slate-400 hover:text-blue-600 transition-colors font-mono truncate"
+                      className="group flex items-center gap-1 text-xs text-slate-500 hover:text-blue-400 transition-colors font-mono truncate"
                     >
-                      <Link2 className="w-3 h-3 shrink-0" />
+                      <Link2 className="w-3 h-3 shrink-0 text-slate-500" />
                       <span className="truncate">{formUrl}</span>
                     </a>
                   </TooltipTrigger>
@@ -343,7 +345,7 @@ export default function NewFormPage() {
               <button
                 type="button"
                 onClick={() => setPreviewKey((k) => k + 1)}
-                className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                className="p-1.5 rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
                 title="Refresh"
               >
                 <RefreshCw className="w-4 h-4" />
@@ -351,7 +353,7 @@ export default function NewFormPage() {
               <button
                 type="button"
                 onClick={handleCopyLink}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-900 text-white text-xs font-medium hover:bg-slate-800 transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white text-slate-900 text-xs font-medium hover:bg-slate-100 transition-colors"
               >
                 <Share2 className="w-3.5 h-3.5" />
                 Share
@@ -359,7 +361,7 @@ export default function NewFormPage() {
             </div>
           </div>
         </div>
-        <div className="border-t border-slate-100" />
+        <div className="border-t border-slate-800" />
       </div>
       <div className="flex-1">
         <ChatPreview
@@ -398,33 +400,31 @@ export default function NewFormPage() {
   return (
     <div className="min-h-screen bg-slate-50" ref={containerRef}>
       <div className="border-b border-slate-200 bg-white">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  if (step === 1 && !entryChoice) {
-                    router.push('/dashboard');
-                  } else if (step === 1 && entryChoice) {
-                    setEntryChoice(null);
-                    setSelectedPreset(null);
-                    setDataFields(presets[0].dataFields);
-                    setFormName(presets[0].name);
-                    setActiveQuestionIndex(0);
-                  } else {
-                    changeStep(step - 1);
-                  }
-                }}
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
-              </Button>
-              <div>
-                <h1 className="text-lg font-semibold text-slate-900">New conversation</h1>
-                <p className="text-sm text-slate-500">Step {step} of 4 — {stepLabels[step - 1]}</p>
-              </div>
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                if (step === 1 && !entryChoice) {
+                  router.push('/dashboard');
+                } else if (step === 1 && entryChoice) {
+                  setEntryChoice(null);
+                  setSelectedPreset(null);
+                  setDataFields(presets[0].dataFields);
+                  setFormName(presets[0].name);
+                  setActiveQuestionIndex(0);
+                } else {
+                  changeStep(step - 1);
+                }
+              }}
+              className="p-1.5 rounded-md text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div className="flex items-center gap-2 text-sm">
+              <button type="button" onClick={() => router.push('/dashboard')} className="text-slate-500 hover:text-slate-900 transition-colors">Dashboard</button>
+              <span className="text-slate-300">›</span>
+              <span className="text-slate-900 font-medium truncate">{formName || 'New conversation'}</span>
             </div>
           </div>
         </div>
@@ -576,51 +576,74 @@ export default function NewFormPage() {
                 <p className="text-slate-500">Set up the welcome message and questions your guest will see.</p>
               </div>
 
-              <div className="mb-8">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center">
-                    <span className="text-xs font-semibold text-white">1</span>
-                  </div>
-                  <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">Welcome screen</h3>
-                </div>
-                <Card className="p-5">
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="welcome-message" className="text-sm text-slate-700">Welcome message</Label>
-                      <Textarea
-                        id="welcome-message"
-                        value={welcomeMessage}
-                        onChange={(e) => setWelcomeMessage(e.target.value)}
-                        placeholder="Leave blank for an auto-generated greeting based on your tone and company name."
-                        className="mt-1.5"
-                        rows={3}
-                      />
-                      <p className="text-xs text-slate-500 mt-1.5">The first thing your guest reads when they open the form.</p>
+              <div className="border border-slate-200 rounded-lg bg-white mb-3 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setOpenSection(openSection === 1 ? 0 : 1)}
+                  className="w-full flex items-center justify-between px-4 py-3.5 text-left hover:bg-slate-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center">
+                      <span className="text-xs font-semibold text-white">1</span>
                     </div>
-                    <div>
-                      <Label htmlFor="end-message" className="text-sm text-slate-700">Completion message</Label>
-                      <Input
-                        id="end-message"
-                        value={endMessage}
-                        onChange={(e) => setEndMessage(e.target.value)}
-                        placeholder="Thanks for sharing those details!"
-                        className="mt-1.5"
-                      />
-                      <p className="text-xs text-slate-500 mt-1.5">Shown after the guest answers all questions.</p>
+                    <span className="text-sm font-medium text-slate-900">Welcome & end screen</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-400">{welcomeMessage ? 'Customized' : 'Default'}</span>
+                    {openSection === 1 ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                  </div>
+                </button>
+                {openSection === 1 && (
+                  <div className="px-4 pb-4 border-t border-slate-100">
+                    <div className="space-y-4 pt-4">
+                      <div>
+                        <Label htmlFor="welcome-message" className="text-sm text-slate-700">Welcome message</Label>
+                        <Textarea
+                          id="welcome-message"
+                          value={welcomeMessage}
+                          onChange={(e) => setWelcomeMessage(e.target.value)}
+                          placeholder="Leave blank for an auto-generated greeting based on your tone and company name."
+                          className="mt-1.5"
+                          rows={3}
+                        />
+                        <p className="text-xs text-slate-500 mt-1.5">The first thing your guest reads when they open the form.</p>
+                      </div>
+                      <div>
+                        <Label htmlFor="end-message" className="text-sm text-slate-700">Completion message</Label>
+                        <Input
+                          id="end-message"
+                          value={endMessage}
+                          onChange={(e) => setEndMessage(e.target.value)}
+                          placeholder="Thanks for sharing those details!"
+                          className="mt-1.5"
+                        />
+                        <p className="text-xs text-slate-500 mt-1.5">Shown after the guest answers all questions.</p>
+                      </div>
                     </div>
                   </div>
-                </Card>
+                )}
               </div>
 
-              <div className="mb-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center">
-                    <span className="text-xs font-semibold text-white">2</span>
+              <div className="border border-slate-200 rounded-lg bg-white mb-3 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setOpenSection(openSection === 2 ? 0 : 2)}
+                  className="w-full flex items-center justify-between px-4 py-3.5 text-left hover:bg-slate-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center">
+                      <span className="text-xs font-semibold text-white">2</span>
+                    </div>
+                    <span className="text-sm font-medium text-slate-900">Questions</span>
                   </div>
-                  <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">Questions</h3>
-                  <span className="text-xs text-slate-400 ml-auto">{dataFields.length} {dataFields.length === 1 ? 'question' : 'questions'}</span>
-                </div>
-              </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-400">{dataFields.length} {dataFields.length === 1 ? 'question' : 'questions'}</span>
+                    {openSection === 2 ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                  </div>
+                </button>
+                {openSection === 2 && (
+                  <div className="px-4 pb-4 border-t border-slate-100">
+                    <div className="pt-4">
 
               {dataFields.length === 0 ? (
                 <div className="border-2 border-dashed border-slate-200 rounded-lg py-14 mb-4">
@@ -724,6 +747,11 @@ export default function NewFormPage() {
               </div>
               )}
 
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="mt-6 flex justify-between items-center">
                 <Button
                   variant="outline"
@@ -770,235 +798,272 @@ export default function NewFormPage() {
                 <p className="text-slate-500">Shape how the conversation looks and feels to your guest.</p>
               </div>
 
-              <div className="space-y-8">
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center">
-                      <span className="text-xs font-semibold text-white">1</span>
+              <div className="space-y-3">
+                <div className="border border-slate-200 rounded-lg bg-white overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setOpenSection(openSection === 1 ? 0 : 1)}
+                    className="w-full flex items-center justify-between px-4 py-3.5 text-left hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center">
+                        <span className="text-xs font-semibold text-white">1</span>
+                      </div>
+                      <span className="text-sm font-medium text-slate-900">Form details</span>
                     </div>
-                    <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">Form details</h3>
-                  </div>
-                  <Card className="p-6">
-                  <div className="space-y-6">
-                    <div>
-                      <Label htmlFor="form-name">
-                        Internal name <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="form-name"
-                        value={formName}
-                        onChange={(e) => setFormName(e.target.value)}
-                        onBlur={() => markTouched('formName')}
-                        placeholder="e.g., New Request"
-                        className={`mt-1.5 ${touched.formName && !formName.trim() ? 'border-red-300 focus-visible:ring-red-200' : ''}`}
-                      />
-                      {touched.formName && !formName.trim() ? (
-                        <p className="text-xs text-red-500 mt-1">Add an internal name to continue.</p>
-                      ) : (
-                        <p className="text-xs text-slate-500 mt-1">Only you see this in your dashboard.</p>
-                      )}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400">{formName.trim() && companyName.trim() ? 'Filled' : 'Required'}</span>
+                      {openSection === 1 ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                     </div>
+                  </button>
+                  {openSection === 1 && (
+                    <div className="px-4 pb-4 border-t border-slate-100">
+                      <div className="space-y-6 pt-4">
+                        <div>
+                          <Label htmlFor="form-name">
+                            Internal name <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="form-name"
+                            value={formName}
+                            onChange={(e) => setFormName(e.target.value)}
+                            onBlur={() => markTouched('formName')}
+                            placeholder="e.g., New Request"
+                            className={`mt-1.5 ${touched.formName && !formName.trim() ? 'border-red-300 focus-visible:ring-red-200' : ''}`}
+                          />
+                          {touched.formName && !formName.trim() ? (
+                            <p className="text-xs text-red-500 mt-1">Add an internal name to continue.</p>
+                          ) : (
+                            <p className="text-xs text-slate-500 mt-1">Only you see this in your dashboard.</p>
+                          )}
+                        </div>
 
-                    <div>
-                      <Label htmlFor="company-name">
-                        Company name <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="company-name"
-                        value={companyName}
-                        onChange={(e) => setCompanyName(e.target.value)}
-                        onBlur={() => markTouched('companyName')}
-                        placeholder="e.g., Atlas Travel"
-                        className={`mt-1.5 ${touched.companyName && !companyName.trim() ? 'border-red-300 focus-visible:ring-red-200' : ''}`}
-                      />
-                      {touched.companyName && !companyName.trim() ? (
-                        <p className="text-xs text-red-500 mt-1">Company name is required</p>
-                      ) : (
-                        <p className="text-xs text-slate-500 mt-1">Shown to guests during the conversation.</p>
-                      )}
+                        <div>
+                          <Label htmlFor="company-name">
+                            Company name <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="company-name"
+                            value={companyName}
+                            onChange={(e) => setCompanyName(e.target.value)}
+                            onBlur={() => markTouched('companyName')}
+                            placeholder="e.g., Atlas Travel"
+                            className={`mt-1.5 ${touched.companyName && !companyName.trim() ? 'border-red-300 focus-visible:ring-red-200' : ''}`}
+                          />
+                          {touched.companyName && !companyName.trim() ? (
+                            <p className="text-xs text-red-500 mt-1">Company name is required</p>
+                          ) : (
+                            <p className="text-xs text-slate-500 mt-1">Shown to guests during the conversation.</p>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </Card>
+                  )}
                 </div>
 
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center">
-                      <span className="text-xs font-semibold text-white">2</span>
+                <div className="border border-slate-200 rounded-lg bg-white overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setOpenSection(openSection === 2 ? 0 : 2)}
+                    className="w-full flex items-center justify-between px-4 py-3.5 text-left hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center">
+                        <span className="text-xs font-semibold text-white">2</span>
+                      </div>
+                      <span className="text-sm font-medium text-slate-900">Branding</span>
                     </div>
-                    <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">Branding</h3>
-                  </div>
-                <Card className="p-6">
-                  <div className="space-y-6">
-                    <div>
-                      <Label htmlFor="logo-url">Logo URL</Label>
-                      <div className="flex gap-2 mt-1.5">
-                        <Input
-                          id="logo-url"
-                          value={logoUrl}
-                          onChange={(e) => setLogoUrl(e.target.value)}
-                          placeholder="https://example.com/logo.png"
-                          className="flex-1"
-                        />
-                        {logoUrl && (
-                          <div className="w-12 h-12 rounded border border-slate-200 bg-white flex items-center justify-center overflow-hidden shrink-0">
-                            <img
-                              src={logoUrl}
-                              alt="Logo preview"
-                              className="max-w-full max-h-full object-contain"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = 'none';
-                              }}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400">{logoUrl ? 'Customized' : 'Optional'}</span>
+                      {openSection === 2 ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                    </div>
+                  </button>
+                  {openSection === 2 && (
+                    <div className="px-4 pb-4 border-t border-slate-100">
+                      <div className="space-y-6 pt-4">
+                        <div>
+                          <Label htmlFor="logo-url">Logo URL</Label>
+                          <div className="flex gap-2 mt-1.5">
+                            <Input
+                              id="logo-url"
+                              value={logoUrl}
+                              onChange={(e) => setLogoUrl(e.target.value)}
+                              placeholder="https://example.com/logo.png"
+                              className="flex-1"
+                            />
+                            {logoUrl && (
+                              <div className="w-12 h-12 rounded border border-slate-200 bg-white flex items-center justify-center overflow-hidden shrink-0">
+                                <img
+                                  src={logoUrl}
+                                  alt="Logo preview"
+                                  className="max-w-full max-h-full object-contain"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-500 mt-1">Optional — displayed at the top of the conversation.</p>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="primary-color">Brand color</Label>
+                          <div className="flex gap-3 mt-1.5 items-center">
+                            <input
+                              type="color"
+                              id="primary-color"
+                              value={primaryColor}
+                              onChange={(e) => setPrimaryColor(e.target.value)}
+                              className="w-10 h-10 rounded border border-slate-200 cursor-pointer p-0.5"
+                            />
+                            <Input
+                              value={primaryColor}
+                              onChange={(e) => setPrimaryColor(e.target.value)}
+                              placeholder="#0f172a"
+                              className="w-32"
+                            />
+                            <div
+                              className="w-6 h-6 rounded-full border border-slate-200 shrink-0"
+                              style={{ backgroundColor: primaryColor }}
                             />
                           </div>
-                        )}
+                          <p className="text-xs text-slate-500 mt-1">Used for buttons and highlights.</p>
+                        </div>
                       </div>
-                      <p className="text-xs text-slate-500 mt-1">Optional — displayed at the top of the conversation.</p>
                     </div>
-
-                    <div>
-                      <Label htmlFor="primary-color">Brand color</Label>
-                      <div className="flex gap-3 mt-1.5 items-center">
-                        <input
-                          type="color"
-                          id="primary-color"
-                          value={primaryColor}
-                          onChange={(e) => setPrimaryColor(e.target.value)}
-                          className="w-10 h-10 rounded border border-slate-200 cursor-pointer p-0.5"
-                        />
-                        <Input
-                          value={primaryColor}
-                          onChange={(e) => setPrimaryColor(e.target.value)}
-                          placeholder="#0f172a"
-                          className="w-32"
-                        />
-                        <div
-                          className="w-6 h-6 rounded-full border border-slate-200 shrink-0"
-                          style={{ backgroundColor: primaryColor }}
-                        />
-                      </div>
-                      <p className="text-xs text-slate-500 mt-1">Used for buttons and highlights.</p>
-                    </div>
-                  </div>
-                </Card>
+                  )}
                 </div>
 
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center">
-                      <span className="text-xs font-semibold text-white">3</span>
+                <div className="border border-slate-200 rounded-lg bg-white overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setOpenSection(openSection === 3 ? 0 : 3)}
+                    className="w-full flex items-center justify-between px-4 py-3.5 text-left hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center">
+                        <span className="text-xs font-semibold text-white">3</span>
+                      </div>
+                      <span className="text-sm font-medium text-slate-900">Conversation tone</span>
                     </div>
-                    <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">Conversation tone</h3>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Info className="w-4 h-4 text-slate-400 cursor-help" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="max-w-xs">
-                            Tone affects phrasing, not what data is collected. The same information will be gathered regardless of tone.
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-
-                  <div className="space-y-3">
-                    {toneOptions.map((option) => {
-                      const isSelected = tone === option.id;
-                      return (
-                        <div
-                          key={option.id}
-                          role="button"
-                          tabIndex={0}
-                          aria-pressed={isSelected}
-                          onClick={() => setTone(option.id)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              setTone(option.id);
-                            }
-                          }}
-                          className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 ${
-                            isSelected
-                              ? 'border-slate-900 bg-slate-50 shadow-sm'
-                              : 'border-slate-200 bg-white hover:border-slate-300'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400 capitalize">{tone}</span>
+                      {openSection === 3 ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                    </div>
+                  </button>
+                  {openSection === 3 && (
+                    <div className="px-4 pb-4 border-t border-slate-100">
+                      <div className="space-y-3 pt-4">
+                        {toneOptions.map((option) => {
+                          const isSelected = tone === option.id;
+                          return (
                             <div
-                              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                                isSelected ? 'border-slate-900 bg-slate-900' : 'border-slate-300'
+                              key={option.id}
+                              role="button"
+                              tabIndex={0}
+                              aria-pressed={isSelected}
+                              onClick={() => setTone(option.id)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  setTone(option.id);
+                                }
+                              }}
+                              className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 ${
+                                isSelected
+                                  ? 'border-slate-900 bg-slate-50 shadow-sm'
+                                  : 'border-slate-200 bg-white hover:border-slate-300'
                               }`}
                             >
-                              {isSelected && <Check className="w-3 h-3 text-white" />}
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className={`font-semibold ${isSelected ? 'text-slate-900' : 'text-slate-700'}`}>
-                                  {option.name}
-                                </span>
-                                {option.recommended && (
-                                  <Badge variant="secondary" className="text-xs">Recommended</Badge>
-                                )}
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                                    isSelected ? 'border-slate-900 bg-slate-900' : 'border-slate-300'
+                                  }`}
+                                >
+                                  {isSelected && <Check className="w-3 h-3 text-white" />}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className={`font-semibold ${isSelected ? 'text-slate-900' : 'text-slate-700'}`}>
+                                      {option.name}
+                                    </span>
+                                    {option.recommended && (
+                                      <Badge variant="secondary" className="text-xs">Recommended</Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-slate-600 mt-0.5">{option.description}</p>
+                                </div>
                               </div>
-                              <p className="text-sm text-slate-600 mt-0.5">{option.description}</p>
                             </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center">
-                      <span className="text-xs font-semibold text-white">4</span>
+                <div className="border border-slate-200 rounded-lg bg-white overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setOpenSection(openSection === 4 ? 0 : 4)}
+                    className="w-full flex items-center justify-between px-4 py-3.5 text-left hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center">
+                        <span className="text-xs font-semibold text-white">4</span>
+                      </div>
+                      <span className="text-sm font-medium text-slate-900">Contact information</span>
                     </div>
-                    <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">Contact information</h3>
-                  </div>
-                  <Card className="p-6">
-                  <div className="space-y-6">
-                    <div>
-                      <Label htmlFor="contact-email">
-                        Contact email <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="contact-email"
-                        type="email"
-                        value={contactEmail}
-                        onChange={(e) => setContactEmail(e.target.value)}
-                        onBlur={() => markTouched('contactEmail')}
-                        placeholder="e.g., hello@atlastravel.com"
-                        className={`mt-1.5 ${
-                          touched.contactEmail && (!contactEmail.trim() || !isValidEmail(contactEmail))
-                            ? 'border-red-300 focus-visible:ring-red-200'
-                            : ''
-                        }`}
-                      />
-                      {touched.contactEmail && !contactEmail.trim() ? (
-                        <p className="text-xs text-red-500 mt-1">Contact email is required</p>
-                      ) : touched.contactEmail && !isValidEmail(contactEmail) ? (
-                        <p className="text-xs text-red-500 mt-1">Enter a valid email address.</p>
-                      ) : (
-                        <p className="text-xs text-slate-500 mt-1">Guests can use this if they need help.</p>
-                      )}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400">{contactEmail ? 'Filled' : 'Required'}</span>
+                      {openSection === 4 ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                     </div>
+                  </button>
+                  {openSection === 4 && (
+                    <div className="px-4 pb-4 border-t border-slate-100">
+                      <div className="space-y-6 pt-4">
+                        <div>
+                          <Label htmlFor="contact-email">
+                            Contact email <span className="text-red-500">*</span>
+                          </Label>
+                          <Input
+                            id="contact-email"
+                            type="email"
+                            value={contactEmail}
+                            onChange={(e) => setContactEmail(e.target.value)}
+                            onBlur={() => markTouched('contactEmail')}
+                            placeholder="e.g., hello@atlastravel.com"
+                            className={`mt-1.5 ${
+                              touched.contactEmail && (!contactEmail.trim() || !isValidEmail(contactEmail))
+                                ? 'border-red-300 focus-visible:ring-red-200'
+                                : ''
+                            }`}
+                          />
+                          {touched.contactEmail && !contactEmail.trim() ? (
+                            <p className="text-xs text-red-500 mt-1">Contact email is required</p>
+                          ) : touched.contactEmail && !isValidEmail(contactEmail) ? (
+                            <p className="text-xs text-red-500 mt-1">Enter a valid email address.</p>
+                          ) : (
+                            <p className="text-xs text-slate-500 mt-1">Guests can use this if they need help.</p>
+                          )}
+                        </div>
 
-                    <div>
-                      <Label htmlFor="whatsapp-link">WhatsApp link</Label>
-                      <Input
-                        id="whatsapp-link"
-                        value={whatsappLink}
-                        onChange={(e) => setWhatsappLink(e.target.value)}
-                        placeholder="e.g., https://wa.me/441234567890"
-                        className="mt-1.5"
-                      />
-                      <p className="text-xs text-slate-500 mt-1">Optional alternative contact method</p>
+                        <div>
+                          <Label htmlFor="whatsapp-link">WhatsApp link</Label>
+                          <Input
+                            id="whatsapp-link"
+                            value={whatsappLink}
+                            onChange={(e) => setWhatsappLink(e.target.value)}
+                            placeholder="e.g., https://wa.me/441234567890"
+                            className="mt-1.5"
+                          />
+                          <p className="text-xs text-slate-500 mt-1">Optional alternative contact method</p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </Card>
+                  )}
                 </div>
               </div>
 
