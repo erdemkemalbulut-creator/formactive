@@ -4,6 +4,7 @@
 FormFlow is a Next.js 13 application that creates intelligent conversational forms for businesses. It replaces long booking forms with natural conversations to collect trip details, preferences, and requirements. Uses Supabase for authentication and database, with optional OpenAI integration for AI-powered responses.
 
 ## Recent Changes
+- 2026-02-08: UX refinement pass — added "How would you like to start?" entry step, typing indicator + fade animations in ChatPreview, calmer copy/hierarchy, "Template" → "Starting point", radio-style selection indicators
 - 2026-02-08: Template selection UX update — renamed presets to travel-universal names, added tag pills, promoted "Start from scratch" to full card, updated Step 1 header/subtext
 - 2026-02-08: Copy update — made wizard copy travel-industry universal (trips, groups, events, weddings, etc.); "client" → "guest", "intake" → "request", neutral greetings in ChatPreview
 - 2026-02-08: UX overhaul of "Create New Form" wizard — split-pane layout for Steps 2 & 3 with live ChatPreview, inline validation, tone card accessibility, scroll-to-top on step change

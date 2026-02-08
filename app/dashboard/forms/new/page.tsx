@@ -27,6 +27,8 @@ import {
   BarChart3,
   ChevronDown,
   ChevronUp,
+  LayoutTemplate,
+  PenLine,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
@@ -105,7 +107,7 @@ const presets: Preset[] = [
   {
     id: 'blank',
     name: 'Start from scratch',
-    description: 'Build a custom conversation from an empty template.',
+    description: 'Build a custom conversation from a blank slate.',
     icon: FileText,
     tags: ['Custom'],
     dataFields: [
@@ -133,7 +135,8 @@ export default function NewFormPage() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [step, setStep] = useState(1);
-  const [selectedPreset, setSelectedPreset] = useState<Preset | null>(presets[0]);
+  const [entryChoice, setEntryChoice] = useState<'template' | 'scratch' | null>(null);
+  const [selectedPreset, setSelectedPreset] = useState<Preset | null>(null);
   const [dataFields, setDataFields] = useState<DataField[]>(presets[0].dataFields);
   const [tone, setTone] = useState('friendly');
   const [formName, setFormName] = useState(presets[0].name);
@@ -170,6 +173,18 @@ export default function NewFormPage() {
       handleCreateDraft();
     }
   }, [step]);
+
+  const handleEntryChoice = (choice: 'template' | 'scratch') => {
+    setEntryChoice(choice);
+    if (choice === 'scratch') {
+      const blankPreset = presets.find((p) => p.id === 'blank')!;
+      setSelectedPreset(blankPreset);
+      setDataFields(blankPreset.dataFields);
+      setFormName(blankPreset.name);
+      setActiveQuestionIndex(0);
+      changeStep(2);
+    }
+  };
 
   const handlePresetSelect = (preset: Preset) => {
     setSelectedPreset(preset);
@@ -272,7 +287,7 @@ export default function NewFormPage() {
   const canProceedToStep3 = !step2HasEmptyLabels;
   const canProceedToStep4 = step3MissingFields.length === 0;
 
-  const stepLabels = ['Basics', 'Questions', 'Tone & branding', 'Review'];
+  const stepLabels = ['Start', 'Questions', 'Tone & branding', 'Review'];
 
   const previewPane = (
     <div className="flex flex-col">
@@ -280,7 +295,7 @@ export default function NewFormPage() {
         <Eye className="w-3.5 h-3.5 text-slate-400" />
         <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Live guest preview</span>
       </div>
-      <p className="text-xs text-slate-500 mb-2">This is exactly what your guest will see.</p>
+      <p className="text-xs text-slate-400 mb-2">This is what your guest will see.</p>
       <div className="lg:sticky lg:top-4">
         <ChatPreview
           dataFields={dataFields}
@@ -321,14 +336,26 @@ export default function NewFormPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => (step === 1 ? router.push('/dashboard') : changeStep(step - 1))}
+                onClick={() => {
+                  if (step === 1 && !entryChoice) {
+                    router.push('/dashboard');
+                  } else if (step === 1 && entryChoice) {
+                    setEntryChoice(null);
+                    setSelectedPreset(null);
+                    setDataFields(presets[0].dataFields);
+                    setFormName(presets[0].name);
+                    setActiveQuestionIndex(0);
+                  } else {
+                    changeStep(step - 1);
+                  }
+                }}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back
               </Button>
               <div>
-                <h1 className="text-xl font-bold text-slate-900">Create a conversational request</h1>
-                <p className="text-sm text-slate-600">Step {step} of 4 — {stepLabels[step - 1]}</p>
+                <h1 className="text-lg font-semibold text-slate-900">New conversation</h1>
+                <p className="text-sm text-slate-500">Step {step} of 4 — {stepLabels[step - 1]}</p>
               </div>
             </div>
           </div>
@@ -358,104 +385,113 @@ export default function NewFormPage() {
           </div>
         </div>
 
-        {step === 1 && (
+        {step === 1 && !entryChoice && (
+          <div className="max-w-xl mx-auto text-center">
+            <div className="mb-10">
+              <h2 className="text-3xl font-bold text-slate-900 mb-3">How would you like to start?</h2>
+              <p className="text-slate-500 text-lg">You can always change everything later.</p>
+            </div>
+
+            <div className="space-y-4">
+              <Card
+                className="p-6 cursor-pointer transition-all hover:shadow-md border-slate-200 hover:border-slate-300 text-left"
+                onClick={() => handleEntryChoice('template')}
+              >
+                <div className="flex items-start gap-4">
+                  <div className="p-3 rounded-lg bg-slate-900">
+                    <LayoutTemplate className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-slate-900">Use a starting point</h3>
+                      <Badge variant="secondary" className="text-xs">Recommended</Badge>
+                    </div>
+                    <p className="text-sm text-slate-500">Pick a pre-built set of questions and customize from there.</p>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-slate-400 mt-1 shrink-0" />
+                </div>
+              </Card>
+
+              <Card
+                className="p-6 cursor-pointer transition-all hover:shadow-md border-slate-200 hover:border-slate-300 text-left"
+                onClick={() => handleEntryChoice('scratch')}
+              >
+                <div className="flex items-start gap-4">
+                  <div className="p-3 rounded-lg bg-slate-100">
+                    <PenLine className="w-6 h-6 text-slate-700" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-slate-900 mb-1">Start from scratch</h3>
+                    <p className="text-sm text-slate-500">Begin with an empty conversation and add your own questions.</p>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-slate-400 mt-1 shrink-0" />
+                </div>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {step === 1 && entryChoice === 'template' && (
           <div className="max-w-3xl mx-auto">
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-slate-900 mb-2">Choose a starting point</h2>
-              <p className="text-slate-600">Pick a template to start fast — you can customize everything next.</p>
+              <p className="text-slate-500">Pick a starting point — you can customize everything next.</p>
             </div>
 
-            <div className="space-y-4 mb-6">
-              {presets.slice(0, 3).map((preset) => {
+            <div className="space-y-3">
+              {presets.filter((p) => p.id !== 'blank').map((preset) => {
                 const Icon = preset.icon;
                 const requiredCount = preset.dataFields.filter((f) => f.required).length;
+                const isSelected = selectedPreset?.id === preset.id;
                 return (
                   <Card
                     key={preset.id}
-                    className={`p-6 cursor-pointer transition-all hover:shadow-md ${
-                      selectedPreset?.id === preset.id ? 'border-2 border-slate-900 bg-slate-50' : 'border-slate-200'
+                    className={`p-5 cursor-pointer transition-all duration-200 ${
+                      isSelected ? 'border-2 border-slate-900 bg-slate-50 shadow-sm' : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
                     }`}
                     onClick={() => handlePresetSelect(preset)}
                   >
                     <div className="flex items-start gap-4">
-                      <div className={`p-3 rounded-lg ${selectedPreset?.id === preset.id ? 'bg-slate-900' : 'bg-slate-100'}`}>
-                        <Icon className={`w-6 h-6 ${selectedPreset?.id === preset.id ? 'text-white' : 'text-slate-700'}`} />
+                      <div className={`p-2.5 rounded-lg transition-colors ${isSelected ? 'bg-slate-900' : 'bg-slate-100'}`}>
+                        <Icon className={`w-5 h-5 ${isSelected ? 'text-white' : 'text-slate-600'}`} />
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-slate-900 mb-1">{preset.name}</h3>
-                        <p className="text-sm text-slate-600 mb-2">{preset.description}</p>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-slate-900 mb-0.5">{preset.name}</h3>
+                        <p className="text-sm text-slate-500 mb-2">{preset.description}</p>
                         {preset.tags && preset.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mb-2">
+                          <div className="flex flex-wrap gap-1.5">
                             {preset.tags.map((tag) => (
-                              <span key={tag} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+                              <span key={tag} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
                                 {tag}
                               </span>
                             ))}
                           </div>
                         )}
-                        <p className="text-xs text-slate-500">
-                          Includes: {requiredCount} required field{requiredCount !== 1 ? 's' : ''}
-                        </p>
                       </div>
-                      {selectedPreset?.id === preset.id && (
-                        <div className="flex-shrink-0">
-                          <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center">
-                            <Check className="w-4 h-4 text-white" />
-                          </div>
+                      <div className="flex-shrink-0 mt-0.5">
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                          isSelected ? 'border-slate-900 bg-slate-900' : 'border-slate-300'
+                        }`}>
+                          {isSelected && <Check className="w-3 h-3 text-white" />}
                         </div>
-                      )}
+                      </div>
                     </div>
                   </Card>
                 );
               })}
             </div>
 
-            <div className="border-t border-slate-200 pt-6">
-              {presets.slice(3).map((preset) => {
-                const Icon = preset.icon;
-                const requiredCount = preset.dataFields.filter((f) => f.required).length;
-                return (
-                  <Card
-                    key={preset.id}
-                    className={`p-6 cursor-pointer transition-all hover:shadow-md ${
-                      selectedPreset?.id === preset.id ? 'border-2 border-slate-900 bg-slate-50' : 'border-slate-200'
-                    }`}
-                    onClick={() => handlePresetSelect(preset)}
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className={`p-3 rounded-lg ${selectedPreset?.id === preset.id ? 'bg-slate-900' : 'bg-slate-100'}`}>
-                        <Icon className={`w-6 h-6 ${selectedPreset?.id === preset.id ? 'text-white' : 'text-slate-700'}`} />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-slate-900 mb-1">{preset.name}</h3>
-                        <p className="text-sm text-slate-600 mb-2">{preset.description}</p>
-                        {preset.tags && preset.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mb-2">
-                            {preset.tags.map((tag) => (
-                              <span key={tag} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        <p className="text-xs text-slate-500">
-                          Includes: {requiredCount} required field{requiredCount !== 1 ? 's' : ''}
-                        </p>
-                      </div>
-                      {selectedPreset?.id === preset.id && (
-                        <div className="flex-shrink-0">
-                          <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center">
-                            <Check className="w-4 h-4 text-white" />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-
-            <div className="mt-8 flex justify-end">
+            <div className="mt-8 flex justify-between items-center">
+              <Button variant="ghost" className="text-slate-500" onClick={() => {
+                setEntryChoice(null);
+                setSelectedPreset(null);
+                setDataFields(presets[0].dataFields);
+                setFormName(presets[0].name);
+                setActiveQuestionIndex(0);
+              }}>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back
+              </Button>
               <Button size="lg" disabled={!canProceedToStep2} onClick={() => changeStep(2)}>
                 Next: Questions
                 <ArrowRight className="w-4 h-4 ml-2" />
@@ -468,8 +504,8 @@ export default function NewFormPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div>
               <div className="mb-6">
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">What should we ask?</h2>
-                <p className="text-slate-600">We'll ask these one at a time — like a quick consultation.</p>
+                <h2 className="text-2xl font-bold text-slate-900 mb-2">Define your questions</h2>
+                <p className="text-slate-500">Each question is asked one at a time during the conversation.</p>
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
@@ -603,8 +639,8 @@ export default function NewFormPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div>
               <div className="mb-6">
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">Set your tone & branding</h2>
-                <p className="text-slate-600">Make the conversation feel like your service.</p>
+                <h2 className="text-2xl font-bold text-slate-900 mb-2">Tone & branding</h2>
+                <p className="text-slate-500">Shape how the conversation looks and feels.</p>
               </div>
 
               <div className="space-y-6">
@@ -860,8 +896,8 @@ export default function NewFormPage() {
                   </div>
                   <p className="text-slate-600">
                     {isPublished
-                      ? 'Your request is live and accepting responses.'
-                      : 'Quick check before you send it out.'}
+                      ? 'Your conversation is live and accepting responses.'
+                      : 'Review everything before publishing.'}
                   </p>
                 </div>
 
@@ -879,7 +915,7 @@ export default function NewFormPage() {
                           <span className="text-sm font-medium text-slate-900">{companyName}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-sm text-slate-600">Template</span>
+                          <span className="text-sm text-slate-600">Starting point</span>
                           <span className="text-sm font-medium text-slate-900">{selectedPreset?.name}</span>
                         </div>
                         <div className="flex justify-between">

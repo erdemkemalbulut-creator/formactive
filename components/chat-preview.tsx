@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -82,6 +82,35 @@ function getInputType(fieldType: string): string {
   }
 }
 
+function TypingIndicator({ color }: { color?: string }) {
+  return (
+    <div className="flex justify-start">
+      <div className="max-w-[85%] rounded-lg px-4 py-3 bg-slate-100">
+        <div className="flex items-center gap-1.5">
+          <span
+            className="w-1.5 h-1.5 rounded-full animate-bounce"
+            style={{ backgroundColor: color || '#64748b', animationDelay: '0ms', animationDuration: '1s' }}
+          />
+          <span
+            className="w-1.5 h-1.5 rounded-full animate-bounce"
+            style={{ backgroundColor: color || '#64748b', animationDelay: '200ms', animationDuration: '1s' }}
+          />
+          <span
+            className="w-1.5 h-1.5 rounded-full animate-bounce"
+            style={{ backgroundColor: color || '#64748b', animationDelay: '400ms', animationDuration: '1s' }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type MessageEntry = {
+  type: 'assistant' | 'user';
+  text: string;
+  key: string;
+};
+
 export function ChatPreview({
   dataFields,
   activeQuestionIndex,
@@ -104,6 +133,53 @@ export function ChatPreview({
   const progressTotal = dataFields.filter((f) => f.required).length || dataFields.length;
   const progressCurrent = Math.min(activeQuestionIndex + 1, progressTotal);
   const progressPct = progressTotal > 0 ? Math.round((progressCurrent / progressTotal) * 100) : 0;
+
+  const allMessages: MessageEntry[] = useMemo(() => {
+    const msgs: MessageEntry[] = [{ type: 'assistant', text: greeting, key: 'greeting' }];
+    previousFields.forEach((field, i) => {
+      msgs.push({ type: 'assistant', text: getQuestionPrompt(tone, field.label, field.helpText), key: `q-${i}` });
+      msgs.push({ type: 'user', text: field.exampleAnswer || getInputPlaceholder(field), key: `a-${i}` });
+    });
+    if (currentField) {
+      msgs.push({ type: 'assistant', text: currentPrompt, key: `q-current` });
+    }
+    return msgs;
+  }, [greeting, previousFields, currentField, currentPrompt, tone]);
+
+  const [visibleCount, setVisibleCount] = useState(allMessages.length);
+  const [showTyping, setShowTyping] = useState(false);
+  const [newMessageStart, setNewMessageStart] = useState(-1);
+  const prevLengthRef = useRef(allMessages.length);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const prevLen = prevLengthRef.current;
+    const newLen = allMessages.length;
+    prevLengthRef.current = newLen;
+
+    if (newLen > prevLen) {
+      setVisibleCount(prevLen);
+      setShowTyping(true);
+      setNewMessageStart(prevLen);
+
+      const typingTimer = setTimeout(() => {
+        setShowTyping(false);
+        setVisibleCount(newLen);
+      }, 400);
+
+      return () => clearTimeout(typingTimer);
+    } else {
+      setVisibleCount(newLen);
+      setShowTyping(false);
+      setNewMessageStart(-1);
+    }
+  }, [allMessages.length]);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [visibleCount, showTyping]);
+
+  const visibleMessages = allMessages.slice(0, visibleCount);
 
   return (
     <div className="flex flex-col h-full">
@@ -142,41 +218,38 @@ export function ChatPreview({
         <div className="flex-1 overflow-y-auto">
           <Card className="border-0 shadow-none bg-transparent">
             <CardContent className="p-4 space-y-3">
-              <div className="flex justify-start">
-                <div className="max-w-[85%] rounded-lg px-4 py-3 bg-slate-100 text-slate-900">
-                  <p className="text-sm whitespace-pre-wrap">{greeting}</p>
-                </div>
-              </div>
-
-              {previousFields.map((field, i) => (
-                <div key={i} className="space-y-3">
-                  <div className="flex justify-start">
-                    <div className="max-w-[85%] rounded-lg px-4 py-3 bg-slate-100 text-slate-900">
-                      <p className="text-sm whitespace-pre-wrap">
-                        {getQuestionPrompt(tone, field.label, field.helpText)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <div className="max-w-[80%]">
-                      <div
-                        className="rounded-lg px-4 py-3 text-white"
-                        style={{ backgroundColor: userBubbleColor }}
-                      >
-                        <p className="text-sm">{field.exampleAnswer || getInputPlaceholder(field)}</p>
+              {visibleMessages.map((msg, i) => (
+                <div
+                  key={msg.key}
+                  className="transition-all duration-300 ease-out"
+                  style={{
+                    animation: newMessageStart >= 0 && i >= newMessageStart ? 'chatFadeIn 0.3s ease-out' : undefined,
+                  }}
+                >
+                  {msg.type === 'assistant' ? (
+                    <div className="flex justify-start">
+                      <div className="max-w-[85%] rounded-lg px-4 py-3 bg-slate-100 text-slate-900">
+                        <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="flex justify-end">
+                      <div className="max-w-[80%]">
+                        <div
+                          className="rounded-lg px-4 py-3 text-white"
+                          style={{ backgroundColor: userBubbleColor }}
+                        >
+                          <p className="text-sm">{msg.text}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
 
-              {currentField && (
-                <div className="flex justify-start">
-                  <div className="max-w-[85%] rounded-lg px-4 py-3 bg-slate-100 text-slate-900">
-                    <p className="text-sm whitespace-pre-wrap">{currentPrompt}</p>
-                  </div>
-                </div>
-              )}
+              {showTyping && <TypingIndicator />}
+
+              <div ref={chatEndRef} />
             </CardContent>
           </Card>
         </div>
@@ -202,6 +275,19 @@ export function ChatPreview({
           </div>
         )}
       </div>
+
+      <style jsx>{`
+        @keyframes chatFadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }
