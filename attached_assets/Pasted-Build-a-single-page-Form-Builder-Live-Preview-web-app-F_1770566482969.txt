@@ -1,0 +1,177 @@
+Build a **single-page Form Builder + Live Preview** web app (Formactive-style) inspired by Formless’ layout, but **WITHOUT AI-driven conversational interaction**. The product is a classic form with **predefined questions**. Users can add/remove/reorder questions, choose the expected answer type, configure validation, and publish/republish—all from the same page. Optionally, offer **AI suggestions** (copy + question ideas) as a helper, but the form itself is not an AI chat.
+
+## Core concept
+
+* One page: **/forms/:id**
+* Same page supports:
+
+  * **Draft (editable)** mode
+  * **Live (published)** mode with owner edit controls
+  * **Edited (needs republish)** state when changes differ from the published snapshot
+* Public link: **/f/:publicId** renders the published snapshot only (no editing)
+
+## UI layout (match Formless “editor left / preview right”)
+
+### Sticky top bar
+
+* Inline editable **Form title**
+* Status pill: Draft / Live / Edited (needs republish)
+* Primary CTA:
+
+  * Draft → **Publish**
+  * Edited → **Republish**
+  * Live + no changes → button disabled
+* Secondary actions (overflow menu):
+
+  * Share (copy public link)
+  * Duplicate
+  * Delete
+* Show public URL when live + copy button
+
+### Left column: Editor panels (stacked cards/accordions)
+
+1. **Questions (main builder)**
+
+* List of questions with:
+
+  * Drag-and-drop reorder
+  * Inline edit (question text)
+  * Required toggle
+  * Type selector (answer type)
+  * Duplicate / delete buttons
+* “Add question” button opens a type picker:
+
+  * Short text, Long text, Email, Phone, Number, Date, Time, Dropdown, Multi-select, Checkbox, Yes/No, Rating, File upload, Consent
+* Per-question settings (shown in a side drawer or expandable row):
+
+  * Placeholder / help text
+  * Validation (min/max length, regex, numeric range, file types)
+  * Options editor (for dropdown/multi-select)
+  * Default value
+  * Conditional logic (optional): show/hide based on prior answers
+
+2. **Welcome & end screen**
+
+* Toggle welcome screen enabled
+* Welcome title + description
+* Start button label (CTA)
+* End screen message
+* Optional redirect toggle + URL field
+
+3. **Form settings**
+
+* Language selector (for system strings)
+* Submission behavior:
+
+  * Single submit per session (optional)
+  * Save partial progress (optional)
+* Basic theming:
+
+  * Logo upload, background, button style, spacing, corner radius
+
+4. **Data mapping / Export**
+
+* Instead of “AI extraction schema”, provide:
+
+  * Internal field keys (slug) per question
+  * Mapping preview: “submission payload JSON”
+  * Export options: CSV download, webhook payload format
+
+5. **Integrations**
+
+* Webhook URL + secret
+* Email notifications to owner
+* Zapier/Make placeholders (toggle + connect later)
+
+6. **AI Suggestions (optional helper only)**
+
+* A small “Suggest questions” button that can:
+
+  * Generate a list of suggested questions based on a short form goal prompt (e.g., “Lead capture for a gym”)
+  * Suggest better wording for selected question
+  * Suggest validation rules (e.g., email, phone)
+* IMPORTANT: AI suggestions only propose changes; user must click “Apply” to insert them.
+* The live form experience remains a normal form UI, not chat.
+
+### Right column: Live Preview (real form renderer)
+
+* Render the form exactly as users will see it (welcome → questions → submit → end screen)
+* Interactive validation (required fields, type checks)
+* “Test submit” submits to sandbox by default (doesn’t create real submissions unless toggled)
+* “Refresh preview” button (optional; ideally preview updates automatically)
+* Footer branding (optional)
+
+## Publishing model (republish workflow)
+
+* Form has two configs:
+
+  * **currentConfig** (what you’re editing)
+  * **publishedConfig** (what the public link uses)
+* If currentConfig != publishedConfig and status is live:
+
+  * show “Edited (needs republish)”
+  * enable Republish button
+* Publishing creates a version snapshot (v1, v2…) with ability to restore.
+
+## Data model (minimum)
+
+Form:
+
+* id, workspaceId, title
+* status: "draft" | "live"
+* currentConfig (JSON)
+* publishedConfig (JSON | null)
+* publicId (string | null)
+* updatedAt, publishedAt
+  Question:
+* id, formId
+* key/slug (string)
+* type (enum)
+* label, placeholder, helpText
+* required (bool)
+* validation (JSON)
+* options (JSON for select types)
+* order (number)
+* logic (JSON optional)
+  Submission:
+* id, formId, createdAt
+* answers (JSON)
+  Version:
+* id, formId, versionNumber, publishedConfigSnapshot (JSON), createdAt
+
+## API endpoints
+
+* POST /api/forms (create draft)
+* GET /api/forms/:id
+* PATCH /api/forms/:id (updates currentConfig)
+* POST /api/forms/:id/publish (copies currentConfig → publishedConfig, sets live, increments version)
+* GET /f/:publicId (serves publishedConfig only)
+* POST /api/forms/:id/submissions (store submission)
+* GET /api/forms/:id/versions
+* POST /api/forms/:id/versions/:versionId/restore
+
+## Implementation requirements
+
+* Frontend: React + TypeScript
+* State:
+
+  * Local state mirrors currentConfig
+  * Autosave with debounce to PATCH endpoint
+  * Dirty detection to enable republish
+* UI details:
+
+  * Collapsible panels
+  * Counters, inline errors, toasts
+  * Accessible keyboard navigation
+* No AI chat. No “conversation rules”. Only predefined questions.
+* AI suggestions are optional and non-blocking.
+
+## Output expectation
+
+Generate the full working app with:
+
+1. Single builder page with left editor panels + right preview
+2. Public renderer page for /f/:publicId
+3. Publish/republish + versioning
+4. Submission storage + export/webhook integration
+5. Optional AI suggestion helper (stubbed if no key)

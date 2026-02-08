@@ -1,0 +1,172 @@
+You are building a **single-page, all-in-one form builder + live form preview** web app (Formactive-style). There is **no multi-step wizard**. Everything (structure, settings, integrations, AI instructions, and preview) is grouped on **one page**. The only major lifecycle action is **Publish** (and later **Republish** when edits are made). The same page supports both **draft (editable)** and **live (published)** states—live uses the same UI but with edit controls available when the user has permission, and changes create a “needs republish” state.
+
+## Product goal
+
+Create a “Formactive” experience where users can:
+
+* Create a new form on the same page
+* Edit all form fields and settings on that page
+* Preview the exact live experience on the same page
+* Publish once to make it live
+* Continue editing and **republish** when needed (no separate “builder” vs “live form” pages)
+
+## Single-page UX structure (one screen, grouped sections)
+
+Build a responsive layout with:
+
+* **Top bar** (sticky):
+
+  * Form title (inline editable)
+  * Status pill: Draft / Live / Edited (needs republish)
+  * Primary CTA: **Publish** (draft) or **Republish** (edited) + disabled if no changes
+  * Secondary: Share, Refresh preview, Duplicate, Delete (in overflow menu)
+  * Public URL shown when live (copy button)
+* **Main body: 2-column split**
+
+  * **Left column = Editor panels** (accordion or stacked cards, but still one page)
+  * **Right column = Live preview** (the actual form experience, rendered from current state)
+
+### Left column panels (editable in draft + edit mode)
+
+1. **Form Fields (core builder)**
+
+* Add field button opens a small picker (Short text, Long text, Email, Phone, Number, Date, Dropdown, Multi-select, Checkbox, File upload, Rating, Consent).
+* Reorder fields via drag-and-drop.
+* Each field has inline edit controls:
+
+  * Label, placeholder, help text
+  * Required toggle
+  * Validation rules (min/max length, regex, email format, number ranges)
+  * Conditional logic (show/hide based on previous answers) — optional but supported
+* Field-level actions: duplicate, hide, delete.
+
+2. **Experience / UI Settings**
+
+* Theme: fonts, radius, spacing, background, button style (simple controls).
+* Layout options: single-column, grouped sections, progress indicator on/off.
+* Localization: language selector for UI strings.
+* Welcome & end screen:
+
+  * Toggle welcome screen visible
+  * Welcome title + message
+  * Call-to-action button label
+  * End screen message
+  * Optional redirect toggle + URL field
+
+3. **AI / Smart behaviors (optional but present)**
+
+* A large textarea called **“Instruct the AI”** that describes how the form should behave (tone, what to ask, what to extract, how to react).
+* Character counter and autosave.
+* “Quick start prompts” button inserts templates.
+* This AI layer can:
+
+  * Suggest field labels
+  * Help create conditional logic
+  * Generate extraction schema
+
+4. **Data Extraction Schema**
+
+* Show “0 items” when empty.
+* JSON schema editor (monospace) with validation errors.
+* “Auto Generate” button creates schema from fields + AI instructions.
+* Extracted values map to submission records.
+
+5. **Integrations (lightweight)**
+
+* Webhook URL + secret
+* Email notifications (to owner)
+* Zapier/Make toggle placeholders
+* Export options (CSV download endpoint)
+
+6. **Publishing & Versions**
+
+* “Publish” creates a live version snapshot of current form configuration.
+* After publishing, any change flips status to **Edited (needs republish)** until republished.
+* Keep version history (v1, v2…) with ability to restore.
+
+### Right column (Live preview panel)
+
+* Show a “real” interactive preview:
+
+  * Users can fill it out and see validation
+  * Submitting in preview goes to a sandbox mode (does not create real submissions unless toggled)
+* Buttons: “Test submit”, “Reset”, “Refresh”
+* Branding footer (optional)
+
+## Draft vs Live behavior (same page)
+
+* Same URL pattern: /forms/:id
+* Two modes controlled by state:
+
+  * **Draft**: editable, not public
+  * **Live**: public URL exists (e.g., /f/:publicId) but owner can still view /forms/:id with edit controls
+* If user is viewing the public link, it’s read-only and shows the live snapshot only.
+* If owner is viewing builder link, they can edit and republish.
+
+## Data model (minimum)
+
+Form:
+
+* id, workspaceId, title
+* status: "draft" | "live"
+* currentConfig (JSON)
+* publishedConfig (JSON | null)
+* publicSlug/publicId (string | null)
+* updatedAt, publishedAt
+
+Field:
+
+* id, formId
+* type, label, placeholder, helpText
+* required, validation (JSON)
+* options (for select types)
+* order
+* logic (JSON)
+
+Submission:
+
+* id, formId, createdAt
+* answers (JSON)
+* extracted (JSON)
+
+Version:
+
+* id, formId, versionNumber
+* publishedConfigSnapshot (JSON)
+* createdAt
+
+## API requirements
+
+* GET /api/forms/:id (returns currentConfig + publishedConfig + status)
+* PATCH /api/forms/:id (updates currentConfig; sets “needsRepublish” if live)
+* POST /api/forms (create new draft form)
+* POST /api/forms/:id/publish (copies currentConfig → publishedConfig, sets live, increments version)
+* GET /f/:publicId (serves publishedConfig only)
+* POST /api/forms/:id/submissions (creates submission; runs extraction)
+* POST /api/forms/:id/schema/auto-generate (returns JSON schema)
+* GET /api/forms/:id/versions, POST /api/forms/:id/versions/:versionId/restore
+
+## Implementation constraints
+
+* One page only (no wizard, no multi-step creation flows).
+* Autosave edits with debounce.
+* Clear “dirty state” detection:
+
+  * If currentConfig differs from publishedConfig -> show “Edited (needs republish)”.
+* Make UI fast:
+
+  * Editor uses local state + optimistic updates.
+  * Preview is derived directly from local state (no refresh required unless user clicks refresh).
+* Accessibility:
+
+  * Keyboard navigation for field list and menus.
+  * Proper labels and aria attributes.
+
+## Output expectation
+
+Generate:
+
+1. The full single-page UI (builder + preview) with the panels described above.
+2. Backend routes and storage layer (SQLite or Postgres) to persist forms, fields, versions, submissions.
+3. Publish/republish logic with versioning.
+4. A minimal public renderer for live forms (read-only based on published snapshot).
