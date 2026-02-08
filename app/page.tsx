@@ -68,10 +68,10 @@ export default function Home() {
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               <div>
                 <h1 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-6 leading-tight">
-                  Forms that feel like conversations
+                  AI-powered forms that feel like conversations
                 </h1>
                 <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                  FormActive turns your questions into a friendly chat experience. One question at a time, no overwhelming walls of fields. Build, preview, and publish — all from a single page.
+                  Describe what you want to learn, and AI crafts the perfect conversational question. One question at a time, natural transitions, and a chat experience respondents love.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <a href="#get-started">
@@ -170,7 +170,7 @@ export default function Home() {
                 How it works
               </h2>
               <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                Build conversational forms from a single page. Your respondents get a friendly chat experience.
+                Describe your intent, let AI do the heavy lifting, then customize and publish.
               </p>
             </div>
 
@@ -180,10 +180,10 @@ export default function Home() {
                   <span className="text-lg font-bold text-slate-900">1</span>
                 </div>
                 <h3 className="text-xl font-semibold text-slate-900 mb-3">
-                  Add your questions
+                  Describe your intent
                 </h3>
                 <p className="text-slate-600 leading-relaxed">
-                  Pick from 14 question types — text, email, dropdowns, ratings, file uploads, and more. Set required fields and validation rules.
+                  Tell the AI what you want to learn — "get their age", "ask about travel budget" — and it generates the conversational question, input type, and validation.
                 </p>
               </div>
 
@@ -192,10 +192,10 @@ export default function Home() {
                   <span className="text-lg font-bold text-slate-900">2</span>
                 </div>
                 <h3 className="text-xl font-semibold text-slate-900 mb-3">
-                  Preview the conversation
+                  Customize and preview
                 </h3>
                 <p className="text-slate-600 leading-relaxed">
-                  See exactly how the chat experience looks as you build it. The live preview plays through the conversation — updating instantly as you edit.
+                  Adjust tone, tweak wording, set your brand colors and theme. The live preview shows the exact chat experience in real time.
                 </p>
               </div>
 
@@ -204,10 +204,10 @@ export default function Home() {
                   <span className="text-lg font-bold text-slate-900">3</span>
                 </div>
                 <h3 className="text-xl font-semibold text-slate-900 mb-3">
-                  Publish and share
+                  Publish and collect
                 </h3>
                 <p className="text-slate-600 leading-relaxed">
-                  Hit publish to go live. Share the public link. Edit anytime and republish when you're ready — version history included.
+                  Hit publish, share the link. Responses come in as structured data. Edit anytime and republish — version history included.
                 </p>
               </div>
             </div>

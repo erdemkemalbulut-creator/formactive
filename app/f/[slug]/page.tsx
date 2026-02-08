@@ -84,8 +84,16 @@ export default function PublicFormPage() {
     );
   }
 
+  const theme = form.published_config.theme;
+  const bgStyle: React.CSSProperties = {
+    backgroundColor: theme?.backgroundType === 'solid' ? (theme?.backgroundColor || '#ffffff') : '#ffffff',
+    backgroundImage: theme?.backgroundType === 'gradient' ? theme?.backgroundGradient :
+                      theme?.backgroundType === 'image' ? `url(${theme?.backgroundImage})` : undefined,
+    backgroundSize: theme?.backgroundType === 'image' ? 'cover' : undefined,
+  };
+
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen" style={bgStyle}>
       <ConversationalForm
         config={form.published_config}
         formName={form.name}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { FormConfig, Question, QuestionType } from '@/lib/types';
+import { FormConfig, Question, QuestionType, FormTheme } from '@/lib/types';
 
 interface ChatMessage {
   id: string;
@@ -10,6 +10,10 @@ interface ChatMessage {
   isWelcome?: boolean;
   isEnd?: boolean;
   welcomeCta?: string;
+  isTransition?: boolean;
+  isCTA?: boolean;
+  ctaUrl?: string;
+  ctaOpenNewTab?: boolean;
 }
 
 export interface ConversationalFormProps {
@@ -34,6 +38,7 @@ const SAMPLE_ANSWERS: Record<QuestionType, string> = {
   rating: '⭐⭐⭐⭐⭐',
   file_upload: 'document.pdf',
   consent: 'I agree',
+  cta: '',
 };
 
 function getSampleAnswer(question: Question): string {
@@ -95,13 +100,15 @@ function validateAnswer(value: any, question: Question): string | null {
   return null;
 }
 
-function TypingIndicator({ formName }: { formName: string }) {
+function TypingIndicator({ formName, theme }: { formName: string; theme?: FormTheme }) {
+  const bgColor = theme?.primaryColor || '#2563eb';
+  const bubbleBg = theme?.botBubbleColor || '#f1f5f9';
   return (
     <div className="flex items-start gap-2 animate-fade-in">
-      <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0" style={{ backgroundColor: bgColor }}>
         {formName.charAt(0).toUpperCase()}
       </div>
-      <div className="bg-gray-100 rounded-2xl rounded-tl-sm px-4 py-3">
+      <div className="rounded-2xl rounded-tl-sm px-4 py-3" style={{ backgroundColor: bubbleBg }}>
         <div className="flex gap-1">
           <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
           <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -112,27 +119,39 @@ function TypingIndicator({ formName }: { formName: string }) {
   );
 }
 
-function BotBubble({ message, formName }: { message: ChatMessage; formName: string }) {
+function BotBubble({ message, formName, theme }: { message: ChatMessage; formName: string; theme?: FormTheme }) {
+  const bgColor = theme?.primaryColor || '#2563eb';
+  const bubbleBg = theme?.botBubbleColor || '#f1f5f9';
+  const isMinimal = theme?.bubbleStyle === 'minimal';
   return (
     <div className="flex items-start gap-2 animate-fade-in">
-      <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0" style={{ backgroundColor: bgColor }}>
         {formName.charAt(0).toUpperCase()}
       </div>
-      <div className="bg-gray-100 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[80%]">
+      <div className={`px-4 py-3 max-w-[80%] ${isMinimal ? 'rounded-lg' : 'rounded-2xl rounded-tl-sm'}`} style={{ backgroundColor: bubbleBg }}>
         <p className="text-sm text-gray-800 whitespace-pre-wrap">{message.content}</p>
       </div>
     </div>
   );
 }
 
-function UserBubble({ message }: { message: ChatMessage }) {
+function UserBubble({ message, theme }: { message: ChatMessage; theme?: FormTheme }) {
+  const bubbleBg = theme?.userBubbleColor || '#2563eb';
+  const isMinimal = theme?.bubbleStyle === 'minimal';
   return (
     <div className="flex justify-end animate-fade-in">
-      <div className="bg-blue-600 text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-[80%]">
+      <div className={`text-white px-4 py-3 max-w-[80%] ${isMinimal ? 'rounded-lg' : 'rounded-2xl rounded-tr-sm'}`} style={{ backgroundColor: bubbleBg }}>
         <p className="text-sm whitespace-pre-wrap">{message.content}</p>
       </div>
     </div>
   );
+}
+
+function resolveTemplate(template: string, answers: Record<string, any>): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key) => {
+    const val = answers[key];
+    return val !== undefined && val !== null ? encodeURIComponent(String(val)) : '';
+  });
 }
 
 export function ConversationalForm({ config, formName, onSubmit, isPreview = false }: ConversationalFormProps) {
@@ -198,9 +217,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
       setShowTyping(true);
       const doSubmit = async () => {
         if (onSubmit) {
-          try {
-            await onSubmit(answers);
-          } catch {}
+          try { await onSubmit(answers); } catch {}
         }
         setTimeout(() => {
           setShowTyping(false);
@@ -211,18 +228,48 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
       doSubmit();
       return;
     }
+    
     setShowTyping(true);
-    setTimeout(() => {
-      setShowTyping(false);
-      const q = sortedQuestions[index];
-      let content = q.label;
-      if (q.helpText) content += `\n${q.helpText}`;
-      addBotMessage(content);
-      setCurrentQuestionIndex(index);
-      setInputValue('');
-      setMultiSelectValues([]);
-      setError(null);
-    }, 400);
+    const q = sortedQuestions[index];
+    
+    if (q.transition_before) {
+      setTimeout(() => {
+        addBotMessage(q.transition_before!);
+        setTimeout(() => {
+          setShowTyping(false);
+          if (q.type === 'cta' && q.cta) {
+            addBotMessage(q.label || 'Check this out:', { isCTA: true, ctaUrl: q.cta.url, ctaOpenNewTab: q.cta.openInNewTab, content: q.cta.text });
+            setCurrentQuestionIndex(index);
+            setTimeout(() => showNextQuestion(index + 1), 800);
+          } else {
+            let content = q.user_prompt || q.label;
+            if (q.helpText) content += '\n' + q.helpText;
+            addBotMessage(content);
+            setCurrentQuestionIndex(index);
+            setInputValue('');
+            setMultiSelectValues([]);
+            setError(null);
+          }
+        }, 600);
+      }, 400);
+    } else {
+      setTimeout(() => {
+        setShowTyping(false);
+        if (q.type === 'cta' && q.cta) {
+          addBotMessage(q.label || 'Check this out:', { isCTA: true, ctaUrl: q.cta.url, ctaOpenNewTab: q.cta.openInNewTab, content: q.cta.text });
+          setCurrentQuestionIndex(index);
+          setTimeout(() => showNextQuestion(index + 1), 800);
+        } else {
+          let content = q.user_prompt || q.label;
+          if (q.helpText) content += '\n' + q.helpText;
+          addBotMessage(content);
+          setCurrentQuestionIndex(index);
+          setInputValue('');
+          setMultiSelectValues([]);
+          setError(null);
+        }
+      }, 400);
+    }
   }, [sortedQuestions, answers, onSubmit, config.endMessage, addBotMessage]);
 
   const startForm = useCallback(() => {
@@ -401,6 +448,8 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
     const q = currentQuestion;
 
     switch (q.type) {
+      case 'cta':
+        return null;
       case 'yes_no':
         return (
           <div className="p-4 border-t border-gray-200 bg-white">
@@ -680,7 +729,13 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
   };
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full" style={{ 
+      backgroundColor: config.theme?.backgroundType === 'solid' ? (config.theme?.backgroundColor || '#ffffff') : '#ffffff',
+      backgroundImage: config.theme?.backgroundType === 'gradient' ? config.theme?.backgroundGradient : 
+                        config.theme?.backgroundType === 'image' ? `url(${config.theme?.backgroundImage})` : undefined,
+      backgroundSize: config.theme?.backgroundType === 'image' ? 'cover' : undefined,
+      fontFamily: config.theme?.fontFamily || 'Inter, sans-serif',
+    }}>
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(8px); }
@@ -690,20 +745,22 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
           animation: fadeIn 0.3s ease-out forwards;
         }
       `}</style>
+      {config.theme?.customCss && <style>{config.theme.customCss}</style>}
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map(msg => {
           if (msg.type === 'bot' && msg.isWelcome && !isStarted && !isPreview) {
             return (
               <div key={msg.id} className="flex items-start gap-2 animate-fade-in">
-                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0" style={{ backgroundColor: config.theme?.primaryColor || '#2563eb' }}>
                   {formName.charAt(0).toUpperCase()}
                 </div>
                 <div className="bg-gray-100 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[80%]">
                   <p className="text-sm text-gray-800 whitespace-pre-wrap">{msg.content}</p>
                   <button
                     onClick={startForm}
-                    className="mt-3 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-full transition-colors"
+                    className="mt-3 px-5 py-2 text-white text-sm font-medium rounded-full transition-colors hover:opacity-90"
+                    style={{ backgroundColor: config.theme?.primaryColor || '#2563eb' }}
                   >
                     {msg.welcomeCta || 'Start'}
                   </button>
@@ -711,13 +768,34 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
               </div>
             );
           }
-          if (msg.type === 'bot') {
-            return <BotBubble key={msg.id} message={msg} formName={formName} />;
+          if (msg.type === 'bot' && msg.isCTA) {
+            const resolvedUrl = resolveTemplate(msg.ctaUrl || '', answers);
+            return (
+              <div key={msg.id} className="flex items-start gap-2 animate-fade-in">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0" style={{ backgroundColor: config.theme?.primaryColor || '#2563eb' }}>
+                  {formName.charAt(0).toUpperCase()}
+                </div>
+                <div className="max-w-[80%]">
+                  <a
+                    href={resolvedUrl}
+                    target={msg.ctaOpenNewTab ? '_blank' : '_self'}
+                    rel="noopener noreferrer"
+                    className="inline-block px-6 py-2.5 text-white text-sm font-medium rounded-full transition-colors hover:opacity-90"
+                    style={{ backgroundColor: config.theme?.primaryColor || '#2563eb' }}
+                  >
+                    {msg.content} →
+                  </a>
+                </div>
+              </div>
+            );
           }
-          return <UserBubble key={msg.id} message={msg} />;
+          if (msg.type === 'bot') {
+            return <BotBubble key={msg.id} message={msg} formName={formName} theme={config.theme} />;
+          }
+          return <UserBubble key={msg.id} message={msg} theme={config.theme} />;
         })}
 
-        {showTyping && <TypingIndicator formName={formName} />}
+        {showTyping && <TypingIndicator formName={formName} theme={config.theme} />}
 
         <div ref={chatEndRef} />
       </div>
