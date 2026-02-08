@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { LoginForm } from '@/components/auth/login-form';
+import { AuthActions } from '@/components/auth-actions';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -44,14 +45,17 @@ export default function Home() {
               <Globe className="w-6 h-6 text-slate-700" />
               <span className="text-xl font-semibold text-slate-900">FormActive</span>
             </div>
-            <nav className="hidden md:flex items-center gap-6">
-              <a href="#how-it-works" className="text-sm text-slate-600 hover:text-slate-900 transition-colors">
-                How It Works
-              </a>
-              <a href="#benefits" className="text-sm text-slate-600 hover:text-slate-900 transition-colors">
-                Benefits
-              </a>
-            </nav>
+            <div className="flex items-center gap-6">
+              <nav className="hidden md:flex items-center gap-6">
+                <a href="#how-it-works" className="text-sm text-slate-600 hover:text-slate-900 transition-colors">
+                  How It Works
+                </a>
+                <a href="#benefits" className="text-sm text-slate-600 hover:text-slate-900 transition-colors">
+                  Benefits
+                </a>
+              </nav>
+              <AuthActions />
+            </div>
           </div>
         </div>
       </header>

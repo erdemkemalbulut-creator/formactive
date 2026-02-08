@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AuthActions } from '@/components/auth-actions';
 import {
   Plus,
   Users,
@@ -27,7 +28,7 @@ type Form = {
 };
 
 export default function DashboardPage() {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [forms, setForms] = useState<Form[]>([]);
@@ -84,11 +85,6 @@ export default function DashboardPage() {
     router.push('/dashboard/forms/new');
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    router.push('/');
-  };
-
   if (loading || loadingData) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -112,12 +108,7 @@ export default function DashboardPage() {
               <Globe className="w-5 h-5 text-slate-700" />
               <span className="text-lg font-semibold text-slate-900">FormActive</span>
             </div>
-            <button
-              onClick={handleSignOut}
-              className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
-            >
-              Sign out
-            </button>
+            <AuthActions />
           </div>
         </div>
       </header>
