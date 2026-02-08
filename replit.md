@@ -1,9 +1,10 @@
-# FormFlow - Conversational Forms
+# FormActive - Guided Conversations
 
 ## Overview
-FormFlow is a Next.js 13 application that creates intelligent conversational forms for businesses. It replaces long booking forms with natural conversations to collect trip details, preferences, and requirements. Uses Supabase for authentication and database, with optional OpenAI integration for AI-powered responses.
+FormActive is a Next.js 13 application that helps travel and service businesses collect the right details through structured, conversational intake. It replaces long forms with guided conversations. Uses Supabase for authentication and database, with optional OpenAI integration for AI-powered responses.
 
 ## Recent Changes
+- 2026-02-08: Rebrand — "FormFlow" → "FormActive"; updated hero copy, tagline, CTAs, metadata, footer, and all dashboard headers
 - 2026-02-08: Thoughtful empty states — dashboard (no forms), results page (no responses), wizard Questions step (no questions), builder Data Fields tab (no fields); dashed borders, circle icons, calm copy, single primary action
 - 2026-02-08: UX refinement pass — added "How would you like to start?" entry step, typing indicator + fade animations in ChatPreview, calmer copy/hierarchy, "Template" → "Starting point", radio-style selection indicators
 - 2026-02-08: Template selection UX update — renamed presets to travel-universal names, added tag pills, promoted "Start from scratch" to full card, updated Step 1 header/subtext
@@ -38,3 +39,4 @@ FormFlow is a Next.js 13 application that creates intelligent conversational for
 
 ## User Preferences
 - No pricing/monetisation features desired
+- App name: FormActive

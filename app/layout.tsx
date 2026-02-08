@@ -7,7 +7,7 @@ import { Toaster } from '@/components/ui/toaster';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'FormFlow - Conversational Forms',
+  title: 'FormActive - Guided Conversations',
   description: 'Create intelligent conversational forms for your business',
   openGraph: {
     images: [

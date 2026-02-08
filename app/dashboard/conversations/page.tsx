@@ -204,7 +204,7 @@ export default function ConversationsPage() {
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back
               </Button>
-              <h1 className="text-2xl font-bold text-slate-900">FormFlow</h1>
+              <h1 className="text-2xl font-bold text-slate-900">FormActive</h1>
             </div>
             <Button
               variant="ghost"

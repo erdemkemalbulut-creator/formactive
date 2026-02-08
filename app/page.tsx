@@ -42,7 +42,7 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Globe className="w-6 h-6 text-slate-700" />
-              <span className="text-xl font-semibold text-slate-900">FormFlow</span>
+              <span className="text-xl font-semibold text-slate-900">FormActive</span>
             </div>
             <nav className="hidden md:flex items-center gap-6">
               <a href="#how-it-works" className="text-sm text-slate-600 hover:text-slate-900 transition-colors">
@@ -62,15 +62,15 @@ export default function Home() {
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               <div>
                 <h1 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-6 leading-tight">
-                  Better conversations with your travel clients
+                  Turn requests into guided conversations
                 </h1>
                 <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                  Replace long booking forms with natural conversations. Collect trip details, preferences, and requirements while making your clients feel heard and understood.
+                  FormActive helps travel and service businesses collect the right details through structured, conversational intake — not long forms.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <a href="#get-started">
                     <Button size="lg" className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800">
-                      Get started
+                      Create a conversation
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                   </a>
@@ -81,7 +81,7 @@ export default function Home() {
                   </a>
                 </div>
                 <p className="text-sm text-slate-500 mt-4">
-                  Get started in minutes. No technical skills required.
+                  Used for trips, events, groups, concierge requests, and more.
                 </p>
               </div>
 
@@ -318,7 +318,7 @@ export default function Home() {
                   Get started today
                 </h2>
                 <p className="text-lg text-slate-600 mb-6">
-                  Join travel professionals who are already using FormFlow to connect better with their clients.
+                  Join travel and service professionals who are already using FormActive to connect better with their clients.
                 </p>
                 <ul className="space-y-3 mb-8">
                   <li className="flex items-center gap-3 text-slate-700">
@@ -350,7 +350,7 @@ export default function Home() {
             <div className="flex flex-col md:flex-row justify-between items-center gap-6">
               <div className="flex items-center gap-2">
                 <Globe className="w-5 h-5 text-slate-600" />
-                <span className="font-semibold text-slate-900">FormFlow</span>
+                <span className="font-semibold text-slate-900">FormActive</span>
               </div>
               <div className="flex gap-8 text-sm text-slate-600">
                 <a href="#how-it-works" className="hover:text-slate-900 transition-colors">
@@ -361,7 +361,7 @@ export default function Home() {
                 </a>
               </div>
               <p className="text-sm text-slate-500">
-                © 2026 FormFlow. Built for travel professionals.
+                © 2026 FormActive. Built for travel and service professionals.
               </p>
             </div>
           </div>

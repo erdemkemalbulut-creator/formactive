@@ -97,7 +97,7 @@ export default function DashboardPage() {
       <header className="bg-white border-b border-slate-200">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-slate-900">FormFlow</h1>
+            <h1 className="text-2xl font-bold text-slate-900">FormActive</h1>
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="sm" onClick={handleSignOut}>
                 <LogOut className="w-4 h-4 mr-2" />
