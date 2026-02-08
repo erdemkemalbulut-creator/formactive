@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Download, Eye } from 'lucide-react';
+import { ArrowLeft, Download, Eye, MessageSquare, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -202,13 +202,28 @@ export default function ResultsPage() {
 
       <main className="container mx-auto px-4 py-8">
         {responses.length === 0 ? (
-          <Card>
-            <CardContent className="py-16">
-              <div className="text-center">
-                <h3 className="text-lg font-semibold text-slate-900 mb-2">No Conversations Yet</h3>
-                <p className="text-slate-600">
-                  Completed conversations will appear here once people finish your form
+          <Card className="border-dashed border-2 border-slate-200 bg-white">
+            <CardContent className="py-20">
+              <div className="text-center max-w-sm mx-auto">
+                <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-5">
+                  <MessageSquare className="w-7 h-7 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                  Responses will show up here
+                </h3>
+                <p className="text-sm text-slate-500 mb-6">
+                  No one has completed this conversation yet — share the link to start collecting responses.
                 </p>
+                <Button
+                  onClick={() => {
+                    const url = `${window.location.origin}/f/${formId}`;
+                    navigator.clipboard.writeText(url);
+                    toast({ title: 'Copied', description: 'Form link copied to clipboard' });
+                  }}
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Copy share link
+                </Button>
               </div>
             </CardContent>
           </Card>

@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, FileText, Users, LogOut } from 'lucide-react';
+import { Plus, FileText, Users, LogOut, MessageSquare } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 type Form = {
@@ -55,7 +55,7 @@ export default function DashboardPage() {
         return acc;
       }, {});
 
-      const formsWithCounts = (formsResult.data || []).map((form) => ({
+      const formsWithCounts = (formsResult.data || []).map((form: any) => ({
         ...form,
         _count: { responses: responseCounts[form.id] || 0 },
       }));
@@ -124,19 +124,21 @@ export default function DashboardPage() {
           </div>
 
           {forms.length === 0 ? (
-            <Card>
-              <CardContent className="py-16">
-                <div className="text-center">
-                  <FileText className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+            <Card className="border-dashed border-2 border-slate-200 bg-white">
+              <CardContent className="py-20">
+                <div className="text-center max-w-sm mx-auto">
+                  <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-5">
+                    <MessageSquare className="w-7 h-7 text-slate-400" />
+                  </div>
                   <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                    No forms yet
+                    This is where your conversations live
                   </h3>
-                  <p className="text-slate-600 mb-6">
-                    Create your first conversational form to get started
+                  <p className="text-sm text-slate-500 mb-6">
+                    You haven't created any yet — it only takes a minute to set one up.
                   </p>
                   <Button onClick={createNewForm}>
                     <Plus className="w-4 h-4 mr-2" />
-                    Create Your First Form
+                    Create your first conversation
                   </Button>
                 </div>
               </CardContent>

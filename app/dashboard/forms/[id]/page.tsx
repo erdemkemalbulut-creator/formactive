@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, Plus, Trash2, Copy, ExternalLink, BarChart3, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Copy, ExternalLink, BarChart3, CheckCircle2, AlertCircle, ListChecks } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 type DataField = {
@@ -398,50 +398,70 @@ export default function FormBuilderPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {dataFields.map((field) => (
-                  <div key={field.id} className="flex gap-2 items-start">
-                    <div className="flex-1 space-y-2">
-                      <Input
-                        placeholder="Field name (e.g., Full Name)"
-                        value={field.name}
-                        onChange={(e) => updateDataField(field.id, 'name', e.target.value)}
-                      />
+                {dataFields.length === 0 ? (
+                  <div className="border-2 border-dashed border-slate-200 rounded-lg py-12">
+                    <div className="text-center max-w-xs mx-auto">
+                      <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                        <ListChecks className="w-6 h-6 text-slate-400" />
+                      </div>
+                      <h4 className="font-semibold text-slate-900 mb-1">No fields yet</h4>
+                      <p className="text-sm text-slate-500 mb-4">
+                        Fields define what information the conversation will collect.
+                      </p>
+                      <Button onClick={addDataField} variant="outline">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add your first field
+                      </Button>
                     </div>
-                    <Select
-                      value={field.type}
-                      onValueChange={(value) => updateDataField(field.id, 'type', value)}
-                    >
-                      <SelectTrigger className="w-[150px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="text">Text</SelectItem>
-                        <SelectItem value="email">Email</SelectItem>
-                        <SelectItem value="phone">Phone</SelectItem>
-                        <SelectItem value="number">Number</SelectItem>
-                        <SelectItem value="date">Date</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={field.required}
-                        onCheckedChange={(checked) => updateDataField(field.id, 'required', checked)}
-                      />
-                      <span className="text-sm text-slate-600">Required</span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeDataField(field.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
                   </div>
-                ))}
-                <Button onClick={addDataField} variant="outline" className="w-full">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Data Field
-                </Button>
+                ) : (
+                  <>
+                    {dataFields.map((field) => (
+                      <div key={field.id} className="flex gap-2 items-start">
+                        <div className="flex-1 space-y-2">
+                          <Input
+                            placeholder="Field name (e.g., Full Name)"
+                            value={field.name}
+                            onChange={(e) => updateDataField(field.id, 'name', e.target.value)}
+                          />
+                        </div>
+                        <Select
+                          value={field.type}
+                          onValueChange={(value) => updateDataField(field.id, 'type', value)}
+                        >
+                          <SelectTrigger className="w-[150px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="text">Text</SelectItem>
+                            <SelectItem value="email">Email</SelectItem>
+                            <SelectItem value="phone">Phone</SelectItem>
+                            <SelectItem value="number">Number</SelectItem>
+                            <SelectItem value="date">Date</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={field.required}
+                            onCheckedChange={(checked) => updateDataField(field.id, 'required', checked)}
+                          />
+                          <span className="text-sm text-slate-600">Required</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeDataField(field.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button onClick={addDataField} variant="outline" className="w-full">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Data Field
+                    </Button>
+                  </>
+                )}
                 <div className="mt-3 p-4 bg-orange-50 border border-orange-200 rounded-lg">
                   <p className="text-sm font-medium text-orange-900 mb-2">Understanding data fields:</p>
                   <ul className="text-sm text-orange-800 space-y-1 list-disc list-inside">

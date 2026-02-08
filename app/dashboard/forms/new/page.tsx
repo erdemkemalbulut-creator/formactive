@@ -29,6 +29,7 @@ import {
   ChevronUp,
   LayoutTemplate,
   PenLine,
+  Plus,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
@@ -515,6 +516,25 @@ export default function NewFormPage() {
                 </p>
               </div>
 
+              {dataFields.length === 0 ? (
+                <div className="border-2 border-dashed border-slate-200 rounded-lg py-14 mb-4">
+                  <div className="text-center max-w-xs mx-auto">
+                    <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                      <FileText className="w-6 h-6 text-slate-400" />
+                    </div>
+                    <h4 className="font-semibold text-slate-900 mb-1">No questions yet</h4>
+                    <p className="text-sm text-slate-500 mb-4">
+                      Questions define what information your conversation will collect.
+                    </p>
+                    <Button variant="outline" onClick={() => {
+                      toast({ title: 'Coming soon', description: 'Adding questions will be available in the next update.' });
+                    }}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add a question
+                    </Button>
+                  </div>
+                </div>
+              ) : (
               <div className="space-y-4">
                 {dataFields.map((field, index) => (
                   <Card
@@ -596,6 +616,7 @@ export default function NewFormPage() {
                   </Card>
                 ))}
               </div>
+              )}
 
               <div className="mt-6 flex justify-between items-center">
                 <Button
