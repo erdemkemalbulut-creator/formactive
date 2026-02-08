@@ -1,22 +1,20 @@
-# FormActive - Guided Conversations
+# FormActive - Single-Page Form Builder
 
 ## Overview
-FormActive is a Next.js 13 application that helps travel and service businesses collect the right details through structured, conversational intake. It replaces long forms with guided conversations. Uses Supabase for authentication and database, with optional OpenAI integration for AI-powered responses.
+FormActive is a Next.js 13 application that provides an all-in-one form builder with live preview. Users create forms with predefined questions, see a real-time preview, and publish — all from a single page. Uses Supabase for authentication and database. No AI-driven conversations — the form is a classic structured form with 14 question types.
 
 ## Recent Changes
-- 2026-02-08: Formless-inspired visual overhaul — dark immersive canvas (bg-slate-950) for ChatPreview, dark toolbar header blending with form surface, compact accordion sidebar (collapsible numbered sections) in Steps 2 & 3, breadcrumb navigation (Dashboard › Form Name)
-- 2026-02-08: Right pane header redesign — "Live form · Draft" status label, gray/green dot, always-visible URL (formactive.io/c/{slug}), tooltip for drafts, sticky header, Share copies link with toast, Refresh re-renders form; removed word "Preview" from all user-facing text
-- 2026-02-08: Builder UX polish — numbered section headers in Steps 2 & 3, Welcome/Completion message editors in Step 2, endMessage surfaced in ChatPreview, removed noisy blue info box
-- 2026-02-08: Removed Google sign-in — stripped OAuth button, handler, "or" divider from login form; removed `signInWithGoogle` from auth context; email is now the only sign-in method
-- 2026-02-08: Functional UX pass — redesigned login/signup form, smart post-login routing (empty → onboarding, forms → list), richer dashboard empty state with 3-step explainer, pulsing "Live preview" indicator in builder, AuthActions nav component with avatar dropdown
-- 2026-02-08: Rebrand — "FormFlow" → "FormActive"; updated hero copy, tagline, CTAs, metadata, footer, and all dashboard headers
-- 2026-02-08: Thoughtful empty states — dashboard (no forms), results page (no responses), wizard Questions step (no questions), builder Data Fields tab (no fields); dashed borders, circle icons, calm copy, single primary action
-- 2026-02-08: UX refinement pass — added "How would you like to start?" entry step, typing indicator + fade animations in ChatPreview, calmer copy/hierarchy, "Template" → "Starting point", radio-style selection indicators
-- 2026-02-08: Template selection UX update — renamed presets to travel-universal names, added tag pills, promoted "Start from scratch" to full card, updated Step 1 header/subtext
-- 2026-02-08: Copy update — made wizard copy travel-industry universal (trips, groups, events, weddings, etc.); "client" → "guest", "intake" → "request", neutral greetings in ChatPreview
-- 2026-02-08: UX overhaul of "Create New Form" wizard — split-pane layout for Steps 2 & 3 with live ChatPreview, inline validation, tone card accessibility, scroll-to-top on step change
-- 2026-02-06: Removed all pricing, billing, subscription, and monetisation pages/components/references
-- 2026-02-06: Initial Replit setup - configured port 5000, added graceful Supabase fallback for missing env vars
+- 2026-02-08: **Major rebuild** — Replaced multi-step wizard + conversational AI approach with a single-page form builder (Formless-inspired layout)
+- 2026-02-08: New single-page builder at /dashboard/forms/[id] with left editor panels + right live preview
+- 2026-02-08: New API routes: POST /api/forms, GET/PATCH /api/forms/[id], POST /api/forms/[id]/publish, GET/POST /api/forms/[id]/submissions
+- 2026-02-08: Publish/republish workflow with version snapshots and dirty detection
+- 2026-02-08: Public form renderer at /f/:slug renders published forms as classic forms (not chat)
+- 2026-02-08: Submissions page with table view, expandable rows, and CSV export
+- 2026-02-08: Updated dashboard — "New form" creates via API and redirects to builder, submission counts
+- 2026-02-08: Updated landing page copy to match form builder concept
+- 2026-02-08: Removed old wizard, chat preview, conversation pages/APIs
+- 2026-02-08: New database migration for published_config, form_versions, submissions tables
+- 2026-02-08: Shared types in lib/types.ts (Question, FormConfig, QuestionType, etc.)
 
 ## Project Architecture
 - **Framework**: Next.js 13.5.1 (App Router)
@@ -26,22 +24,46 @@ FormActive is a Next.js 13 application that helps travel and service businesses 
 
 ### Key Directories
 - `app/` - Next.js App Router pages and API routes
-- `components/` - React components (ui/, auth/, chat-preview.tsx)
-- `lib/` - Shared utilities (supabase client, auth context)
+- `app/api/forms/` - Form CRUD, publish, submissions API routes
+- `app/dashboard/forms/[id]/` - Single-page form builder
+- `app/f/[slug]/` - Public form renderer
+- `components/` - React components (ui/, auth/)
+- `lib/` - Shared utilities (supabase client, auth context, types)
 - `hooks/` - Custom React hooks
 - `supabase/migrations/` - Database migration SQL files
+
+### Key Files
+- `lib/types.ts` - Shared TypeScript types (Question, FormConfig, QuestionType, etc.)
+- `lib/supabase.ts` - Supabase client + getServiceClient()
+- `lib/auth-context.tsx` - Auth context provider
+- `app/dashboard/forms/[id]/page.tsx` - Main form builder (editor + live preview)
+- `app/f/[slug]/page.tsx` - Public form renderer
+
+### Data Model
+- **forms** table: id, user_id, name, slug, status (draft/live), current_config (JSON), published_config (JSON), version, published_at
+- **submissions** table: id, form_id, answers (JSON), metadata (JSON), created_at
+- **form_versions** table: id, form_id, version_number, config_snapshot (JSON), created_at
+- Legacy tables still exist: conversations, messages, responses, subscriptions
 
 ### Environment Variables Required
 - `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anonymous key
-- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (server-only)
-- `OPENAI_API_KEY` - Optional, for AI-powered responses
+- `SUPABASE_SERVICE_ROLE_KEY` (or `SERVICE_ROLE_KEY`) - Supabase service role key (server-only)
+- `OPENAI_API_KEY` - Optional, for future AI suggestions feature
 
 ### Running
 - Dev: `npm run dev` (runs on port 5000)
 - Build: `npm run build`
 - Start: `npm run start` (runs on port 5000)
 
+### Publishing Model
+- Forms have `current_config` (editing state) and `published_config` (live state)
+- "Publish" copies current_config → published_config, sets status to 'live', creates version snapshot
+- "Republish" when current_config differs from published_config after editing a live form
+- Public URL: /f/:slug serves published_config only
+
 ## User Preferences
-- No pricing/monetisation features desired
+- No pricing/monetisation features
+- No AI-driven conversations — forms are classic with predefined questions
 - App name: FormActive
+- Single-page builder approach (no multi-step wizards)

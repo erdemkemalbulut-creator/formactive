@@ -8,14 +8,16 @@ import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
-  MessageSquare,
-  Calendar,
-  Users,
+  FileText,
+  Eye,
+  Send,
   ArrowRight,
   CheckCircle2,
   Globe,
   Clock,
-  Shield
+  Shield,
+  Zap,
+  BarChart3
 } from 'lucide-react';
 
 export default function Home() {
@@ -66,15 +68,15 @@ export default function Home() {
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               <div>
                 <h1 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-6 leading-tight">
-                  Turn requests into guided conversations
+                  Build forms, preview live, publish instantly
                 </h1>
                 <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-                  FormActive helps travel and service businesses collect the right details through structured, conversational intake — not long forms.
+                  FormActive is the all-in-one form builder where you create questions, see a live preview, and publish — all from a single page. No wizards, no clutter.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <a href="#get-started">
                     <Button size="lg" className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800">
-                      Create a conversation
+                      Start building
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                   </a>
@@ -85,52 +87,41 @@ export default function Home() {
                   </a>
                 </div>
                 <p className="text-sm text-slate-500 mt-4">
-                  Used for trips, events, groups, concierge requests, and more.
+                  Used for lead capture, intake forms, feedback, registrations, and more.
                 </p>
               </div>
 
               <div className="relative">
-                <Card className="p-6 bg-white border-slate-200 shadow-lg">
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0 mt-1">
-                        <MessageSquare className="w-4 h-4 text-slate-600" />
+                <Card className="p-6 bg-white border-slate-200 shadow-lg overflow-hidden">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-slate-900">Travel Inquiry</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200">Live</span>
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm text-slate-900 mb-2">
-                          Hi! I'd love to help you plan your perfect getaway. Where are you dreaming of going?
-                        </p>
+                      <span className="text-xs text-slate-400">formactive.io/f/travel-inquiry</span>
+                    </div>
+                    <div className="space-y-3 py-2">
+                      <div>
+                        <label className="text-xs font-medium text-slate-700">Your name</label>
+                        <div className="mt-1 h-8 bg-slate-50 border border-slate-200 rounded-md px-3 flex items-center text-sm text-slate-400">Jane Doe</div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-slate-700">Where are you dreaming of going?</label>
+                        <div className="mt-1 h-8 bg-slate-50 border border-slate-200 rounded-md px-3 flex items-center text-sm text-slate-400">Santorini, Greece</div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-slate-700">How many travelers?</label>
+                        <div className="mt-1 h-8 bg-slate-50 border border-slate-200 rounded-md px-3 flex items-center text-sm text-slate-400">4</div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-slate-700">Preferred travel dates</label>
+                        <div className="mt-1 h-8 bg-slate-50 border border-slate-200 rounded-md px-3 flex items-center text-sm text-slate-400">Sep 15–22, 2026</div>
                       </div>
                     </div>
-
-                    <div className="flex items-start gap-3 justify-end">
-                      <div className="flex-1 text-right">
-                        <div className="inline-block bg-slate-900 text-white text-sm px-4 py-2 rounded-lg">
-                          We're thinking Santorini in September
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0 mt-1">
-                        <MessageSquare className="w-4 h-4 text-slate-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm text-slate-900 mb-2">
-                          Wonderful choice! Santorini is absolutely stunning in September. How many travelers will be joining you?
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="pt-4 border-t border-slate-100">
-                      <div className="flex items-center gap-2 text-xs text-slate-500">
-                        <CheckCircle2 className="w-4 h-4 text-green-600" />
-                        <span>Destination and dates captured</span>
-                      </div>
-                    </div>
+                    <button className="w-full h-9 bg-slate-900 text-white text-sm font-medium rounded-md">Submit</button>
                   </div>
                 </Card>
-
                 <div className="absolute -top-4 -right-4 w-24 h-24 bg-blue-100 rounded-full opacity-50 blur-2xl" />
                 <div className="absolute -bottom-4 -left-4 w-32 h-32 bg-slate-100 rounded-full opacity-50 blur-2xl" />
               </div>
@@ -147,7 +138,7 @@ export default function Home() {
                 How it works
               </h2>
               <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                Set up your first conversational form in minutes. No technical skills required.
+                Build and publish forms from a single page. No multi-step wizards or separate preview screens.
               </p>
             </div>
 
@@ -157,10 +148,10 @@ export default function Home() {
                   <span className="text-lg font-bold text-slate-900">1</span>
                 </div>
                 <h3 className="text-xl font-semibold text-slate-900 mb-3">
-                  Choose your form type
+                  Add your questions
                 </h3>
                 <p className="text-slate-600 leading-relaxed">
-                  Select from travel-focused templates like hotel bookings, vacation packages, or event inquiries. Each template comes pre-configured with relevant fields.
+                  Pick from 14 question types — text, email, dropdowns, ratings, file uploads, and more. Set required fields and validation rules.
                 </p>
               </div>
 
@@ -169,10 +160,10 @@ export default function Home() {
                   <span className="text-lg font-bold text-slate-900">2</span>
                 </div>
                 <h3 className="text-xl font-semibold text-slate-900 mb-3">
-                  Customize the questions
+                  Preview in real-time
                 </h3>
                 <p className="text-slate-600 leading-relaxed">
-                  Edit the wording and tone to match your brand. Choose from professional, friendly, or luxury styles to fit your audience.
+                  See exactly how your form looks as you build it. The live preview updates instantly — no save or refresh needed.
                 </p>
               </div>
 
@@ -181,10 +172,10 @@ export default function Home() {
                   <span className="text-lg font-bold text-slate-900">3</span>
                 </div>
                 <h3 className="text-xl font-semibold text-slate-900 mb-3">
-                  Share and collect responses
+                  Publish and share
                 </h3>
                 <p className="text-slate-600 leading-relaxed">
-                  Get a unique link to embed on your website or share directly. View structured responses in your dashboard as conversations complete.
+                  Hit publish to go live. Share the public link. Edit anytime and republish when you're ready — version history included.
                 </p>
               </div>
             </div>
@@ -197,88 +188,88 @@ export default function Home() {
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
               <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-4">
-                Built for travel professionals
+                Everything in one place
               </h2>
               <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                Designed specifically for agencies, advisors, and creators who value meaningful client relationships.
+                Build, preview, publish, and collect responses — all from one screen.
               </p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
               <Card className="p-8 border-slate-200">
                 <div className="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center mb-6">
-                  <Users className="w-6 h-6 text-blue-600" />
+                  <Eye className="w-6 h-6 text-blue-600" />
                 </div>
                 <h3 className="text-xl font-semibold text-slate-900 mb-3">
-                  Qualify leads naturally
+                  Live preview as you build
                 </h3>
                 <p className="text-slate-600 leading-relaxed mb-4">
-                  Let conversations flow naturally while capturing budget, timeline, and preferences without overwhelming clients with long forms.
+                  No guessing. The right panel shows your form exactly as visitors will see it, updating in real-time.
                 </p>
                 <ul className="space-y-2">
                   <li className="flex items-start gap-2 text-sm text-slate-600">
                     <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Collect trip details conversationally</span>
+                    <span>Instant visual feedback</span>
                   </li>
                   <li className="flex items-start gap-2 text-sm text-slate-600">
                     <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Understand budget and preferences early</span>
+                    <span>Test validation before publishing</span>
                   </li>
                   <li className="flex items-start gap-2 text-sm text-slate-600">
                     <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Identify serious inquiries faster</span>
+                    <span>Welcome and end screens included</span>
                   </li>
                 </ul>
               </Card>
 
               <Card className="p-8 border-slate-200">
                 <div className="w-12 h-12 rounded-lg bg-green-50 flex items-center justify-center mb-6">
-                  <Clock className="w-6 h-6 text-green-600" />
+                  <Zap className="w-6 h-6 text-green-600" />
                 </div>
                 <h3 className="text-xl font-semibold text-slate-900 mb-3">
-                  Save hours each week
+                  Publish and republish
                 </h3>
                 <p className="text-slate-600 leading-relaxed mb-4">
-                  Reduce back-and-forth emails by collecting all necessary information upfront through guided conversations.
+                  One click to go live. Make changes anytime and republish when ready. Every version is saved.
                 </p>
                 <ul className="space-y-2">
                   <li className="flex items-start gap-2 text-sm text-slate-600">
                     <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Gather complete information in one go</span>
+                    <span>Draft → Live → Edit → Republish</span>
                   </li>
                   <li className="flex items-start gap-2 text-sm text-slate-600">
                     <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Structured responses ready to review</span>
+                    <span>Version history with restore</span>
                   </li>
                   <li className="flex items-start gap-2 text-sm text-slate-600">
                     <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Export data to your CRM or spreadsheet</span>
+                    <span>Public link stays the same</span>
                   </li>
                 </ul>
               </Card>
 
               <Card className="p-8 border-slate-200">
                 <div className="w-12 h-12 rounded-lg bg-orange-50 flex items-center justify-center mb-6">
-                  <Calendar className="w-6 h-6 text-orange-600" />
+                  <BarChart3 className="w-6 h-6 text-orange-600" />
                 </div>
                 <h3 className="text-xl font-semibold text-slate-900 mb-3">
-                  Provide better service
+                  Collect and export
                 </h3>
                 <p className="text-slate-600 leading-relaxed mb-4">
-                  Show clients you care about their unique needs with personalized, thoughtful interactions from the first touchpoint.
+                  View submissions in your dashboard. Export to CSV. Keep everything organized without extra tools.
                 </p>
                 <ul className="space-y-2">
                   <li className="flex items-start gap-2 text-sm text-slate-600">
                     <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Personalized tone options</span>
+                    <span>Structured response data</span>
                   </li>
                   <li className="flex items-start gap-2 text-sm text-slate-600">
                     <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Professional first impression</span>
+                    <span>CSV export with one click</span>
                   </li>
                   <li className="flex items-start gap-2 text-sm text-slate-600">
                     <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Make clients feel heard</span>
+                    <span>Expandable row details</span>
                   </li>
                 </ul>
               </Card>
@@ -288,23 +279,23 @@ export default function Home() {
                   <Shield className="w-6 h-6 text-slate-600" />
                 </div>
                 <h3 className="text-xl font-semibold text-slate-900 mb-3">
-                  Simple and reliable
+                  14 question types
                 </h3>
                 <p className="text-slate-600 leading-relaxed mb-4">
-                  Focus on your clients, not technical setup. Everything works out of the box with clear, straightforward controls.
+                  From simple text fields to star ratings, file uploads, and consent checkboxes — cover every use case.
                 </p>
                 <ul className="space-y-2">
                   <li className="flex items-start gap-2 text-sm text-slate-600">
                     <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>No coding or complex setup</span>
+                    <span>Text, email, phone, number, date</span>
                   </li>
                   <li className="flex items-start gap-2 text-sm text-slate-600">
                     <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Works on all devices</span>
+                    <span>Dropdowns, multi-select, yes/no</span>
                   </li>
                   <li className="flex items-start gap-2 text-sm text-slate-600">
                     <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Secure data handling</span>
+                    <span>Rating, file upload, consent</span>
                   </li>
                 </ul>
               </Card>
@@ -322,16 +313,16 @@ export default function Home() {
                   Get started today
                 </h2>
                 <p className="text-lg text-slate-600 mb-6">
-                  Join travel and service professionals who are already using FormActive to connect better with their clients.
+                  Sign up and build your first form in minutes. No credit card, no complex setup.
                 </p>
                 <ul className="space-y-3 mb-8">
                   <li className="flex items-center gap-3 text-slate-700">
                     <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
-                    <span>All templates and features included</span>
+                    <span>All question types and features included</span>
                   </li>
                   <li className="flex items-center gap-3 text-slate-700">
                     <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
-                    <span>Set up in minutes</span>
+                    <span>Build and publish from one page</span>
                   </li>
                   <li className="flex items-center gap-3 text-slate-700">
                     <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
@@ -365,7 +356,7 @@ export default function Home() {
                 </a>
               </div>
               <p className="text-sm text-slate-500">
-                © 2026 FormActive. Built for travel and service professionals.
+                © 2026 FormActive. Build forms, preview live, publish instantly.
               </p>
             </div>
           </div>

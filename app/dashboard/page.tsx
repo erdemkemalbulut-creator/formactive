@@ -24,9 +24,10 @@ type Form = {
   id: string;
   name: string;
   slug: string;
-  is_published: boolean;
+  status: 'draft' | 'live';
   created_at: string;
-  _count?: { responses: number };
+  updated_at: string;
+  _count?: { submissions: number };
 };
 
 export default function DashboardPage() {
@@ -38,6 +39,7 @@ export default function DashboardPage() {
   const [deleteTarget, setDeleteTarget] = useState<Form | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -54,26 +56,26 @@ export default function DashboardPage() {
 
   const loadDashboardData = async () => {
     try {
-      const [formsResult, responsesResult] = await Promise.all([
-        supabase
-          .from('forms')
-          .select('*')
-          .eq('user_id', user?.id)
-          .order('created_at', { ascending: false }),
-        supabase.from('responses').select('form_id'),
-      ]);
+      const { data: formsData, error: formsError } = await supabase
+        .from('forms')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('updated_at', { ascending: false });
 
-      if (formsResult.error) throw formsResult.error;
+      if (formsError) throw formsError;
 
-      const responseCounts = (responsesResult.data || []).reduce((acc: any, r: any) => {
-        acc[r.form_id] = (acc[r.form_id] || 0) + 1;
-        return acc;
-      }, {});
-
-      const formsWithCounts = (formsResult.data || []).map((form: any) => ({
-        ...form,
-        _count: { responses: responseCounts[form.id] || 0 },
-      }));
+      const formsWithCounts = await Promise.all(
+        (formsData || []).map(async (form: any) => {
+          const { count } = await supabase
+            .from('submissions')
+            .select('*', { count: 'exact', head: true })
+            .eq('form_id', form.id);
+          return {
+            ...form,
+            _count: { submissions: count || 0 },
+          };
+        })
+      );
 
       setForms(formsWithCounts);
     } catch (error: any) {
@@ -87,8 +89,37 @@ export default function DashboardPage() {
     }
   };
 
-  const createNewForm = () => {
-    router.push('/dashboard/forms/new');
+  const createNewForm = async () => {
+    if (!user || isCreating) return;
+    setIsCreating(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Not authenticated');
+
+      const res = await fetch('/api/forms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ name: 'Untitled form' }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to create form');
+      }
+
+      const newForm = await res.json();
+      router.push(`/dashboard/forms/${newForm.id}`);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create form',
+        variant: 'destructive',
+      });
+      setIsCreating(false);
+    }
   };
 
   useEffect(() => {
@@ -107,11 +138,11 @@ export default function DashboardPage() {
     if (!deleteTarget || !user) return;
     setIsDeleting(true);
     try {
-      const { error: responsesError } = await supabase
-        .from('responses')
+      const { error: submissionsError } = await supabase
+        .from('submissions')
         .delete()
         .eq('form_id', deleteTarget.id);
-      if (responsesError) throw responsesError;
+      if (submissionsError) throw submissionsError;
 
       const { error } = await supabase
         .from('forms')
@@ -140,8 +171,8 @@ export default function DashboardPage() {
     );
   }
 
-  const totalResponses = forms.reduce((sum, f) => sum + (f._count?.responses || 0), 0);
-  const publishedCount = forms.filter(f => f.is_published).length;
+  const totalSubmissions = forms.reduce((sum, f) => sum + (f._count?.submissions || 0), 0);
+  const liveCount = forms.filter(f => f.status === 'live').length;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -162,24 +193,25 @@ export default function DashboardPage() {
           <div className="py-12">
             <div className="max-w-lg mx-auto text-center mb-10">
               <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-6">
-                <MessageSquare className="w-8 h-8 text-slate-400" />
+                <FileText className="w-8 h-8 text-slate-400" />
               </div>
               <h1 className="text-2xl font-bold text-slate-900 mb-3">
                 Welcome to FormActive
               </h1>
               <p className="text-slate-600 leading-relaxed mb-2">
-                Create a guided conversation to collect information from your guests.
-                Instead of a long form, they'll have a natural back-and-forth that feels personal.
+                Create forms to collect information from your users.
+                Build custom forms with a visual editor and get a shareable link.
               </p>
               <p className="text-sm text-slate-500 mb-8">
-                You'll choose a starting point, customize the questions, and get a shareable link.
+                You'll design your questions, customize the look, and start collecting submissions.
               </p>
               <Button
                 size="lg"
                 onClick={createNewForm}
+                disabled={isCreating}
                 className="bg-slate-900 hover:bg-slate-800 h-12 px-8 text-base"
               >
-                Create your first conversation
+                {isCreating ? 'Creating...' : 'Create your first form'}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
@@ -189,21 +221,21 @@ export default function DashboardPage() {
                 <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center mx-auto mb-3">
                   <FileText className="w-5 h-5 text-slate-400" />
                 </div>
-                <h3 className="text-sm font-medium text-slate-900 mb-1">Pick a starting point</h3>
-                <p className="text-xs text-slate-500">Choose from travel, group, or premium templates</p>
+                <h3 className="text-sm font-medium text-slate-900 mb-1">Build your form</h3>
+                <p className="text-xs text-slate-500">Add questions and customize the design</p>
               </div>
               <div className="text-center p-5 rounded-lg bg-white border border-slate-100">
                 <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center mx-auto mb-3">
                   <MessageSquare className="w-5 h-5 text-slate-400" />
                 </div>
-                <h3 className="text-sm font-medium text-slate-900 mb-1">Customize questions</h3>
-                <p className="text-xs text-slate-500">Set the tone and see a live preview as you build</p>
+                <h3 className="text-sm font-medium text-slate-900 mb-1">Preview & publish</h3>
+                <p className="text-xs text-slate-500">See a live preview and publish when ready</p>
               </div>
               <div className="text-center p-5 rounded-lg bg-white border border-slate-100">
                 <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center mx-auto mb-3">
                   <BarChart3 className="w-5 h-5 text-slate-400" />
                 </div>
-                <h3 className="text-sm font-medium text-slate-900 mb-1">Collect responses</h3>
+                <h3 className="text-sm font-medium text-slate-900 mb-1">Collect submissions</h3>
                 <p className="text-xs text-slate-500">Share a link and review structured results here</p>
               </div>
             </div>
@@ -212,16 +244,16 @@ export default function DashboardPage() {
           <>
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h1 className="text-2xl font-bold text-slate-900">Your conversations</h1>
+                <h1 className="text-2xl font-bold text-slate-900">Your forms</h1>
                 <p className="text-sm text-slate-500 mt-1">
-                  {forms.length} conversation{forms.length !== 1 ? 's' : ''}
-                  {publishedCount > 0 && ` · ${publishedCount} published`}
-                  {totalResponses > 0 && ` · ${totalResponses} response${totalResponses !== 1 ? 's' : ''}`}
+                  {forms.length} form{forms.length !== 1 ? 's' : ''}
+                  {liveCount > 0 && ` · ${liveCount} live`}
+                  {totalSubmissions > 0 && ` · ${totalSubmissions} submission${totalSubmissions !== 1 ? 's' : ''}`}
                 </p>
               </div>
-              <Button onClick={createNewForm} className="bg-slate-900 hover:bg-slate-800">
+              <Button onClick={createNewForm} disabled={isCreating} className="bg-slate-900 hover:bg-slate-800">
                 <Plus className="w-4 h-4 mr-2" />
-                New conversation
+                {isCreating ? 'Creating...' : 'New form'}
               </Button>
             </div>
 
@@ -236,7 +268,7 @@ export default function DashboardPage() {
                     <div className="flex items-start justify-between gap-2">
                       <CardTitle className="text-base leading-snug">{form.name}</CardTitle>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        {form.is_published ? (
+                        {form.status === 'live' ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
                             Live
                           </span>
@@ -280,7 +312,7 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-4 text-xs text-slate-500">
                       <div className="flex items-center gap-1.5">
                         <Users className="w-3.5 h-3.5" />
-                        <span>{form._count?.responses || 0} responses</span>
+                        <span>{form._count?.submissions || 0} submissions</span>
                       </div>
                       <span>
                         Created {new Date(form.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -297,12 +329,12 @@ export default function DashboardPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="fixed inset-0 bg-black/50" onClick={() => !isDeleting && setDeleteTarget(null)} />
             <div className="relative bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">Delete conversation</h3>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">Delete form</h3>
               <p className="text-sm text-slate-600 mb-1">
                 Are you sure you want to delete <strong>{deleteTarget.name}</strong>?
               </p>
               <p className="text-sm text-slate-500 mb-6">
-                This will permanently remove the form and all {deleteTarget._count?.responses || 0} response{(deleteTarget._count?.responses || 0) !== 1 ? 's' : ''}. This action cannot be undone.
+                This will permanently remove the form and all {deleteTarget._count?.submissions || 0} submission{(deleteTarget._count?.submissions || 0) !== 1 ? 's' : ''}. This action cannot be undone.
               </p>
               <div className="flex justify-end gap-3">
                 <Button

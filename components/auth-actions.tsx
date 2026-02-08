@@ -62,7 +62,7 @@ export function AuthActions() {
             }
           }}
         >
-          Create a conversation
+          Create a form
         </Button>
       </div>
     );

@@ -7,8 +7,8 @@ import { Toaster } from '@/components/ui/toaster';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'FormActive - Guided Conversations',
-  description: 'Create intelligent conversational forms for your business',
+  title: 'FormActive - Build Forms, Preview Live, Publish Instantly',
+  description: 'The all-in-one form builder with live preview. Create questions, see your form in real-time, and publish — all from a single page.',
   openGraph: {
     images: [
       {

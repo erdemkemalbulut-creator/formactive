@@ -1,341 +1,493 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Send, CheckCircle2, MessageSquare, Sparkles } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 
-type Message = {
+interface QuestionOption {
   id: string;
-  role: 'assistant' | 'user';
-  content: string;
-  created_at: string;
-};
+  label: string;
+  value: string;
+}
 
-type Form = {
+interface Question {
+  id: string;
+  key: string;
+  type: 'short_text' | 'long_text' | 'email' | 'phone' | 'number' | 'date' | 'time' | 'dropdown' | 'multi_select' | 'checkbox' | 'yes_no' | 'rating' | 'file_upload' | 'consent';
+  label: string;
+  placeholder: string;
+  helpText: string;
+  required: boolean;
+  validation: any;
+  options: QuestionOption[];
+  order: number;
+}
+
+interface FormConfig {
+  questions: Question[];
+  welcomeEnabled: boolean;
+  welcomeTitle: string;
+  welcomeMessage: string;
+  welcomeCta: string;
+  endMessage: string;
+  endRedirectEnabled: boolean;
+  endRedirectUrl: string;
+  theme: { buttonStyle?: string; spacing?: string };
+}
+
+interface FormData {
   id: string;
   name: string;
-  conversation_rules: string;
-  business_info: any[];
-  data_fields: any[];
-};
+  published_config: FormConfig;
+}
+
+type Phase = 'welcome' | 'form' | 'end';
 
 export default function PublicFormPage() {
   const params = useParams();
   const slug = params.slug as string;
-  const { toast } = useToast();
 
-  const [form, setForm] = useState<Form | null>(null);
-  const [conversationId, setConversationId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
-  const [sending, setSending] = useState(false);
-  const [completed, setCompleted] = useState(false);
+  const [form, setForm] = useState<FormData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [progress, setProgress] = useState({ collected: 0, total: 0, percentage: 0 });
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [notFound, setNotFound] = useState(false);
+  const [phase, setPhase] = useState<Phase>('welcome');
+  const [answers, setAnswers] = useState<Record<string, any>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     loadForm();
   }, [slug]);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   const loadForm = async () => {
     try {
       const { data, error } = await supabase
         .from('forms')
-        .select('*')
+        .select('id, name, published_config')
         .eq('slug', slug)
         .eq('is_published', true)
         .maybeSingle();
 
-      if (error) {
-        console.error('[Form] Database error loading form:', error);
-        throw new Error('FORM_NOT_FOUND');
-      }
-      if (!data) {
-        throw new Error('FORM_NOT_FOUND');
+      if (error || !data || !data.published_config) {
+        setNotFound(true);
+        return;
       }
 
       setForm(data);
-      await startConversation(data.id);
-    } catch (error: any) {
-      console.error('[Form] Failed to load form:', error);
-      toast({
-        title: 'Form Unavailable',
-        description: 'This form is not available. Please check the link and try again.',
-        variant: 'destructive',
-      });
+      const config = data.published_config as FormConfig;
+      if (!config.welcomeEnabled) {
+        setPhase('form');
+      }
+    } catch {
+      setNotFound(true);
     } finally {
       setLoading(false);
     }
   };
 
-  const startConversation = async (formId: string) => {
-    try {
-      console.log('[Form] Starting conversation for form:', formId);
+  const validate = (): boolean => {
+    if (!form) return false;
+    const config = form.published_config;
+    const newErrors: Record<string, string> = {};
 
-      const response = await fetch('/api/conversations/start', {
+    for (const q of config.questions) {
+      if (q.required) {
+        const val = answers[q.key];
+        if (val === undefined || val === null || val === '' || (Array.isArray(val) && val.length === 0)) {
+          newErrors[q.key] = 'This field is required';
+        }
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form || !validate()) return;
+
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/forms/${form.id}/submissions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ formId }),
+        body: JSON.stringify({ answers }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('[Form] Start conversation error:', {
-          status: response.status,
-          error: errorData.error
-        });
-        throw new Error('START_FAILED');
+      if (!res.ok) throw new Error('Submission failed');
+
+      setPhase('end');
+
+      const config = form.published_config;
+      if (config.endRedirectEnabled && config.endRedirectUrl) {
+        setTimeout(() => {
+          window.location.href = config.endRedirectUrl;
+        }, 3000);
       }
+    } catch {
+      setErrors({ _form: 'Failed to submit. Please try again.' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-      const data = await response.json();
-
-      if (!data.conversationId || !data.message) {
-        console.error('[Form] Invalid response from server:', data);
-        throw new Error('INVALID_RESPONSE');
-      }
-
-      console.log('[Form] Conversation started:', data.conversationId);
-      setConversationId(data.conversationId);
-
-      const assistantMessage = {
-        id: Date.now().toString(),
-        role: 'assistant' as const,
-        content: data.message,
-        created_at: new Date().toISOString(),
-      };
-
-      setMessages([assistantMessage]);
-
-      if (data.progress) {
-        setProgress(data.progress);
-      }
-
-      console.log('[Form] Conversation started successfully');
-    } catch (error: any) {
-      console.error('[Form] Failed to start conversation:', error);
-
-      toast({
-        title: 'Unable to Start',
-        description: 'We couldn\'t start the conversation. Please refresh the page and try again.',
-        variant: 'destructive',
+  const updateAnswer = (key: string, value: any) => {
+    setAnswers((prev) => ({ ...prev, [key]: value }));
+    if (errors[key]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
       });
     }
   };
 
-  const sendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || !conversationId || sending) return;
-
-    const userMessage = input.trim();
-    setInput('');
-    setSending(true);
-
-    const userMsg: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: userMessage,
-      created_at: new Date().toISOString(),
-    };
-
-    setMessages((prev) => [...prev, userMsg]);
-
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          conversationId,
-          formId: form!.id,
-          message: userMessage,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('[Form] Send message error:', {
-          status: response.status,
-          error: errorData.error
-        });
-        throw new Error('SEND_FAILED');
-      }
-
-      const data = await response.json();
-
-      if (!data.message) {
-        console.error('[Form] No message in response:', data);
-        throw new Error('NO_RESPONSE');
-      }
-
-      const assistantMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: data.message,
-        created_at: new Date().toISOString(),
-      };
-
-      setMessages((prev) => [...prev, assistantMsg]);
-
-      if (data.progress) {
-        setProgress(data.progress);
-      }
-
-      if (data.completed) {
-        setCompleted(true);
-      }
-    } catch (error: any) {
-      console.error('[Form] Error sending message:', error);
-      toast({
-        title: 'Message Not Sent',
-        description: 'Your message couldn\'t be sent. Please try again.',
-        variant: 'destructive',
-      });
-      // Remove the user message from UI since it failed
-      setMessages((prev) => prev.filter((m) => m.id !== userMsg.id));
-    } finally {
-      setSending(false);
-    }
+  const toggleMultiSelect = (key: string, value: string) => {
+    const current: string[] = answers[key] || [];
+    const updated = current.includes(value)
+      ? current.filter((v: string) => v !== value)
+      : [...current, value];
+    updateAnswer(key, updated);
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-lg">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center gap-3">
+          <svg className="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+          <p className="text-gray-500 text-sm">Loading form...</p>
+        </div>
       </div>
     );
   }
 
-  if (!form) {
+  if (notFound || !form) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Card className="max-w-md">
-          <CardContent className="py-8 text-center">
-            <h2 className="text-xl font-semibold text-slate-900 mb-2">Form Not Found</h2>
-            <p className="text-slate-600">This form is not available.</p>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 max-w-md text-center">
+          <div className="text-5xl mb-4">📋</div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Form not found</h2>
+          <p className="text-gray-500">This form doesn't exist or is no longer available.</p>
+        </div>
       </div>
     );
   }
 
-  const requiredFieldsCount = form.data_fields.filter((f: any) => f.required).length;
-  const showProgress = !completed && messages.length > 0 && requiredFieldsCount > 0;
+  const config = form.published_config;
+  const sortedQuestions = [...config.questions].sort((a, b) => a.order - b.order);
+
+  if (phase === 'welcome') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 max-w-lg w-full text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-3">{config.welcomeTitle || form.name}</h1>
+          {config.welcomeMessage && (
+            <p className="text-gray-600 mb-6 whitespace-pre-wrap">{config.welcomeMessage}</p>
+          )}
+          <button
+            onClick={() => setPhase('form')}
+            className="inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            {config.welcomeCta || 'Start'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === 'end') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 max-w-lg w-full text-center">
+          <div className="text-5xl mb-4">✅</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">Thank you!</h2>
+          <p className="text-gray-600 whitespace-pre-wrap">{config.endMessage || 'Your response has been recorded.'}</p>
+          {config.endRedirectEnabled && config.endRedirectUrl && (
+            <p className="text-gray-400 text-sm mt-4">Redirecting in a few seconds...</p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-6">
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">{form.name}</h1>
-            {showProgress && (
-              <div className="max-w-md mx-auto">
-                <div className="flex items-center justify-between text-sm text-slate-600 mb-2">
-                  <span>
-                    {progress.total > 0
-                      ? `Step ${Math.min(progress.collected + 1, progress.total)} of ${progress.total}`
-                      : 'In Progress'
-                    }
-                  </span>
-                  <span className="font-medium">{progress.percentage}%</span>
-                </div>
-                <div className="w-full bg-slate-200 rounded-full h-2.5">
-                  <div
-                    className="bg-blue-600 h-2.5 rounded-full transition-all duration-500 ease-out"
-                    style={{ width: `${progress.percentage}%` }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
+    <div className="min-h-screen bg-gray-50 py-8 px-4">
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sm:p-8">
+          <h1 className="text-2xl font-bold text-gray-900 mb-6">{form.name}</h1>
 
-          <Card className="mb-6">
-            <CardContent className="p-6">
-              <div className="space-y-4 max-h-[500px] overflow-y-auto">
-                {messages.length === 0 && !loading && (
-                  <div className="text-center py-8 text-slate-500">
-                    <MessageSquare className="w-12 h-12 mx-auto mb-3 text-slate-400" />
-                    <p className="text-sm">Starting conversation...</p>
-                  </div>
-                )}
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[80%] rounded-lg px-4 py-3 ${
-                        message.role === 'user'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-slate-100 text-slate-900'
-                      }`}
-                    >
-                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                    </div>
-                  </div>
-                ))}
-                {sending && (
-                  <div className="flex justify-start">
-                    <div className="bg-slate-100 rounded-lg px-4 py-3">
-                      <div className="flex gap-1">
-                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
-                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce delay-100" />
-                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce delay-200" />
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-            </CardContent>
-          </Card>
-
-          {completed ? (
-            <Card className="border-green-200 bg-green-50">
-              <CardContent className="py-12 text-center">
-                <div className="relative inline-block mb-4">
-                  <CheckCircle2 className="w-16 h-16 text-green-600 mx-auto" />
-                  <Sparkles className="w-6 h-6 text-green-500 absolute -top-1 -right-1 animate-pulse" />
-                </div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-3">
-                  All Set!
-                </h2>
-                <p className="text-slate-700 text-lg mb-2">
-                  Thank you for completing the form.
-                </p>
-                <p className="text-slate-600 text-sm">
-                  Your responses have been received and saved.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <form onSubmit={sendMessage} className="flex gap-2">
-              <Input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Type your response..."
-                disabled={sending}
-                className="flex-1"
-              />
-              <Button type="submit" disabled={sending || !input.trim()}>
-                <Send className="w-4 h-4" />
-              </Button>
-            </form>
+          {errors._form && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {errors._form}
+            </div>
           )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {sortedQuestions.map((question) => (
+              <div key={question.id} className="space-y-1.5">
+                <label className="block text-sm font-medium text-gray-900">
+                  {question.label}
+                  {question.required && <span className="text-red-500 ml-1">(required)</span>}
+                </label>
+
+                <QuestionInput
+                  question={question}
+                  value={answers[question.key]}
+                  onChange={(val) => updateAnswer(question.key, val)}
+                  onToggleMulti={(val) => toggleMultiSelect(question.key, val)}
+                />
+
+                {question.helpText && (
+                  <p className="text-xs text-gray-400">{question.helpText}</p>
+                )}
+
+                {errors[question.key] && (
+                  <p className="text-xs text-red-500">{errors[question.key]}</p>
+                )}
+              </div>
+            ))}
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            >
+              {submitting ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Submitting...
+                </>
+              ) : (
+                'Submit'
+              )}
+            </button>
+          </form>
         </div>
       </div>
     </div>
   );
+}
+
+function QuestionInput({
+  question,
+  value,
+  onChange,
+  onToggleMulti,
+}: {
+  question: Question;
+  value: any;
+  onChange: (val: any) => void;
+  onToggleMulti: (val: string) => void;
+}) {
+  const inputClasses = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent';
+
+  switch (question.type) {
+    case 'short_text':
+      return (
+        <input
+          type="text"
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={question.placeholder}
+          className={inputClasses}
+        />
+      );
+
+    case 'long_text':
+      return (
+        <textarea
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={question.placeholder}
+          rows={4}
+          className={inputClasses + ' resize-y'}
+        />
+      );
+
+    case 'email':
+      return (
+        <input
+          type="email"
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={question.placeholder || 'email@example.com'}
+          className={inputClasses}
+        />
+      );
+
+    case 'phone':
+      return (
+        <input
+          type="tel"
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={question.placeholder || '+1 (555) 000-0000'}
+          className={inputClasses}
+        />
+      );
+
+    case 'number':
+      return (
+        <input
+          type="number"
+          value={value ?? ''}
+          onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))}
+          placeholder={question.placeholder}
+          className={inputClasses}
+        />
+      );
+
+    case 'date':
+      return (
+        <input
+          type="date"
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          className={inputClasses}
+        />
+      );
+
+    case 'time':
+      return (
+        <input
+          type="time"
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          className={inputClasses}
+        />
+      );
+
+    case 'dropdown':
+      return (
+        <select
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          className={inputClasses}
+        >
+          <option value="">{question.placeholder || 'Select an option'}</option>
+          {(question.options || []).map((opt) => (
+            <option key={opt.id} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      );
+
+    case 'multi_select':
+      return (
+        <div className="space-y-2">
+          {(question.options || []).map((opt) => (
+            <label key={opt.id} className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={(value || []).includes(opt.value)}
+                onChange={() => onToggleMulti(opt.value)}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">{opt.label}</span>
+            </label>
+          ))}
+        </div>
+      );
+
+    case 'checkbox':
+      return (
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={value || false}
+            onChange={(e) => onChange(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span className="text-sm text-gray-700">{question.placeholder || 'Yes'}</span>
+        </label>
+      );
+
+    case 'yes_no':
+      return (
+        <div className="flex gap-4">
+          {['Yes', 'No'].map((opt) => (
+            <label key={opt} className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name={`q_${question.id}`}
+                checked={value === opt}
+                onChange={() => onChange(opt)}
+                className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">{opt}</span>
+            </label>
+          ))}
+        </div>
+      );
+
+    case 'rating':
+      return (
+        <div className="flex gap-1">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <button
+              key={star}
+              type="button"
+              onClick={() => onChange(star)}
+              className="focus:outline-none transition-colors"
+              aria-label={`${star} star${star > 1 ? 's' : ''}`}
+            >
+              <svg
+                className={`w-8 h-8 ${star <= (value || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              >
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              </svg>
+            </button>
+          ))}
+        </div>
+      );
+
+    case 'file_upload':
+      return (
+        <input
+          type="file"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onChange(file.name);
+          }}
+          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+        />
+      );
+
+    case 'consent':
+      return (
+        <label className="flex items-start gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={value || false}
+            onChange={(e) => onChange(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-0.5"
+          />
+          <span className="text-sm text-gray-700">{question.label}</span>
+        </label>
+      );
+
+    default:
+      return (
+        <input
+          type="text"
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={question.placeholder}
+          className={inputClasses}
+        />
+      );
+  }
 }

@@ -1,34 +1,24 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Download, Eye, MessageSquare, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Download, ChevronDown, ChevronUp, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import type { Question, FormConfig } from '@/lib/types';
 
-type Response = {
+interface Submission {
   id: string;
-  conversation_id: string;
-  extracted_data: any;
-  completed_at: string;
-};
-
-type Message = {
-  role: string;
-  content: string;
+  form_id: string;
+  answers: Record<string, any>;
+  metadata: Record<string, any>;
   created_at: string;
-};
+}
 
 export default function ResultsPage() {
   const params = useParams();
@@ -38,11 +28,10 @@ export default function ResultsPage() {
   const { toast } = useToast();
 
   const [formName, setFormName] = useState('');
-  const [responses, setResponses] = useState<Response[]>([]);
+  const [config, setConfig] = useState<FormConfig | null>(null);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loadingData, setLoadingData] = useState(true);
-  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
-  const [conversationMessages, setConversationMessages] = useState<Message[]>([]);
-  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -58,25 +47,26 @@ export default function ResultsPage() {
 
   const loadResults = async () => {
     try {
-      const [formResult, responsesResult] = await Promise.all([
+      const [formResult, submissionsResult] = await Promise.all([
         supabase
           .from('forms')
-          .select('name')
+          .select('name, current_config')
           .eq('id', formId)
           .eq('user_id', user!.id)
           .single(),
         supabase
-          .from('responses')
+          .from('submissions')
           .select('*')
           .eq('form_id', formId)
-          .order('completed_at', { ascending: false }),
+          .order('created_at', { ascending: false }),
       ]);
 
       if (formResult.error) throw formResult.error;
-      if (responsesResult.error) throw responsesResult.error;
+      if (submissionsResult.error) throw submissionsResult.error;
 
       setFormName(formResult.data.name);
-      setResponses(responsesResult.data || []);
+      setConfig(formResult.data.current_config);
+      setSubmissions(submissionsResult.data || []);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -88,74 +78,31 @@ export default function ResultsPage() {
     }
   };
 
-  const viewConversation = async (conversationId: string) => {
-    setSelectedConversation(conversationId);
-    setLoadingMessages(true);
-
-    try {
-      const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-
-      setConversationMessages(data || []);
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load conversation',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoadingMessages(false);
-    }
-  };
-
-  const exportToCSV = () => {
-    if (responses.length === 0) {
-      toast({
-        title: 'No Data',
-        description: 'There are no conversations to export',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const allKeys = new Set<string>();
-    responses.forEach((response) => {
-      Object.keys(response.extracted_data || {}).forEach((key) => allKeys.add(key));
-    });
-
-    const headers = ['Completed At', ...Array.from(allKeys)];
-    const rows = responses.map((response) => {
-      const row = [new Date(response.completed_at).toLocaleString()];
-      allKeys.forEach((key) => {
-        row.push(response.extracted_data?.[key] || '');
-      });
-      return row;
-    });
-
-    const csvContent = [
-      headers.join(','),
-      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
+  const exportCSV = () => {
+    if (!config || submissions.length === 0) return;
+    const questions = config.questions;
+    const headers = ['#', 'Submitted', ...questions.map(q => q.label || q.key)];
+    const rows = submissions.map((s, i) => [
+      i + 1,
+      new Date(s.created_at).toLocaleString(),
+      ...questions.map(q => {
+        const val = s.answers[q.key];
+        if (Array.isArray(val)) return val.join(', ');
+        return String(val ?? '');
+      })
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${formName.replace(/\s+/g, '-')}-conversations-${Date.now()}.csv`;
-    document.body.appendChild(a);
+    a.download = `${formName}-submissions.csv`;
     a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+    URL.revokeObjectURL(url);
+  };
 
-    toast({
-      title: 'Success',
-      description: 'Conversations exported to CSV',
-    });
+  const toggleRow = (id: string) => {
+    setExpandedRow(expandedRow === id ? null : id);
   };
 
   if (loading || loadingData) {
@@ -169,10 +116,8 @@ export default function ResultsPage() {
     );
   }
 
-  const allDataKeys = new Set<string>();
-  responses.forEach((response) => {
-    Object.keys(response.extracted_data || {}).forEach((key) => allDataKeys.add(key));
-  });
+  const questions = config?.questions || [];
+  const previewQuestions = questions.slice(0, 4);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -188,11 +133,16 @@ export default function ResultsPage() {
                 <ArrowLeft className="w-4 h-4" />
               </Button>
               <div>
-                <h1 className="text-2xl font-bold text-slate-900">{formName} - Results</h1>
-                <p className="text-sm text-slate-600">{responses.length} conversations</p>
+                <h1 className="text-2xl font-bold text-slate-900">{formName}</h1>
+                <div className="flex items-center gap-2 mt-1">
+                  <Users className="w-4 h-4 text-slate-400" />
+                  <span className="text-sm text-slate-600">
+                    {submissions.length} {submissions.length === 1 ? 'submission' : 'submissions'}
+                  </span>
+                </div>
               </div>
             </div>
-            <Button onClick={exportToCSV} disabled={responses.length === 0}>
+            <Button onClick={exportCSV} disabled={submissions.length === 0}>
               <Download className="w-4 h-4 mr-2" />
               Export CSV
             </Button>
@@ -201,73 +151,116 @@ export default function ResultsPage() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {responses.length === 0 ? (
+        {submissions.length === 0 ? (
           <Card className="border-dashed border-2 border-slate-200 bg-white">
             <CardContent className="py-20">
               <div className="text-center max-w-sm mx-auto">
                 <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-5">
-                  <MessageSquare className="w-7 h-7 text-slate-400" />
+                  <Users className="w-7 h-7 text-slate-400" />
                 </div>
                 <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                  Responses will show up here
+                  No submissions yet
                 </h3>
-                <p className="text-sm text-slate-500 mb-6">
-                  No one has completed this conversation yet — share the link to start collecting responses.
+                <p className="text-sm text-slate-500">
+                  Share your form to start collecting submissions. They will appear here as they come in.
                 </p>
-                <Button
-                  onClick={() => {
-                    const url = `${window.location.origin}/f/${formId}`;
-                    navigator.clipboard.writeText(url);
-                    toast({ title: 'Copied', description: 'Form link copied to clipboard' });
-                  }}
-                >
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Copy share link
-                </Button>
               </div>
             </CardContent>
           </Card>
         ) : (
           <Card>
             <CardHeader>
-              <CardTitle>Completed Conversations</CardTitle>
-              <CardDescription>View and analyze all completed conversations</CardDescription>
+              <CardTitle>Submissions</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Completed</TableHead>
-                      {Array.from(allDataKeys).map((key) => (
-                        <TableHead key={key}>{key}</TableHead>
+                      <TableHead className="w-12">#</TableHead>
+                      <TableHead>Submitted</TableHead>
+                      {previewQuestions.map((q) => (
+                        <TableHead key={q.id}>{q.label || q.key}</TableHead>
                       ))}
-                      <TableHead>Actions</TableHead>
+                      <TableHead className="w-12"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {responses.map((response) => (
-                      <TableRow key={response.id}>
-                        <TableCell className="whitespace-nowrap">
-                          {new Date(response.completed_at).toLocaleDateString()}{' '}
-                          {new Date(response.completed_at).toLocaleTimeString()}
-                        </TableCell>
-                        {Array.from(allDataKeys).map((key) => (
-                          <TableCell key={key}>
-                            {response.extracted_data?.[key] || '-'}
+                    {submissions.map((submission, index) => (
+                      <Fragment key={submission.id}>
+                        <TableRow
+                          className="cursor-pointer hover:bg-slate-50"
+                          onClick={() => toggleRow(submission.id)}
+                        >
+                          <TableCell className="font-medium text-slate-500">
+                            {index + 1}
                           </TableCell>
-                        ))}
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => viewConversation(response.conversation_id)}
-                          >
-                            <Eye className="w-4 h-4 mr-2" />
-                            View Chat
-                          </Button>
-                        </TableCell>
-                      </TableRow>
+                          <TableCell className="whitespace-nowrap">
+                            {new Date(submission.created_at).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                              hour: 'numeric',
+                              minute: '2-digit',
+                            })}
+                          </TableCell>
+                          {previewQuestions.map((q) => {
+                            const val = submission.answers[q.key];
+                            const display = Array.isArray(val)
+                              ? val.join(', ')
+                              : String(val ?? '—');
+                            return (
+                              <TableCell key={q.id} className="max-w-[200px] truncate">
+                                {display}
+                              </TableCell>
+                            );
+                          })}
+                          <TableCell>
+                            {expandedRow === submission.id ? (
+                              <ChevronUp className="w-4 h-4 text-slate-400" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-slate-400" />
+                            )}
+                          </TableCell>
+                        </TableRow>
+                        {expandedRow === submission.id && (
+                          <TableRow key={`${submission.id}-expanded`}>
+                            <TableCell colSpan={previewQuestions.length + 3} className="bg-slate-50 p-0">
+                              <div className="p-6">
+                                <h4 className="text-sm font-semibold text-slate-700 mb-4">All Answers</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {questions.map((q) => {
+                                    const val = submission.answers[q.key];
+                                    const display = Array.isArray(val)
+                                      ? val.join(', ')
+                                      : String(val ?? '—');
+                                    return (
+                                      <div key={q.id} className="space-y-1">
+                                        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                                          {q.label || q.key}
+                                        </p>
+                                        <p className="text-sm text-slate-900">{display}</p>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                {submission.metadata && Object.keys(submission.metadata).length > 0 && (
+                                  <div className="mt-4 pt-4 border-t border-slate-200">
+                                    <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Metadata</h4>
+                                    <div className="flex flex-wrap gap-2">
+                                      {Object.entries(submission.metadata).map(([key, value]) => (
+                                        <Badge key={key} variant="secondary" className="text-xs">
+                                          {key}: {String(value)}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </Fragment>
                     ))}
                   </TableBody>
                 </Table>
@@ -276,40 +269,6 @@ export default function ResultsPage() {
           </Card>
         )}
       </main>
-
-      <Dialog open={!!selectedConversation} onOpenChange={() => setSelectedConversation(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Conversation History</DialogTitle>
-            <DialogDescription>Complete conversation transcript</DialogDescription>
-          </DialogHeader>
-          {loadingMessages ? (
-            <div className="py-8 text-center">Loading...</div>
-          ) : (
-            <div className="space-y-4">
-              {conversationMessages.map((message, index) => (
-                <div
-                  key={index}
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[80%] rounded-lg px-4 py-3 ${
-                      message.role === 'user'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-slate-100 text-slate-900'
-                    }`}
-                  >
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                    <p className="text-xs mt-1 opacity-70">
-                      {new Date(message.created_at).toLocaleTimeString()}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
