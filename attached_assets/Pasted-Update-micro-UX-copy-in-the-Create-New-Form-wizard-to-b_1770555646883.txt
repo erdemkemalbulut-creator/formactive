@@ -1,0 +1,71 @@
+Update micro-UX copy in the “Create New Form” wizard to be travel-industry universal (not only “trip requests”). It should work equally well for: trips, group travel, events/retreats, weddings, corporate travel, concierge requests, partnerships, venue/hotel inquiries, etc.
+
+Scope constraints:
+
+* Text-only changes (labels, helper text, empty states, button text, preview headings, toast copy).
+* Do NOT change layout, schema, database calls, routes, or step logic.
+* Keep existing split-pane builder and deterministic preview behavior.
+
+Voice:
+
+* Travel-professional, warm and confident (advisor/organizer vibe).
+* Avoid narrow words like “trip request”, “getaway”, “destination” in global UI unless the selected template specifically uses them.
+* Prefer neutral terms: “request”, “inquiry”, “experience”, “event”, “plan”, “details”, “preferences”.
+
+Apply these copy adjustments (or closest equivalents if strings differ):
+
+Global / Stepper
+
+* “Create a conversational intake” -> “Create a conversational request”
+* Global subtitle -> “Collect the right details through a guided conversation — for trips, groups, events, and more.”
+* Wherever it says “client preview” -> “Guest preview” (more universal for travel)
+
+Step 1 (Basics)
+
+* “Internal name” helper -> “Only you see this in your dashboard.”
+* If there’s any “Trip request” default name -> change default to “New request” (or “New inquiry”) unless a template explicitly sets it.
+* Disabled Next hint -> “Add an internal name to continue.”
+
+Step 2 (Questions)
+
+* Title -> “What should we ask?”
+* Subtext -> “We’ll ask these one at a time — like a quick consultation.”
+* Question placeholder -> “e.g. What are you planning?”
+* Helper text helper -> “Shown under the question to guide the guest.”
+* Example answer helper -> “Used only for the preview.”
+* “Must be answered” keep.
+* Preview header -> “Live guest preview”
+* Preview subtext -> “This is exactly what your guest will see.”
+
+Step 3 (Tone & branding)
+
+* Title -> “Set your tone & branding”
+* Subtext -> “Make the conversation feel like your service.”
+* Company name helper -> “Shown to guests during the conversation.”
+* Contact email helper -> “Guests can use this if they need help.”
+* “Brand color” helper -> “Used for buttons and highlights.”
+* Logo helper -> “Optional — displayed at the top of the conversation.”
+* Tone card descriptions:
+
+  * Professional -> “Clear, confident, consultation-style”
+  * Friendly (Recommended badge) -> “Warm, welcoming, easy to answer”
+  * Luxury -> “Polished, elevated, premium experience”
+
+Step 4 (Review)
+
+* Title -> “Ready to share?”
+* Subtext -> “Quick check before you send it out.”
+* CTA -> “Create request” (instead of “Create intake”)
+* Loading -> “Creating…”
+
+Also update any landing/preview greeting lines inside `components/chat-preview.tsx` (or equivalent) to avoid trip-specific language:
+
+* Replace “plan your perfect getaway” / “Where are you dreaming of going?” with something neutral like:
+  “Hi! I’ll ask a few quick questions so we can help you with your request.”
+  First question should mirror the selected template’s first question.
+
+Acceptance:
+
+* TypeScript passes.
+* Only copy changes.
+* Summarize which strings were changed and where.

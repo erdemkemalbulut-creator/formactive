@@ -48,14 +48,16 @@ type Preset = {
   icon: React.ComponentType<{ className?: string }>;
   dataFields: DataField[];
   defaultRules: string;
+  tags?: string[];
 };
 
 const presets: Preset[] = [
   {
     id: 'trip-request',
-    name: 'Trip request',
-    description: 'Capture trip details for individual travelers',
+    name: 'General travel inquiry',
+    description: 'A flexible starting point for trips, events, concierge, and more.',
     icon: Plane,
+    tags: ['Trip', 'Event', 'Concierge', 'Other'],
     dataFields: [
       { name: 'traveler_name', type: 'text', required: true, label: 'Traveler name', helpText: 'Full name of the traveler', exampleAnswer: 'John Smith' },
       { name: 'destination', type: 'text', required: true, label: 'Destination', helpText: 'Where they want to travel', exampleAnswer: 'Santorini, Greece' },
@@ -67,9 +69,10 @@ const presets: Preset[] = [
   },
   {
     id: 'group-itinerary',
-    name: 'Group itinerary',
-    description: 'Plan trips for groups and families',
+    name: 'Group / multi-person planning',
+    description: 'Ideal for groups, retreats, weddings, and corporate travel.',
     icon: Users,
+    tags: ['Group', 'Retreat', 'Wedding', 'Corporate'],
     dataFields: [
       { name: 'organizer_name', type: 'text', required: true, label: 'Organizer name', helpText: 'Name of the group organizer', exampleAnswer: 'Sarah Chen' },
       { name: 'group_size', type: 'number', required: true, label: 'Group size', helpText: 'Total number of travelers', exampleAnswer: '8' },
@@ -83,9 +86,10 @@ const presets: Preset[] = [
   },
   {
     id: 'luxury-brief',
-    name: 'Luxury travel brief',
-    description: 'High-end travel consultation and planning',
+    name: 'Premium / VIP request',
+    description: 'More detail for high-touch, premium service.',
     icon: Sparkles,
+    tags: ['Luxury', 'Concierge', 'High-touch'],
     dataFields: [
       { name: 'client_name', type: 'text', required: true, label: 'Client name', helpText: 'Full name of the client', exampleAnswer: 'Alexandra Monroe' },
       { name: 'destination_preferences', type: 'text', required: true, label: 'Destination preferences', helpText: 'Desired destinations or regions', exampleAnswer: 'Maldives or Seychelles' },
@@ -100,9 +104,10 @@ const presets: Preset[] = [
   },
   {
     id: 'blank',
-    name: 'Blank form',
-    description: 'Start from scratch with no preset fields',
+    name: 'Start from scratch',
+    description: 'Build a custom conversation from an empty template.',
     icon: FileText,
+    tags: ['Custom'],
     dataFields: [
       { name: 'name', type: 'text', required: true, label: 'Name', helpText: 'Customer name', exampleAnswer: 'Jane Doe' },
       { name: 'email', type: 'email', required: true, label: 'Email', helpText: 'Contact email', exampleAnswer: 'jane@example.com' },
@@ -356,9 +361,8 @@ export default function NewFormPage() {
         {step === 1 && (
           <div className="max-w-3xl mx-auto">
             <div className="mb-8">
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">Start from a preset</h2>
-              <p className="text-slate-600">Choose a template designed for your use case</p>
-              <p className="text-sm text-slate-500 mt-1">Collect the right details through a guided conversation — for trips, groups, events, and more.</p>
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">Choose a starting point</h2>
+              <p className="text-slate-600">Pick a template to start fast — you can customize everything next.</p>
             </div>
 
             <div className="space-y-4 mb-6">
@@ -380,6 +384,15 @@ export default function NewFormPage() {
                       <div className="flex-1">
                         <h3 className="font-semibold text-slate-900 mb-1">{preset.name}</h3>
                         <p className="text-sm text-slate-600 mb-2">{preset.description}</p>
+                        {preset.tags && preset.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mb-2">
+                            {preset.tags.map((tag) => (
+                              <span key={tag} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                         <p className="text-xs text-slate-500">
                           Includes: {requiredCount} required field{requiredCount !== 1 ? 's' : ''}
                         </p>
@@ -400,20 +413,42 @@ export default function NewFormPage() {
             <div className="border-t border-slate-200 pt-6">
               {presets.slice(3).map((preset) => {
                 const Icon = preset.icon;
+                const requiredCount = preset.dataFields.filter((f) => f.required).length;
                 return (
                   <Card
                     key={preset.id}
-                    className={`p-4 cursor-pointer transition-all hover:border-slate-300 ${
-                      selectedPreset?.id === preset.id ? 'border-2 border-slate-400 bg-slate-50' : 'border-slate-200 bg-white'
+                    className={`p-6 cursor-pointer transition-all hover:shadow-md ${
+                      selectedPreset?.id === preset.id ? 'border-2 border-slate-900 bg-slate-50' : 'border-slate-200'
                     }`}
                     onClick={() => handlePresetSelect(preset)}
                   >
-                    <div className="flex items-center gap-3">
-                      <Icon className="w-4 h-4 text-slate-500" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-slate-700">{preset.name}</p>
+                    <div className="flex items-start gap-4">
+                      <div className={`p-3 rounded-lg ${selectedPreset?.id === preset.id ? 'bg-slate-900' : 'bg-slate-100'}`}>
+                        <Icon className={`w-6 h-6 ${selectedPreset?.id === preset.id ? 'text-white' : 'text-slate-700'}`} />
                       </div>
-                      {selectedPreset?.id === preset.id && <Check className="w-4 h-4 text-slate-600" />}
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-slate-900 mb-1">{preset.name}</h3>
+                        <p className="text-sm text-slate-600 mb-2">{preset.description}</p>
+                        {preset.tags && preset.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mb-2">
+                            {preset.tags.map((tag) => (
+                              <span key={tag} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <p className="text-xs text-slate-500">
+                          Includes: {requiredCount} required field{requiredCount !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                      {selectedPreset?.id === preset.id && (
+                        <div className="flex-shrink-0">
+                          <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center">
+                            <Check className="w-4 h-4 text-white" />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </Card>
                 );
