@@ -1,0 +1,112 @@
+You are building a web app page that functions as a “Conversational Form Builder” editor (similar to Formless by Typeform). The page is a single-workspace editor for one conversation project, combining: (1) a rules/prompt editor for an AI conversation, (2) welcome/end screen configuration, (3) data extraction schema generation, (4) visuals + training panels, and (5) publish/share/test controls.
+
+## Overall layout (UX + IA)
+
+* Use a **dashboard shell** with a **top navigation header** and a **left/secondary nav** or tab bar.
+* Primary navigation items: **Editor**, **Conversations**, and an **Analytics** link for the current project.
+* The main view is a **two-column layout**:
+
+  * **Left column (configuration panels)**: stacked collapsible sections for setup.
+  * **Right column (live preview)**: a device-like preview of the conversational experience with a “Test instructions” button and a small “Runs on…” branding footer.
+
+## Key sections and functionality
+
+### 1) “Instruct the AI” (Prompt/Rules Editor)
+
+* A prominent section labeled **“Instruct the AI”** with helper text: “Define in detail & in plain language the rules of the conversation…”
+* Include:
+
+  * A **multiline textarea** for the AI instructions (hard character limit visible, e.g., “1500 characters left”).
+  * A **“Quick start prompts”** button that inserts or suggests templates.
+* Technical expectations:
+
+  * Store prompt text in state, autosave with debounce.
+  * Show remaining characters and prevent overflow.
+  * Support versioning or draft state indicator (optional).
+
+### 2) “Welcome & end screen” configuration
+
+* A section with a toggle: **“Your Welcome Screen is currently hidden”** + **Enable** button.
+* Fields:
+
+  * **Title & welcome statement**: one single-line input (title) + one multiline textarea (welcome message) with character counter (e.g., 250).
+  * **Language selector** (e.g., 🇬🇧 en) dropdown to localize the welcome content.
+  * **Call to action** input for the welcome button label.
+  * **End screen redirect button** with a checkbox toggle and optional redirect URL field when enabled.
+* UX:
+
+  * Disabled/hidden state clearly shown.
+  * When enabled, fields animate in and become editable.
+
+### 3) Data extraction (Schema)
+
+* A section labeled **“Data extraction”** showing “0 items” when empty.
+* Explanation: auto-generated data schema based on the “Instruct the AI” prompt.
+* Include:
+
+  * A JSON-like schema editor area (monospace) showing `{}` by default.
+  * An **“Auto Generate”** button that creates a schema from the prompt (simulate with a mock API).
+* Technical:
+
+  * Schema stored as JSON, validated with inline errors.
+  * Auto-generate calls an endpoint and updates the schema editor.
+  * Extracted items list is derived from schema keys.
+
+### 4) Visuals panel
+
+* Collapsible section **“Visuals”** with status (“Open”).
+* Placeholder for theme settings:
+
+  * Colors, avatar/illustration, background, typography, maybe a logo upload.
+* Technical:
+
+  * Persist settings per conversation project.
+  * Preview updates live.
+
+### 5) “Train the AI” panel
+
+* Collapsible section **“Train the AI”** with status (“Open”).
+* Purpose: upload examples/FAQs, add knowledge snippets, or test conversation behavior.
+* Technical:
+
+  * Provide a simple dataset list with add/edit/remove.
+  * Mock endpoints for training data persistence.
+
+## Top-right actions (primary controls)
+
+* A primary CTA button: **“Publish formless”** that publishes the current project.
+* Below/near it: a shareable public URL (e.g., [https://formless.ai/c/](https://formless.ai/c/)<id>).
+* Buttons for **Share** and **Refresh**; include a small usage badge like “1x”.
+
+## Right-side live preview
+
+* A preview card showing:
+
+  * The current welcome title (“Hello hiiiii” in the example).
+  * A **“Test instructions”** button that runs a test chat session using the current prompt + settings.
+  * Branding footer “Runs on… Formless”.
+* Technical:
+
+  * Preview reads from the same state store as the editor.
+  * “Test instructions” triggers a simulated chat run (mock streaming responses).
+
+## Technical implementation requirements
+
+* Frontend: React + TypeScript, modern component system.
+* State: central store per conversation (e.g., Zustand/Redux) with autosave debounce.
+* Backend: REST endpoints (or server actions) for:
+
+  * GET/PUT conversation config (prompt, welcome/end settings, visuals, training items)
+  * POST generate-schema from prompt
+  * POST publish
+  * GET public link metadata
+* Validation:
+
+  * Character counters enforced client-side.
+  * JSON schema validation with user-friendly errors.
+* UX polish:
+
+  * Collapsible sections with clear headings and helper text.
+  * Disabled states + tooltips for unavailable items.
+  * Toast notifications for save/publish/generate actions.
+  * Loading spinners on schema generation and publish.

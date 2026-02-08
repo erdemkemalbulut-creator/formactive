@@ -4,7 +4,8 @@
 FormActive is a Next.js 13 application that helps travel and service businesses collect the right details through structured, conversational intake. It replaces long forms with guided conversations. Uses Supabase for authentication and database, with optional OpenAI integration for AI-powered responses.
 
 ## Recent Changes
-- 2026-02-08: Builder UX polish — browser-chrome header with URL bar/share/refresh on right pane, numbered section headers in Steps 2 & 3, Welcome/Completion message editors in Step 2, endMessage surfaced in ChatPreview, removed noisy blue info box
+- 2026-02-08: Right pane header redesign — replaced browser-chrome with "Live form · Draft" status label, gray/green dot, always-visible URL (formactive.io/c/{slug}), tooltip for drafts, sticky header with hairline divider, Share button copies link with toast, Refresh re-renders form; removed word "Preview" from all user-facing text
+- 2026-02-08: Builder UX polish — numbered section headers in Steps 2 & 3, Welcome/Completion message editors in Step 2, endMessage surfaced in ChatPreview, removed noisy blue info box
 - 2026-02-08: Removed Google sign-in — stripped OAuth button, handler, "or" divider from login form; removed `signInWithGoogle` from auth context; email is now the only sign-in method
 - 2026-02-08: Functional UX pass — redesigned login/signup form, smart post-login routing (empty → onboarding, forms → list), richer dashboard empty state with 3-step explainer, pulsing "Live preview" indicator in builder, AuthActions nav component with avatar dropdown
 - 2026-02-08: Rebrand — "FormFlow" → "FormActive"; updated hero copy, tagline, CTAs, metadata, footer, and all dashboard headers

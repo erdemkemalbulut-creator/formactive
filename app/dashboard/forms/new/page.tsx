@@ -32,7 +32,7 @@ import {
   Plus,
   RefreshCw,
   Share2,
-  Globe,
+  Link2,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
@@ -297,42 +297,71 @@ export default function NewFormPage() {
   const stepLabels = ['Start', 'Questions', 'Tone & branding', 'Review'];
 
   const formSlugPreview = formName ? generateSlug(formName) : 'your-form';
+  const formUrl = `https://formactive.io/c/${formSlugPreview}`;
+  const isDraft = true;
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(formUrl).then(() => {
+      toast({ title: 'Link copied', description: formUrl });
+    }).catch(() => {
+      toast({ title: 'Link copied', description: formUrl });
+    });
+  };
 
   const previewPane = (
-    <div className="flex flex-col lg:sticky lg:top-4">
-      <div className="rounded-t-lg border border-b-0 border-slate-200 bg-white">
-        <div className="flex items-center justify-between px-3 py-2">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 rounded-md flex-1 min-w-0 border border-slate-100">
-              <Globe className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span className="text-xs text-slate-500 truncate font-mono">
-                formactive.app/f/{formSlugPreview}
-              </span>
+    <div className="flex flex-col h-full">
+      <div className="sticky top-0 z-10 bg-white rounded-t-xl border border-b-0 border-slate-200">
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isDraft ? 'bg-slate-400' : 'bg-emerald-500'}`} />
+                <span className="text-xs font-medium text-slate-600">
+                  Live form · {isDraft ? 'Draft' : 'Published'}
+                </span>
+              </div>
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <a
+                      href={formUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex items-center gap-1 text-xs text-slate-400 hover:text-blue-600 transition-colors font-mono truncate"
+                    >
+                      <Link2 className="w-3 h-3 shrink-0" />
+                      <span className="truncate">{formUrl}</span>
+                    </a>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">
+                    {isDraft ? 'Draft link — visible only to you' : 'Opens form in a new tab'}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div className="flex items-center gap-1 ml-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setPreviewKey((k) => k + 1)}
+                className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                title="Refresh"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-900 text-white text-xs font-medium hover:bg-slate-800 transition-colors"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                Share
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-1 ml-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => setPreviewKey((k) => k + 1)}
-              className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors"
-              title="Refresh preview"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                toast({ title: 'Share', description: 'Publish your form first to get a shareable link.' });
-              }}
-              className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors"
-              title="Share"
-            >
-              <Share2 className="w-3.5 h-3.5" />
-            </button>
-          </div>
         </div>
+        <div className="border-t border-slate-100" />
       </div>
-      <div className="-mt-px">
+      <div className="flex-1">
         <ChatPreview
           key={previewKey}
           dataFields={dataFields}
@@ -358,7 +387,7 @@ export default function NewFormPage() {
       >
         <span className="flex items-center gap-2">
           <Eye className="w-4 h-4 text-slate-500" />
-          {mobilePreviewOpen ? 'Hide form preview' : 'Show form preview'}
+          {mobilePreviewOpen ? 'Hide live form' : 'Show live form'}
         </span>
         {mobilePreviewOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
       </button>
@@ -677,10 +706,10 @@ export default function NewFormPage() {
                             id={`example-${index}`}
                             value={field.exampleAnswer || ''}
                             onChange={(e) => handleFieldUpdate(index, 'exampleAnswer', e.target.value)}
-                            placeholder="Optional: show a sample answer for the preview."
+                            placeholder="Optional: show a sample answer in the live form."
                             className="mt-1.5"
                           />
-                          <p className="text-xs text-slate-500 mt-1">Used only for the preview.</p>
+                          <p className="text-xs text-slate-500 mt-1">Shown only in the editor view.</p>
                         </div>
                       </div>
                     )}
@@ -1112,7 +1141,7 @@ export default function NewFormPage() {
                     <Card className="p-6 bg-slate-50 border-slate-200">
                       <div className="flex items-center gap-2 mb-4">
                         <Eye className="w-4 h-4 text-slate-600" />
-                        <h3 className="font-semibold text-slate-900">Guest preview</h3>
+                        <h3 className="font-semibold text-slate-900">Guest experience</h3>
                       </div>
                       <ChatPreview
                         dataFields={dataFields}
