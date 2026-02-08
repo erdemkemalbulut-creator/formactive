@@ -1,0 +1,99 @@
+You are a senior full-stack engineer. I have an existing web app “FormActive” (form builder + live preview). I want to evolve it into an AI-powered conversational form builder.
+
+GOAL
+Create an “Intent-first Question Builder” where the form creator describes what they want to learn (e.g., “get their age”, “understand travel budget”, “ask for consent to contact”), and an LLM generates:
+1) the user-facing conversational wording,
+2) the best input type (short text, long text, yes/no, date, dropdown, rating, consent),
+3) extraction schema for structured data,
+4) follow-up questions ONLY if needed (clarifications),
+5) validation rules (required, min/max, formats),
+6) micro-transitions between questions (acknowledgements, short bridges).
+
+CORE CONCEPTS
+- Each “question” in the builder is actually a Conversation Node with:
+  - intent: string (creator’s goal)
+  - field_key: string (where extracted data goes)
+  - data_type: enum (string, number, boolean, date, email, phone, categorical, rating)
+  - ui_type: enum (short_text, long_text, yes_no, date, dropdown, multiselect, rating, consent, file_upload)
+  - user_prompt: string (conversational question shown to respondent)
+  - transition_before: string (short bridge message shown before question)
+  - required: boolean
+  - validation: object (regex, min/max, allowed_values, etc.)
+  - extraction: JSON schema describing what to extract from user’s reply
+  - followups: array of follow-up node templates with conditions (only ask when unclear)
+
+UI REQUIREMENTS
+A) Builder
+- Replace “Label” with “Intent” input (textarea): “In one sentence, what do you want from this question?”
+- Add optional controls:
+  - Tone: friendly / professional / luxury / playful
+  - Directness: casual ↔ precise
+  - Audience: optional string (e.g., “luxury travelers from EU”)
+- Add “Generate with AI” button that calls backend endpoint /api/ai/generate-node
+- Allow editing the generated user_prompt and transition_before manually.
+
+B) Live Preview (respondent view)
+- Render as a chat conversation:
+  - Welcome screen message
+  - transitions and prompts as chat bubbles
+  - input controls based on ui_type
+  - typing indicator (optional)
+- Support conditional follow-ups (if extraction confidence low or validation fails).
+- Store extracted structured answers in a JSON object keyed by field_key.
+
+C) Debug Preview (builder-only)
+- Toggle “AI debug” panel that shows:
+  - intent
+  - extracted values
+  - validation status
+  - why a follow-up was asked
+  - confidence score if available
+
+THEMING / CUSTOMIZATION
+Add a “Theme” section with:
+- logo upload + display
+- background: solid / gradient / image
+- font family
+- primary/secondary colors
+- button styles
+- chat bubble style (rounded, minimal)
+- allow custom CSS (advanced)
+Persist theme as JSON and apply to preview.
+
+CTA BUTTONS
+Support Conversation CTA nodes:
+- “Show CTA” node with:
+  - text
+  - link URL (allow templating with collected answers, e.g. https://site.com/book?name={{name}}&budget={{budget}})
+  - open in new tab
+- AI can recommend inserting a CTA at end based on form goal.
+
+LLM INTEGRATION
+- Use OpenAI (or a mock provider if key not available) via a single service file.
+- Implement /api/ai/generate-node:
+  Input: { intent, tone, directness, audience, existing_fields }
+  Output: a Conversation Node object exactly matching the schema above.
+- The LLM prompt MUST enforce JSON-only output and include schema.
+- Add server-side validation of the returned JSON; if invalid, retry once with repair prompt.
+
+DATA MODEL / STORAGE
+- Persist forms as:
+  { id, slug, welcome, nodes[], theme, createdAt, updatedAt }
+- Persist submissions as:
+  { formId, createdAt, answersJSON, transcript }
+Use a simple DB (sqlite/prisma) or file-based storage if needed.
+
+DELIVERABLES
+1) Updated database/schema/models.
+2) Builder UI changes + new “Intent” workflow.
+3) Conversational preview renderer + follow-up logic.
+4) Theme editor + applying styles in preview.
+5) CTA node support.
+6) Minimal tests or a demo form template.
+
+IMPLEMENTATION NOTES
+- Keep existing “Add question” list, but add “Generate with AI” flow.
+- Provide at least 3 example intents and generated nodes.
+- Make code clean and modular.
+
+Start by inspecting the current codebase and describing the file structure. Then implement incrementally with runnable commits.
