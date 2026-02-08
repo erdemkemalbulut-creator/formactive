@@ -29,12 +29,12 @@ function getGreeting(tone: string, companyName: string): string {
   const name = companyName || 'us';
   switch (tone) {
     case 'professional':
-      return `Thank you for reaching out to ${name}. I'll walk you through a few quick questions so we can start planning your trip.`;
+      return `Thank you for reaching out to ${name}. I'll walk you through a few quick questions so we can get started.`;
     case 'luxury':
       return `Welcome to ${name}. We're delighted to begin curating your experience. Let's start with a few details.`;
     case 'friendly':
     default:
-      return `Hi there! Welcome to ${name}. I'd love to help plan your perfect trip — let's get started!`;
+      return `Hi there! Welcome to ${name}. I'll ask a few quick questions so we can help you with your request — let's go!`;
   }
 }
 

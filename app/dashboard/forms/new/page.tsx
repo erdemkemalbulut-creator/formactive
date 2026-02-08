@@ -231,7 +231,7 @@ export default function NewFormPage() {
       const { error } = await supabase.from('forms').update({ is_published: true }).eq('id', createdFormId);
       if (error) throw error;
       setIsPublished(true);
-      toast({ title: 'You\'re live!', description: 'Your intake is ready to receive client responses.' });
+      toast({ title: 'You\'re live!', description: 'Your request is ready to receive responses.' });
     } catch (error: any) {
       toast({ title: 'Something went wrong', description: error.message, variant: 'destructive' });
     } finally {
@@ -273,9 +273,9 @@ export default function NewFormPage() {
     <div className="flex flex-col">
       <div className="flex items-center gap-1.5 mb-3">
         <Eye className="w-3.5 h-3.5 text-slate-400" />
-        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Live client preview</span>
+        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Live guest preview</span>
       </div>
-      <p className="text-xs text-slate-500 mb-2">This is exactly what your client will see.</p>
+      <p className="text-xs text-slate-500 mb-2">This is exactly what your guest will see.</p>
       <div className="lg:sticky lg:top-4">
         <ChatPreview
           dataFields={dataFields}
@@ -299,7 +299,7 @@ export default function NewFormPage() {
       >
         <span className="flex items-center gap-2">
           <Eye className="w-4 h-4 text-slate-400" />
-          {mobilePreviewOpen ? 'Hide preview' : 'Show chat preview'}
+          {mobilePreviewOpen ? 'Hide preview' : 'Show guest preview'}
         </span>
         {mobilePreviewOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
       </button>
@@ -322,7 +322,7 @@ export default function NewFormPage() {
                 Back
               </Button>
               <div>
-                <h1 className="text-xl font-bold text-slate-900">Create a conversational intake</h1>
+                <h1 className="text-xl font-bold text-slate-900">Create a conversational request</h1>
                 <p className="text-sm text-slate-600">Step {step} of 4 — {stepLabels[step - 1]}</p>
               </div>
             </div>
@@ -358,7 +358,7 @@ export default function NewFormPage() {
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-slate-900 mb-2">Start from a preset</h2>
               <p className="text-slate-600">Choose a template designed for your use case</p>
-              <p className="text-sm text-slate-500 mt-1">Collect trip details naturally — like a great first consultation.</p>
+              <p className="text-sm text-slate-500 mt-1">Collect the right details through a guided conversation — for trips, groups, events, and more.</p>
             </div>
 
             <div className="space-y-4 mb-6">
@@ -433,8 +433,8 @@ export default function NewFormPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div>
               <div className="mb-6">
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">What should we ask your client?</h2>
-                <p className="text-slate-600">We'll ask these one at a time — just like a quick consultation.</p>
+                <h2 className="text-2xl font-bold text-slate-900 mb-2">What should we ask?</h2>
+                <p className="text-slate-600">We'll ask these one at a time — like a quick consultation.</p>
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
@@ -483,7 +483,7 @@ export default function NewFormPage() {
                             value={field.label}
                             onChange={(e) => handleFieldUpdate(index, 'label', e.target.value)}
                             onBlur={() => markTouched(`label-${index}`)}
-                            placeholder="e.g. Where would you love to go?"
+                            placeholder="e.g. What are you planning?"
                             className="mt-1.5"
                           />
                           {touched[`label-${index}`] && !field.label.trim() && (
@@ -497,11 +497,11 @@ export default function NewFormPage() {
                             id={`help-${index}`}
                             value={field.helpText}
                             onChange={(e) => handleFieldUpdate(index, 'helpText', e.target.value)}
-                            placeholder="Optional: add context to help the client answer accurately."
+                            placeholder="Optional: add context to help the guest answer accurately."
                             className="mt-1.5"
                             rows={2}
                           />
-                          <p className="text-xs text-slate-500 mt-1">Shown under the question to guide your client.</p>
+                          <p className="text-xs text-slate-500 mt-1">Shown under the question to guide the guest.</p>
                         </div>
                         <div>
                           <Label htmlFor={`example-${index}`}>Example answer</Label>
@@ -509,7 +509,7 @@ export default function NewFormPage() {
                             id={`example-${index}`}
                             value={field.exampleAnswer || ''}
                             onChange={(e) => handleFieldUpdate(index, 'exampleAnswer', e.target.value)}
-                            placeholder="Optional: show a sample answer to guide clients."
+                            placeholder="Optional: show a sample answer for the preview."
                             className="mt-1.5"
                           />
                           <p className="text-xs text-slate-500 mt-1">Used only for the preview.</p>
@@ -569,7 +569,7 @@ export default function NewFormPage() {
             <div>
               <div className="mb-6">
                 <h2 className="text-2xl font-bold text-slate-900 mb-2">Set your tone & branding</h2>
-                <p className="text-slate-600">Make the conversation feel like your brand.</p>
+                <p className="text-slate-600">Make the conversation feel like your service.</p>
               </div>
 
               <div className="space-y-6">
@@ -585,7 +585,7 @@ export default function NewFormPage() {
                         value={formName}
                         onChange={(e) => setFormName(e.target.value)}
                         onBlur={() => markTouched('formName')}
-                        placeholder="e.g., Trip Request Form"
+                        placeholder="e.g., New Request"
                         className={`mt-1.5 ${touched.formName && !formName.trim() ? 'border-red-300 focus-visible:ring-red-200' : ''}`}
                       />
                       {touched.formName && !formName.trim() ? (
@@ -610,7 +610,7 @@ export default function NewFormPage() {
                       {touched.companyName && !companyName.trim() ? (
                         <p className="text-xs text-red-500 mt-1">Company name is required</p>
                       ) : (
-                        <p className="text-xs text-slate-500 mt-1">Shown to clients during the conversation.</p>
+                        <p className="text-xs text-slate-500 mt-1">Shown to guests during the conversation.</p>
                       )}
                     </div>
                   </div>
@@ -761,7 +761,7 @@ export default function NewFormPage() {
                       ) : touched.contactEmail && !isValidEmail(contactEmail) ? (
                         <p className="text-xs text-red-500 mt-1">Enter a valid email address.</p>
                       ) : (
-                        <p className="text-xs text-slate-500 mt-1">Clients can use this if they need help.</p>
+                        <p className="text-xs text-slate-500 mt-1">Guests can use this if they need help.</p>
                       )}
                     </div>
 
@@ -825,15 +825,15 @@ export default function NewFormPage() {
                   </div>
                   <p className="text-slate-600">
                     {isPublished
-                      ? 'Your intake is live and accepting responses.'
-                      : 'Quick check before you send it to clients.'}
+                      ? 'Your request is live and accepting responses.'
+                      : 'Quick check before you send it out.'}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <div className="space-y-6">
                     <Card className="p-6">
-                      <h3 className="font-semibold text-slate-900 mb-4">Intake details</h3>
+                      <h3 className="font-semibold text-slate-900 mb-4">Request details</h3>
                       <div className="space-y-3">
                         <div className="flex justify-between">
                           <span className="text-sm text-slate-600">Internal name</span>
@@ -892,7 +892,7 @@ export default function NewFormPage() {
                                 <Info className="w-4 h-4 text-slate-400 cursor-help" />
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Create your intake to activate the share link</p>
+                                <p>Create your request to activate the share link</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -900,7 +900,7 @@ export default function NewFormPage() {
                       </div>
                       <div className={`flex gap-2 ${!isPublished ? 'opacity-50' : ''}`}>
                         <Input
-                          value={isPublished ? getFormUrl() : 'Create intake to activate link'}
+                          value={isPublished ? getFormUrl() : 'Create request to activate link'}
                           readOnly
                           disabled={!isPublished}
                           className="flex-1 font-mono text-sm"
@@ -910,7 +910,7 @@ export default function NewFormPage() {
                         </Button>
                       </div>
                       {!isPublished && (
-                        <p className="text-xs text-slate-500 mt-2">Your intake is saved as a draft. Publish to share it with clients.</p>
+                        <p className="text-xs text-slate-500 mt-2">Your request is saved as a draft. Publish to share it.</p>
                       )}
                     </Card>
                   </div>
@@ -919,7 +919,7 @@ export default function NewFormPage() {
                     <Card className="p-6 bg-slate-50 border-slate-200">
                       <div className="flex items-center gap-2 mb-4">
                         <Eye className="w-4 h-4 text-slate-600" />
-                        <h3 className="font-semibold text-slate-900">Client preview</h3>
+                        <h3 className="font-semibold text-slate-900">Guest preview</h3>
                       </div>
                       <ChatPreview
                         dataFields={dataFields}
@@ -931,7 +931,7 @@ export default function NewFormPage() {
                         formName={formName}
                       />
                       <p className="text-xs text-slate-500 mt-3">
-                        This shows how the conversation starts. The AI will naturally guide clients through each question.
+                        This shows how the conversation starts. The AI will naturally guide guests through each question.
                       </p>
                     </Card>
                   </div>
@@ -944,7 +944,7 @@ export default function NewFormPage() {
                       Back
                     </Button>
                     <Button size="lg" onClick={handlePublishForm} disabled={isPublishing}>
-                      {isPublishing ? 'Creating...' : 'Create intake'}
+                      {isPublishing ? 'Creating...' : 'Create request'}
                       <CheckCircle2 className="w-4 h-4 ml-2" />
                     </Button>
                   </div>
@@ -955,9 +955,9 @@ export default function NewFormPage() {
                         <CheckCircle2 className="w-6 h-6 text-green-600" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-semibold text-slate-900 mb-2">Intake published successfully!</h3>
+                        <h3 className="font-semibold text-slate-900 mb-2">Request published successfully!</h3>
                         <p className="text-sm text-slate-600 mb-4">
-                          Your intake is now live. Share it with clients or embed it on your website.
+                          Your request is now live. Share it with guests or embed it on your website.
                         </p>
                         <div className="flex flex-wrap gap-3">
                           <Button variant="default" onClick={() => router.push('/dashboard')}>
@@ -974,7 +974,7 @@ export default function NewFormPage() {
                           </Button>
                           <Button variant="outline" onClick={() => window.open(getFormUrl(), '_blank')}>
                             <ExternalLink className="w-4 h-4 mr-2" />
-                            View intake
+                            View request
                           </Button>
                           <Button variant="outline" onClick={() => router.push(`/dashboard/forms/${createdFormId}/results`)}>
                             <BarChart3 className="w-4 h-4 mr-2" />
