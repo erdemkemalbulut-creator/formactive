@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceClient } from '@/lib/supabase';
+import { createServerClient } from '@/lib/supabase';
 import { createDefaultConfig, generateSlug } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getServiceClient();
-    if (!supabase) {
-      return NextResponse.json(
-        { error: 'Service temporarily unavailable' },
-        { status: 500 }
-      );
-    }
-
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(
@@ -21,8 +13,9 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const supabase = createServerClient(token);
 
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -57,8 +50,11 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       console.error('[Forms API] Insert error:', insertError);
+      const msg = insertError.message?.includes('current_config')
+        ? 'Database migration needed. Please run the v2 migration SQL in your Supabase SQL Editor.'
+        : insertError.message || 'Failed to create form';
       return NextResponse.json(
-        { error: 'Failed to create form' },
+        { error: msg },
         { status: 500 }
       );
     }

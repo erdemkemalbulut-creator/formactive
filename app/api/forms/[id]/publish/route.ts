@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceClient } from '@/lib/supabase';
+import { createServerClient } from '@/lib/supabase';
 import { generateSlug } from '@/lib/types';
 
 export async function POST(
@@ -7,14 +7,6 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = getServiceClient();
-    if (!supabase) {
-      return NextResponse.json(
-        { error: 'Service temporarily unavailable' },
-        { status: 500 }
-      );
-    }
-
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(
@@ -24,8 +16,9 @@ export async function POST(
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const supabase = createServerClient(token);
 
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },

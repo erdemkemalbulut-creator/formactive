@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceClient } from '@/lib/supabase';
+import { createServerClient } from '@/lib/supabase';
 
-async function authenticateUser(supabase: any, request: NextRequest) {
+async function getAuthenticatedClient(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   if (!authHeader?.startsWith('Bearer ')) {
-    return { user: null, error: 'Missing or invalid authorization header' };
+    return { supabase: null, user: null, error: 'Missing or invalid authorization header' };
   }
 
   const token = authHeader.replace('Bearer ', '');
-  const { data: { user }, error } = await supabase.auth.getUser(token);
+  const supabase = createServerClient(token);
 
+  const { data: { user }, error } = await supabase.auth.getUser(token);
   if (error || !user) {
-    return { user: null, error: 'Unauthorized' };
+    return { supabase: null, user: null, error: 'Unauthorized' };
   }
 
-  return { user, error: null };
+  return { supabase, user, error: null };
 }
 
 export async function GET(
@@ -22,16 +23,8 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = getServiceClient();
-    if (!supabase) {
-      return NextResponse.json(
-        { error: 'Service temporarily unavailable' },
-        { status: 500 }
-      );
-    }
-
-    const { user, error: authError } = await authenticateUser(supabase, request);
-    if (authError) {
+    const { supabase, user, error: authError } = await getAuthenticatedClient(request);
+    if (authError || !supabase) {
       return NextResponse.json({ error: authError }, { status: 401 });
     }
 
@@ -39,7 +32,7 @@ export async function GET(
       .from('forms')
       .select('*')
       .eq('id', params.id)
-      .eq('user_id', user.id)
+      .eq('user_id', user!.id)
       .single();
 
     if (fetchError || !form) {
@@ -64,31 +57,9 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = getServiceClient();
-    if (!supabase) {
-      return NextResponse.json(
-        { error: 'Service temporarily unavailable' },
-        { status: 500 }
-      );
-    }
-
-    const { user, error: authError } = await authenticateUser(supabase, request);
-    if (authError) {
+    const { supabase, user, error: authError } = await getAuthenticatedClient(request);
+    if (authError || !supabase) {
       return NextResponse.json({ error: authError }, { status: 401 });
-    }
-
-    const { data: existing, error: fetchError } = await supabase
-      .from('forms')
-      .select('id, user_id')
-      .eq('id', params.id)
-      .eq('user_id', user.id)
-      .single();
-
-    if (fetchError || !existing) {
-      return NextResponse.json(
-        { error: 'Form not found' },
-        { status: 404 }
-      );
     }
 
     const body = await request.json();
@@ -114,7 +85,7 @@ export async function PATCH(
       .from('forms')
       .update(updates)
       .eq('id', params.id)
-      .eq('user_id', user.id)
+      .eq('user_id', user!.id)
       .select()
       .single();
 

@@ -7,23 +7,15 @@
   - submissions table for classic form submissions
   - Status tracking (draft/live)
   
-  Preserves existing columns for backward compatibility.
+  Run this SQL in your Supabase SQL Editor (https://supabase.com/dashboard → SQL Editor)
 */
 
 -- Add new columns to forms table
-ALTER TABLE forms ADD COLUMN IF NOT EXISTS status text DEFAULT 'draft' CHECK (status IN ('draft', 'live'));
+ALTER TABLE forms ADD COLUMN IF NOT EXISTS status text DEFAULT 'draft';
 ALTER TABLE forms ADD COLUMN IF NOT EXISTS published_config jsonb DEFAULT NULL;
 ALTER TABLE forms ADD COLUMN IF NOT EXISTS current_config jsonb DEFAULT '{}'::jsonb;
 ALTER TABLE forms ADD COLUMN IF NOT EXISTS published_at timestamptz DEFAULT NULL;
 ALTER TABLE forms ADD COLUMN IF NOT EXISTS version integer DEFAULT 0;
-ALTER TABLE forms ADD COLUMN IF NOT EXISTS welcome_title text DEFAULT '';
-ALTER TABLE forms ADD COLUMN IF NOT EXISTS welcome_message text DEFAULT '';
-ALTER TABLE forms ADD COLUMN IF NOT EXISTS welcome_cta text DEFAULT 'Start';
-ALTER TABLE forms ADD COLUMN IF NOT EXISTS welcome_enabled boolean DEFAULT true;
-ALTER TABLE forms ADD COLUMN IF NOT EXISTS end_message text DEFAULT 'Thank you for your submission!';
-ALTER TABLE forms ADD COLUMN IF NOT EXISTS end_redirect_url text DEFAULT '';
-ALTER TABLE forms ADD COLUMN IF NOT EXISTS end_redirect_enabled boolean DEFAULT false;
-ALTER TABLE forms ADD COLUMN IF NOT EXISTS theme jsonb DEFAULT '{}'::jsonb;
 
 -- Create form_versions table
 CREATE TABLE IF NOT EXISTS form_versions (
@@ -52,37 +44,41 @@ CREATE INDEX IF NOT EXISTS idx_forms_status ON forms(status);
 -- RLS for form_versions
 ALTER TABLE form_versions ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view versions of own forms"
-  ON form_versions FOR SELECT
-  TO authenticated
-  USING (form_id IN (SELECT id FROM forms WHERE user_id = auth.uid()));
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'form_versions' AND policyname = 'Users can view versions of own forms') THEN
+    CREATE POLICY "Users can view versions of own forms"
+      ON form_versions FOR SELECT
+      TO authenticated
+      USING (form_id IN (SELECT id FROM forms WHERE user_id = auth.uid()));
+  END IF;
+END $$;
 
-CREATE POLICY "Users can insert versions for own forms"
-  ON form_versions FOR INSERT
-  TO authenticated
-  WITH CHECK (form_id IN (SELECT id FROM forms WHERE user_id = auth.uid()));
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'form_versions' AND policyname = 'Users can insert versions for own forms') THEN
+    CREATE POLICY "Users can insert versions for own forms"
+      ON form_versions FOR INSERT
+      TO authenticated
+      WITH CHECK (form_id IN (SELECT id FROM forms WHERE user_id = auth.uid()));
+  END IF;
+END $$;
 
 -- RLS for submissions
 ALTER TABLE submissions ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view submissions for own forms"
-  ON submissions FOR SELECT
-  TO authenticated
-  USING (form_id IN (SELECT id FROM forms WHERE user_id = auth.uid()));
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'submissions' AND policyname = 'Users can view submissions for own forms') THEN
+    CREATE POLICY "Users can view submissions for own forms"
+      ON submissions FOR SELECT
+      TO authenticated
+      USING (form_id IN (SELECT id FROM forms WHERE user_id = auth.uid()));
+  END IF;
+END $$;
 
-CREATE POLICY "Anyone can submit to published forms"
-  ON submissions FOR INSERT
-  TO anon, authenticated
-  WITH CHECK (form_id IN (SELECT id FROM forms WHERE status = 'live'));
-
-CREATE POLICY "Service role full access to submissions"
-  ON submissions FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
-
-CREATE POLICY "Service role full access to form_versions"
-  ON form_versions FOR ALL
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'submissions' AND policyname = 'Anyone can submit to published forms') THEN
+    CREATE POLICY "Anyone can submit to published forms"
+      ON submissions FOR INSERT
+      TO anon, authenticated
+      WITH CHECK (form_id IN (SELECT id FROM forms WHERE status = 'live'));
+  END IF;
+END $$;
