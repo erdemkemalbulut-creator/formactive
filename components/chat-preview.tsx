@@ -23,6 +23,8 @@ type ChatPreviewProps = {
   primaryColor: string;
   tone: string;
   formName: string;
+  welcomeMessage?: string;
+  endMessage?: string;
 };
 
 function getGreeting(tone: string, companyName: string): string {
@@ -119,11 +121,14 @@ export function ChatPreview({
   primaryColor,
   tone,
   formName,
+  welcomeMessage,
+  endMessage,
 }: ChatPreviewProps) {
   const currentField = dataFields[activeQuestionIndex] || dataFields[0];
   const previousFields = dataFields.slice(0, activeQuestionIndex);
 
-  const greeting = useMemo(() => getGreeting(tone, companyName), [tone, companyName]);
+  const defaultGreeting = useMemo(() => getGreeting(tone, companyName), [tone, companyName]);
+  const greeting = welcomeMessage?.trim() || defaultGreeting;
   const currentPrompt = useMemo(
     () => currentField ? getQuestionPrompt(tone, currentField.label, currentField.helpText) : '',
     [tone, currentField?.label, currentField?.helpText]
@@ -134,17 +139,22 @@ export function ChatPreview({
   const progressCurrent = Math.min(activeQuestionIndex + 1, progressTotal);
   const progressPct = progressTotal > 0 ? Math.round((progressCurrent / progressTotal) * 100) : 0;
 
+  const completionText = endMessage?.trim() || 'Thanks for sharing those details! We\'ll be in touch soon.';
+  const isComplete = activeQuestionIndex >= dataFields.length && dataFields.length > 0;
+
   const allMessages: MessageEntry[] = useMemo(() => {
     const msgs: MessageEntry[] = [{ type: 'assistant', text: greeting, key: 'greeting' }];
     previousFields.forEach((field, i) => {
       msgs.push({ type: 'assistant', text: getQuestionPrompt(tone, field.label, field.helpText), key: `q-${i}` });
       msgs.push({ type: 'user', text: field.exampleAnswer || getInputPlaceholder(field), key: `a-${i}` });
     });
-    if (currentField) {
+    if (isComplete) {
+      msgs.push({ type: 'assistant', text: completionText, key: 'completion' });
+    } else if (currentField) {
       msgs.push({ type: 'assistant', text: currentPrompt, key: `q-current` });
     }
     return msgs;
-  }, [greeting, previousFields, currentField, currentPrompt, tone]);
+  }, [greeting, previousFields, currentField, currentPrompt, tone, isComplete, completionText]);
 
   const [visibleCount, setVisibleCount] = useState(allMessages.length);
   const [showTyping, setShowTyping] = useState(false);

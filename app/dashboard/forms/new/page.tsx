@@ -30,6 +30,9 @@ import {
   LayoutTemplate,
   PenLine,
   Plus,
+  RefreshCw,
+  Share2,
+  Globe,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
@@ -156,6 +159,9 @@ export default function NewFormPage() {
   const [isPublishing, setIsPublishing] = useState(false);
 
   const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
+  const [previewKey, setPreviewKey] = useState(0);
+  const [welcomeMessage, setWelcomeMessage] = useState('');
+  const [endMessage, setEndMessage] = useState('Thanks for sharing those details! We\'ll be in touch soon.');
 
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -290,18 +296,45 @@ export default function NewFormPage() {
 
   const stepLabels = ['Start', 'Questions', 'Tone & branding', 'Review'];
 
+  const formSlugPreview = formName ? generateSlug(formName) : 'your-form';
+
   const previewPane = (
-    <div className="flex flex-col">
-      <div className="flex items-center gap-1.5 mb-3">
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-        </span>
-        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Live preview</span>
+    <div className="flex flex-col lg:sticky lg:top-4">
+      <div className="rounded-t-lg border border-b-0 border-slate-200 bg-white">
+        <div className="flex items-center justify-between px-3 py-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 rounded-md flex-1 min-w-0 border border-slate-100">
+              <Globe className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span className="text-xs text-slate-500 truncate font-mono">
+                formactive.app/f/{formSlugPreview}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 ml-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setPreviewKey((k) => k + 1)}
+              className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors"
+              title="Refresh preview"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                toast({ title: 'Share', description: 'Publish your form first to get a shareable link.' });
+              }}
+              className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors"
+              title="Share"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
       </div>
-      <p className="text-xs text-slate-400 mb-2">Updates as you make changes — this is what your guest will see.</p>
-      <div className="lg:sticky lg:top-4">
+      <div className="-mt-px">
         <ChatPreview
+          key={previewKey}
           dataFields={dataFields}
           activeQuestionIndex={activeQuestionIndex}
           companyName={companyName}
@@ -309,6 +342,8 @@ export default function NewFormPage() {
           primaryColor={primaryColor}
           tone={tone}
           formName={formName}
+          welcomeMessage={welcomeMessage}
+          endMessage={endMessage}
         />
       </div>
     </div>
@@ -322,11 +357,8 @@ export default function NewFormPage() {
         className="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
       >
         <span className="flex items-center gap-2">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-          </span>
-          {mobilePreviewOpen ? 'Hide preview' : 'Show live preview'}
+          <Eye className="w-4 h-4 text-slate-500" />
+          {mobilePreviewOpen ? 'Hide form preview' : 'Show form preview'}
         </span>
         {mobilePreviewOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
       </button>
@@ -510,16 +542,55 @@ export default function NewFormPage() {
         {step === 2 && selectedPreset && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div>
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">Define your questions</h2>
-                <p className="text-slate-500">Each question is asked one at a time during the conversation.</p>
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-slate-900 mb-2">Build your conversation</h2>
+                <p className="text-slate-500">Set up the welcome message and questions your guest will see.</p>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <p className="text-sm text-blue-900">
-                  <strong>You can edit:</strong> Question wording, helper text, and example answers.{' '}
-                  <strong>Coming soon:</strong> Adding or removing questions and changing answer types.
-                </p>
+              <div className="mb-8">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center">
+                    <span className="text-xs font-semibold text-white">1</span>
+                  </div>
+                  <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">Welcome screen</h3>
+                </div>
+                <Card className="p-5">
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="welcome-message" className="text-sm text-slate-700">Welcome message</Label>
+                      <Textarea
+                        id="welcome-message"
+                        value={welcomeMessage}
+                        onChange={(e) => setWelcomeMessage(e.target.value)}
+                        placeholder="Leave blank for an auto-generated greeting based on your tone and company name."
+                        className="mt-1.5"
+                        rows={3}
+                      />
+                      <p className="text-xs text-slate-500 mt-1.5">The first thing your guest reads when they open the form.</p>
+                    </div>
+                    <div>
+                      <Label htmlFor="end-message" className="text-sm text-slate-700">Completion message</Label>
+                      <Input
+                        id="end-message"
+                        value={endMessage}
+                        onChange={(e) => setEndMessage(e.target.value)}
+                        placeholder="Thanks for sharing those details!"
+                        className="mt-1.5"
+                      />
+                      <p className="text-xs text-slate-500 mt-1.5">Shown after the guest answers all questions.</p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center">
+                    <span className="text-xs font-semibold text-white">2</span>
+                  </div>
+                  <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">Questions</h3>
+                  <span className="text-xs text-slate-400 ml-auto">{dataFields.length} {dataFields.length === 1 ? 'question' : 'questions'}</span>
+                </div>
               </div>
 
               {dataFields.length === 0 ? (
@@ -665,14 +736,20 @@ export default function NewFormPage() {
         {step === 3 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div>
-              <div className="mb-6">
+              <div className="mb-8">
                 <h2 className="text-2xl font-bold text-slate-900 mb-2">Tone & branding</h2>
-                <p className="text-slate-500">Shape how the conversation looks and feels.</p>
+                <p className="text-slate-500">Shape how the conversation looks and feels to your guest.</p>
               </div>
 
-              <div className="space-y-6">
-                <Card className="p-6">
-                  <h3 className="text-lg font-semibold text-slate-900 mb-6">Form details</h3>
+              <div className="space-y-8">
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center">
+                      <span className="text-xs font-semibold text-white">1</span>
+                    </div>
+                    <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">Form details</h3>
+                  </div>
+                  <Card className="p-6">
                   <div className="space-y-6">
                     <div>
                       <Label htmlFor="form-name">
@@ -713,9 +790,16 @@ export default function NewFormPage() {
                     </div>
                   </div>
                 </Card>
+                </div>
 
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center">
+                      <span className="text-xs font-semibold text-white">2</span>
+                    </div>
+                    <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">Branding</h3>
+                  </div>
                 <Card className="p-6">
-                  <h3 className="text-lg font-semibold text-slate-900 mb-6">Branding</h3>
                   <div className="space-y-6">
                     <div>
                       <Label htmlFor="logo-url">Logo URL</Label>
@@ -768,10 +852,14 @@ export default function NewFormPage() {
                     </div>
                   </div>
                 </Card>
+                </div>
 
-                <Card className="p-6">
-                  <div className="flex items-center gap-2 mb-6">
-                    <h3 className="text-lg font-semibold text-slate-900">Conversation tone</h3>
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center">
+                      <span className="text-xs font-semibold text-white">3</span>
+                    </div>
+                    <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">Conversation tone</h3>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -832,10 +920,16 @@ export default function NewFormPage() {
                       );
                     })}
                   </div>
-                </Card>
+                </div>
 
-                <Card className="p-6">
-                  <h3 className="text-lg font-semibold text-slate-900 mb-6">Contact information</h3>
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center">
+                      <span className="text-xs font-semibold text-white">4</span>
+                    </div>
+                    <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">Contact information</h3>
+                  </div>
+                  <Card className="p-6">
                   <div className="space-y-6">
                     <div>
                       <Label htmlFor="contact-email">
@@ -876,6 +970,7 @@ export default function NewFormPage() {
                     </div>
                   </div>
                 </Card>
+                </div>
               </div>
 
               {mobilePreviewToggle}
@@ -1027,6 +1122,8 @@ export default function NewFormPage() {
                         primaryColor={primaryColor}
                         tone={tone}
                         formName={formName}
+                        welcomeMessage={welcomeMessage}
+                        endMessage={endMessage}
                       />
                       <p className="text-xs text-slate-500 mt-3">
                         This shows how the conversation starts. The AI will naturally guide guests through each question.
