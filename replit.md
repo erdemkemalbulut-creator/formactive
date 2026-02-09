@@ -69,7 +69,7 @@ Each question has:
 - `logoUrl` - Brand logo
 - `customCss` - Additional CSS overrides
 
-### AI System (Two-Step)
+### AI System (Two-Step with Validation)
 1. **Structure Generation** (`/api/ai/generate-conversation`):
    - Input: context description, tone, audience
    - Output: JSON array of `{ label, type, required, options }`
@@ -77,8 +77,10 @@ Each question has:
    
 2. **Wording Generation** (`/api/ai/generate-node`):
    - Input: global description, tone, full journey list, current item
-   - Output: plain text message for the respondent
-   - Prompt speaks directly to respondent, never references AI/form/creator
+   - Two-pass pipeline:
+     a. **Generate**: Creates candidate message text (temperature 0.7)
+     b. **Validate**: Strict validator checks message against rules (temperature 0) — ensures it speaks only to respondent, contains one step, no meta/AI references, matches tone. Returns `{ok, reason, fixed_message}`. If invalid, the fixed_message replaces the candidate.
+   - Output: validated plain text message for the respondent
 
 ### CTA Nodes
 - Question type `cta` renders as a clickable button
