@@ -264,8 +264,9 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
         )}
         {!config.welcomeMessage && <div className="mb-10" />}
         <button
+          disabled={isPreview}
           onClick={!isPreview ? startForm : undefined}
-          className={`px-10 text-white font-semibold rounded-full transition-all hover:shadow-xl ${isPreview ? 'cursor-default' : 'hover:opacity-90 hover:scale-[1.02] active:scale-[0.98]'}`}
+          className={`px-10 text-white font-semibold rounded-full transition-all ${isPreview ? 'cursor-default opacity-80' : 'hover:shadow-xl hover:opacity-90 hover:scale-[1.02] active:scale-[0.98]'}`}
           style={{ backgroundColor: isHero ? 'rgba(255,255,255,0.2)' : primaryColor, height: '52px', fontSize: '1rem', backdropFilter: isHero ? 'blur(8px)' : undefined, border: isHero ? '1px solid rgba(255,255,255,0.3)' : undefined }}
         >
           {config.welcomeCta || 'Start'}
