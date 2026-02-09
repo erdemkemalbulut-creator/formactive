@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import { FormConfig, Question, QuestionType, QUESTION_TYPES, ToneType, createDefaultCTA, FormTheme, DEFAULT_THEME, AIContext, FormVisuals } from '@/lib/types';
-import { ConversationalForm } from '@/components/conversational-form';
+import { ConversationalForm, PreviewTarget } from '@/components/conversational-form';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -91,7 +91,7 @@ export default function FormBuilderPage() {
   const [generatingWording, setGeneratingWording] = useState<string | null>(null);
   const [generatingAllWording, setGeneratingAllWording] = useState(false);
   const [showTonePicker, setShowTonePicker] = useState(false);
-  const [activeItemIndex, setActiveItemIndex] = useState<number | null>(null);
+  const [previewTarget, setPreviewTarget] = useState<PreviewTarget>(null);
   const [uploadingVisual, setUploadingVisual] = useState(false);
   const [showVisualUrlInput, setShowVisualUrlInput] = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
@@ -834,12 +834,12 @@ export default function FormBuilderPage() {
                 </button>
                 {openSections.has(3) && (
                   <div className="px-5 pb-5 pt-1 pl-14 space-y-5">
-                    <div className="space-y-3">
+                    <div className="space-y-3" onClick={() => setPreviewTarget('welcome')}>
                       <div className="flex items-center justify-between">
                         <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Welcome screen</label>
                         <Switch
                           checked={currentConfig.welcomeEnabled}
-                          onCheckedChange={(checked) => updateConfig({ welcomeEnabled: checked })}
+                          onCheckedChange={(checked) => { updateConfig({ welcomeEnabled: checked }); setPreviewTarget('welcome'); }}
                         />
                       </div>
                       {currentConfig.welcomeEnabled && (
@@ -847,30 +847,33 @@ export default function FormBuilderPage() {
                           <Input
                             value={currentConfig.welcomeTitle}
                             onChange={(e) => updateConfig({ welcomeTitle: e.target.value })}
+                            onFocus={() => setPreviewTarget('welcome')}
                             placeholder="Welcome title"
                             className="h-9 text-sm"
                           />
                           <Textarea
                             value={currentConfig.welcomeMessage}
                             onChange={(e) => updateConfig({ welcomeMessage: e.target.value })}
+                            onFocus={() => setPreviewTarget('welcome')}
                             placeholder="A short description for respondents..."
                             className="text-sm min-h-[50px] resize-none"
                           />
                           <Input
                             value={currentConfig.welcomeCta}
                             onChange={(e) => updateConfig({ welcomeCta: e.target.value })}
+                            onFocus={() => setPreviewTarget('welcome')}
                             placeholder="CTA button label (e.g., Start)"
                             className="h-9 text-sm"
                           />
                         </div>
                       )}
                     </div>
-                    <div className="border-t border-slate-100 pt-4 space-y-3">
+                    <div className="border-t border-slate-100 pt-4 space-y-3" onClick={() => setPreviewTarget('end')}>
                       <div className="flex items-center justify-between">
                         <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">End screen</label>
                         <Switch
                           checked={currentConfig.endEnabled ?? true}
-                          onCheckedChange={(checked) => updateConfig({ endEnabled: checked })}
+                          onCheckedChange={(checked) => { updateConfig({ endEnabled: checked }); setPreviewTarget('end'); }}
                         />
                       </div>
                       {(currentConfig.endEnabled ?? true) && (
@@ -878,12 +881,14 @@ export default function FormBuilderPage() {
                           <Textarea
                             value={currentConfig.endMessage}
                             onChange={(e) => updateConfig({ endMessage: e.target.value })}
+                            onFocus={() => setPreviewTarget('end')}
                             placeholder="Thank you message"
                             className="text-sm min-h-[50px] resize-none"
                           />
                           <Input
                             value={currentConfig.endCtaText || ''}
                             onChange={(e) => updateConfig({ endCtaText: e.target.value })}
+                            onFocus={() => setPreviewTarget('end')}
                             placeholder="Optional CTA text"
                             className="h-9 text-sm"
                           />
@@ -891,6 +896,7 @@ export default function FormBuilderPage() {
                             <Input
                               value={currentConfig.endCtaUrl || ''}
                               onChange={(e) => updateConfig({ endCtaUrl: e.target.value })}
+                              onFocus={() => setPreviewTarget('end')}
                               placeholder="CTA URL (https://...)"
                               className="h-9 text-sm"
                             />
@@ -947,12 +953,12 @@ export default function FormBuilderPage() {
                           key={q.id}
                           question={q}
                           index={i}
-                          isActive={activeItemIndex === i}
+                          isActive={previewTarget !== null && typeof previewTarget === 'object' && 'step' in previewTarget && previewTarget.step === i}
                           isDragging={dragIndex === i}
                           isDragOver={dragOverIndex === i}
                           isGenerating={generatingWording === q.id}
                           onUpdate={(updates) => updateQuestion(q.id, updates)}
-                          onFocus={() => setActiveItemIndex(i)}
+                          onFocus={() => setPreviewTarget({ step: i })}
                           onDuplicate={() => duplicateJourneyItem(q.id)}
                           onDelete={() => deleteJourneyItem(q.id)}
                           onGenerateWording={() => generateWordingForQuestion(q.id)}
@@ -1149,7 +1155,7 @@ export default function FormBuilderPage() {
           <LivePreviewPanel
             config={currentConfig}
             formName={formName}
-            activeItemIndex={activeItemIndex}
+            previewTarget={previewTarget}
             slug={slug}
           />
         </div>
@@ -1189,36 +1195,45 @@ function JourneyItemRow({
   onDragOver: (e: React.DragEvent) => void;
   onDragEnd: () => void;
 }) {
-  const [showActions, setShowActions] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const promptText = question.message || question.label || 'Untitled step';
+  const typeLabel = QUESTION_TYPES.find(t => t.value === question.type)?.label || question.type;
 
   return (
     <div
-      draggable
+      draggable={!editing}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
-      onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => setShowActions(false)}
-      className={`group relative rounded-lg border transition-all ${
+      onClick={onFocus}
+      className={`group relative rounded-lg border transition-all cursor-pointer ${
         isDragging
           ? 'opacity-40 border-blue-300 bg-blue-50'
           : isDragOver
           ? 'border-blue-300 bg-blue-50/50 border-dashed'
           : isActive
-          ? 'border-blue-400 bg-blue-50/30 ring-1 ring-blue-200'
-          : 'border-slate-200 hover:border-slate-300'
+          ? 'border-blue-500 bg-blue-50/40 ring-1 ring-blue-200 shadow-sm'
+          : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
       }`}
     >
-      <div className="flex items-start gap-2 p-3">
-        <div className="flex items-center gap-1.5 pt-2 flex-shrink-0">
-          <GripVertical className="w-3.5 h-3.5 text-slate-300 cursor-grab active:cursor-grabbing" />
-          <span className="text-[11px] text-slate-400 font-mono w-4 text-center">{index + 1}</span>
+      <div className="flex items-center gap-2 px-2.5 py-2.5">
+        <div
+          className="flex-shrink-0 cursor-grab active:cursor-grabbing p-0.5"
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <GripVertical className="w-3.5 h-3.5 text-slate-300" />
         </div>
 
-        <div className="flex-1 min-w-0">
+        <span className={`text-[11px] font-semibold flex-shrink-0 w-5 h-5 rounded flex items-center justify-center ${
+          isActive ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'
+        }`}>
+          {index + 1}
+        </span>
+
+        {editing ? (
           <textarea
+            autoFocus
             value={question.label}
-            onFocus={onFocus}
             onChange={(e) => {
               const updates: Partial<Question> = { label: e.target.value };
               if (!question.key || question.key === generateKeyFromLabel(question.label)) {
@@ -1226,41 +1241,59 @@ function JourneyItemRow({
               }
               onUpdate(updates);
             }}
+            onBlur={() => setEditing(false)}
+            onKeyDown={(e) => { if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) { e.preventDefault(); setEditing(false); } }}
             placeholder="What should AI ask at this step?"
             rows={2}
-            className="w-full text-sm text-slate-800 bg-transparent border-0 p-0 resize-none focus:outline-none focus:ring-0 placeholder:text-slate-400"
+            className="flex-1 min-w-0 text-sm text-slate-800 bg-white border border-slate-200 rounded-md px-2 py-1 resize-none focus:outline-none focus:ring-1 focus:ring-blue-300 placeholder:text-slate-400"
+            onClick={(e) => e.stopPropagation()}
           />
-          {question.message && (
-            <p className="text-[11px] text-green-600 mt-1 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
-              Wording generated
-            </p>
-          )}
-        </div>
-      </div>
+        ) : (
+          <div className="flex-1 min-w-0" onDoubleClick={(e) => { e.stopPropagation(); setEditing(true); }}>
+            <p className="text-sm text-slate-700 truncate leading-snug">{promptText}</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-[10px] text-slate-400">{typeLabel}</span>
+              {question.message && (
+                <span className="flex items-center gap-1 text-[10px] text-green-600">
+                  <span className="w-1 h-1 rounded-full bg-green-400 inline-block" />
+                  AI
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
-      {showActions && (
-        <div className="absolute top-2 right-2 flex items-center gap-0.5 bg-white border border-slate-200 rounded-md shadow-sm p-0.5">
-          <button
-            onClick={onGenerateWording}
-            disabled={isGenerating || !question.label}
-            className="p-1 rounded hover:bg-blue-50 transition-colors disabled:opacity-40"
-            title="Generate wording"
-          >
-            {isGenerating ? (
-              <Loader2 className="w-3 h-3 text-blue-500 animate-spin" />
-            ) : (
-              <Sparkles className="w-3 h-3 text-blue-500" />
-            )}
-          </button>
-          <button onClick={onDuplicate} className="p-1 rounded hover:bg-slate-100 transition-colors" title="Duplicate">
-            <Copy className="w-3 h-3 text-slate-500" />
-          </button>
-          <button onClick={onDelete} className="p-1 rounded hover:bg-red-50 transition-colors" title="Delete">
-            <Trash2 className="w-3 h-3 text-red-400" />
-          </button>
-        </div>
-      )}
+        {!editing && (
+          <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={(e) => { e.stopPropagation(); onGenerateWording(); }}
+              disabled={isGenerating || !question.label}
+              className="p-1 rounded hover:bg-blue-50 transition-colors disabled:opacity-40"
+              title="Generate wording"
+            >
+              {isGenerating ? (
+                <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" />
+              ) : (
+                <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+              )}
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onFocus(); setEditing(true); }}
+              className="p-1 rounded hover:bg-slate-100 transition-colors"
+              title="Edit step"
+            >
+              <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              className="p-1 rounded hover:bg-red-50 transition-colors"
+              title="Delete"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-red-400" />
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1420,12 +1453,12 @@ const SPEED_OPTIONS = [
 function LivePreviewPanel({
   config,
   formName,
-  activeItemIndex,
+  previewTarget,
   slug,
 }: {
   config: FormConfig;
   formName: string;
-  activeItemIndex: number | null;
+  previewTarget: PreviewTarget;
   slug: string;
 }) {
   const [previewSpeed, setPreviewSpeed] = useState(1);
@@ -1554,7 +1587,7 @@ function LivePreviewPanel({
                 config={config}
                 formName={formName || 'Form'}
                 isPreview={true}
-                previewStepIndex={activeItemIndex !== null && activeItemIndex >= 0 ? activeItemIndex : undefined}
+                previewTarget={previewTarget}
               />
             )}
           </div>

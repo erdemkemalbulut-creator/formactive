@@ -3,12 +3,15 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { FormConfig, Question } from '@/lib/types';
 
+export type PreviewTarget = 'welcome' | 'end' | { step: number } | null;
+
 export interface ConversationalFormProps {
   config: FormConfig;
   formName: string;
   onSubmit?: (answers: Record<string, any>) => Promise<void>;
   isPreview?: boolean;
   previewStepIndex?: number;
+  previewTarget?: PreviewTarget;
   onPhaseChange?: (phase: 'welcome' | 'questions' | 'submitting' | 'done') => void;
   heroWelcome?: boolean;
 }
@@ -42,7 +45,7 @@ const FONT_MAP: Record<string, string> = {
   'Serif': "'Georgia', 'Times New Roman', serif",
 };
 
-export function ConversationalForm({ config, formName, onSubmit, isPreview = false, previewStepIndex, onPhaseChange, heroWelcome = false }: ConversationalFormProps) {
+export function ConversationalForm({ config, formName, onSubmit, isPreview = false, previewStepIndex, previewTarget, onPhaseChange, heroWelcome = false }: ConversationalFormProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(-1);
   const [inputValue, setInputValue] = useState<any>('');
   const [multiSelectValues, setMultiSelectValues] = useState<string[]>([]);
@@ -96,13 +99,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
   }, [sortedQuestions, onSubmit, isPreview]);
 
   useEffect(() => {
-    if (isPreview) {
-      if (previewStepIndex !== undefined && previewStepIndex >= 0 && sortedQuestions.length > 0) {
-        setPhase('questions');
-        setCurrentStepIndex(previewStepIndex);
-      }
-      return;
-    }
+    if (isPreview) return;
     if (!config.welcomeEnabled) {
       startForm();
     }
@@ -110,16 +107,29 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
 
   useEffect(() => {
     if (!isPreview) return;
-    if (previewStepIndex !== undefined && previewStepIndex !== null && previewStepIndex >= 0 && previewStepIndex < sortedQuestions.length) {
+
+    if (previewTarget === 'welcome') {
+      setPhase('welcome');
+      setCurrentStepIndex(-1);
+    } else if (previewTarget === 'end') {
+      setPhase('done');
+      setCurrentStepIndex(-1);
+    } else if (previewTarget && typeof previewTarget === 'object' && 'step' in previewTarget) {
+      const idx = previewTarget.step;
+      if (idx >= 0 && idx < sortedQuestions.length) {
+        setPhase('questions');
+        setCurrentStepIndex(idx);
+      }
+    } else if (previewStepIndex !== undefined && previewStepIndex !== null && previewStepIndex >= 0 && previewStepIndex < sortedQuestions.length) {
       setPhase('questions');
       setCurrentStepIndex(previewStepIndex);
-    } else if (previewStepIndex === undefined || previewStepIndex === null || previewStepIndex < 0) {
+    } else {
       if (config.welcomeEnabled) {
         setPhase('welcome');
       }
       setCurrentStepIndex(-1);
     }
-  }, [previewStepIndex, isPreview, sortedQuestions.length]);
+  }, [previewStepIndex, previewTarget, isPreview, sortedQuestions.length]);
 
   useEffect(() => {
     if (phase === 'questions' && !transitioning && currentStepIndex >= 0 && !isPreview) {
@@ -552,7 +562,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
       {isPreview ? (
         <div className="px-8 pt-5 pb-1">
           <p className="text-[11px] font-medium tracking-wide uppercase" style={{ color: subtextColor, opacity: 0.7 }}>
-            {phase === 'welcome' && config.welcomeEnabled ? 'Welcome' : phase === 'done' ? 'Done' : phase === 'questions' && sortedQuestions.length > 0 ? `Question ${currentStepIndex + 1} of ${sortedQuestions.length}` : '\u00A0'}
+            {phase === 'welcome' && config.welcomeEnabled ? 'Welcome' : phase === 'done' ? 'End screen' : phase === 'questions' && sortedQuestions.length > 0 ? `Step ${currentStepIndex + 1} of ${sortedQuestions.length}` : '\u00A0'}
           </p>
         </div>
       ) : (
