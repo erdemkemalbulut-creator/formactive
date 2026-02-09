@@ -766,7 +766,8 @@ export default function FormBuilderPage() {
                 {openSections.has(1) && (
                   <div className="px-5 pb-5 pt-1 pl-14 space-y-4">
                     <div>
-                      <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1.5 block">What is this conversation about?</label>
+                      <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">What is this conversation about?</label>
+                      <p className="text-[11px] text-slate-400 mb-1.5">Describe the purpose and AI will build your form</p>
                       <div className="relative">
                         <Textarea
                           value={currentConfig.aiContext?.context || ''}
@@ -775,7 +776,7 @@ export default function FormBuilderPage() {
                               updateAIContext({ context: e.target.value });
                             }
                           }}
-                          placeholder={"Explain what this conversation is about...\n\ne.g., I'm organizing my wedding and want to send this form to my guests to know who will attend, which dates work for them, and their meal preferences."}
+                          placeholder={"e.g. I'm collecting RSVPs for my wedding — guest names, dietary needs, plus-ones, and song requests."}
                           className="text-sm min-h-[100px] resize-none pr-16"
                         />
                         <span className={`absolute bottom-2 right-3 text-[10px] tabular-nums ${contextLength > CONTEXT_MAX_CHARS * 0.9 ? 'text-amber-500' : 'text-slate-300'}`}>
@@ -838,7 +839,7 @@ export default function FormBuilderPage() {
                       <Input
                         value={currentConfig.aiContext?.audience || ''}
                         onChange={(e) => updateAIContext({ audience: e.target.value })}
-                        placeholder="e.g., wedding guests, clients, students"
+                        placeholder="e.g. wedding guests, new clients, job applicants"
                         className="h-9 text-sm"
                       />
                     </div>
@@ -872,21 +873,21 @@ export default function FormBuilderPage() {
                             value={currentConfig.welcomeTitle}
                             onChange={(e) => updateConfig({ welcomeTitle: e.target.value })}
                             onFocus={() => setPreviewTarget('welcome')}
-                            placeholder="Welcome title"
+                            placeholder="e.g. We'd love to hear from you"
                             className="h-9 text-sm"
                           />
                           <Textarea
                             value={currentConfig.welcomeMessage}
                             onChange={(e) => updateConfig({ welcomeMessage: e.target.value })}
                             onFocus={() => setPreviewTarget('welcome')}
-                            placeholder="A short description for respondents..."
+                            placeholder="A brief intro your respondents will see first"
                             className="text-sm min-h-[50px] resize-none"
                           />
                           <Input
                             value={currentConfig.welcomeCta}
                             onChange={(e) => updateConfig({ welcomeCta: e.target.value })}
                             onFocus={() => setPreviewTarget('welcome')}
-                            placeholder="CTA button label (e.g., Start)"
+                            placeholder="e.g. Get started"
                             className="h-9 text-sm"
                           />
                         </div>
@@ -906,14 +907,14 @@ export default function FormBuilderPage() {
                             value={currentConfig.endMessage}
                             onChange={(e) => updateConfig({ endMessage: e.target.value })}
                             onFocus={() => setPreviewTarget('end')}
-                            placeholder="Thank you message"
+                            placeholder="e.g. Thanks! We'll be in touch soon."
                             className="text-sm min-h-[50px] resize-none"
                           />
                           <Input
                             value={currentConfig.endCtaText || ''}
                             onChange={(e) => updateConfig({ endCtaText: e.target.value })}
                             onFocus={() => setPreviewTarget('end')}
-                            placeholder="Optional CTA text"
+                            placeholder="e.g. Visit our website"
                             className="h-9 text-sm"
                           />
                           {currentConfig.endCtaText && (
@@ -1046,7 +1047,7 @@ export default function FormBuilderPage() {
                     <Textarea
                       value={currentConfig.aboutYou || ''}
                       onChange={(e) => updateConfig({ aboutYou: e.target.value })}
-                      placeholder="Tell us about your brand or company. This helps AI match your voice..."
+                      placeholder="e.g. We're a boutique florist based in London. We keep things warm and personal."
                       className="text-sm min-h-[60px] resize-none"
                     />
                   </div>
@@ -1072,7 +1073,7 @@ export default function FormBuilderPage() {
                     <Textarea
                       value={currentConfig.trainAI || ''}
                       onChange={(e) => updateConfig({ trainAI: e.target.value })}
-                      placeholder={"e.g., Always ask for first name before last name.\nDon't mention competitors.\nKeep questions under 20 words."}
+                      placeholder={"e.g. Always ask for first name before last name.\nDon't mention competitors.\nKeep questions under 20 words."}
                       className="text-sm min-h-[80px] resize-none font-mono text-xs"
                     />
                   </div>
@@ -1161,6 +1162,7 @@ function StepSettingsDrawer({
   onUpdate: (updates: Partial<Question>) => void;
 }) {
   const promptText = question.message || question.label || 'Untitled step';
+  const stepNumber = question.order + 1;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -1209,7 +1211,7 @@ function StepSettingsDrawer({
               <Youtube className="w-3.5 h-3.5 text-red-500" />
               Attach a YouTube video
             </Label>
-            <p className="text-xs text-slate-500">Optionally show a video alongside this step</p>
+            <p className="text-xs text-slate-500">Show a video alongside this question</p>
             <Input
               value={question.videoUrl || ''}
               onChange={(e) => onUpdate({ videoUrl: e.target.value || undefined })}
@@ -1220,7 +1222,7 @@ function StepSettingsDrawer({
 
           <div className="space-y-2">
             <Label className="text-sm font-medium text-slate-800">Internal name</Label>
-            <p className="text-xs text-slate-500">Machine-readable key used in data exports</p>
+            <p className="text-xs text-slate-500">Used as the column name in exports and integrations</p>
             <Input
               value={question.internalName ?? question.key ?? ''}
               onChange={(e) => {
@@ -1235,13 +1237,13 @@ function StepSettingsDrawer({
           {(question.type === 'single_choice' || question.type === 'multiple_choice') && (
             <div className="space-y-2">
               <Label className="text-sm font-medium text-slate-800">Options</Label>
-              <p className="text-xs text-slate-500">Set in the journey editor or via AI generation</p>
+              <p className="text-xs text-slate-500">Edit in the journey list or generate with AI</p>
               <div className="space-y-1">
                 {question.options.map((opt, i) => (
                   <div key={opt.id} className="text-sm text-slate-600 bg-slate-50 rounded px-2.5 py-1.5">{opt.label}</div>
                 ))}
                 {question.options.length === 0 && (
-                  <p className="text-xs text-slate-400 italic">No options yet — use AI wording to generate them</p>
+                  <p className="text-xs text-slate-400 italic">No options yet — click Generate with AI in Journey</p>
                 )}
               </div>
             </div>
@@ -1286,7 +1288,7 @@ function JourneyItemRow({
   onDragEnd: () => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const promptText = question.message || question.label || 'Untitled step';
+  const promptText = question.message || question.label || 'Untitled — double-click to edit';
   const typeLabel = QUESTION_TYPES.find(t => t.value === question.type)?.label || question.type;
 
   return (
@@ -1333,7 +1335,7 @@ function JourneyItemRow({
             }}
             onBlur={() => setEditing(false)}
             onKeyDown={(e) => { if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) { e.preventDefault(); setEditing(false); } }}
-            placeholder="What should AI ask at this step?"
+            placeholder="Write your prompt…"
             rows={2}
             className="flex-1 min-w-0 text-sm text-slate-800 bg-white border border-slate-200 rounded-md px-2 py-1 resize-none focus:outline-none focus:ring-1 focus:ring-blue-300 placeholder:text-slate-400"
             onClick={(e) => e.stopPropagation()}
@@ -1567,7 +1569,7 @@ function StepVisualManager({
   return (
     <div className="space-y-1">
       {stepRows.length === 0 && (
-        <p className="text-xs text-slate-400 italic py-2">Add steps to attach visuals</p>
+        <p className="text-xs text-slate-400 italic py-2">No steps yet — add items in Journey to attach visuals</p>
       )}
       {stepRows.map((row) => {
         const hasVis = row.visual?.kind && row.visual.kind !== 'none' && row.visual?.url?.trim();
@@ -1589,7 +1591,7 @@ function StepVisualManager({
               )}
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-slate-700 truncate">{row.label}</p>
-                <p className="text-[10px] text-slate-400">{hasVis ? 'Visual set' : 'No visual'}</p>
+                <p className="text-[10px] text-slate-400">{hasVis ? 'Visual set' : 'No visual — click to add'}</p>
               </div>
               <ChevronRight className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
             </button>
@@ -1728,7 +1730,7 @@ function LivePreviewPanel({
               <div className="text-center px-8">
                 <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-30 text-white" />
                 <p className="text-sm font-medium text-white/60">No steps yet</p>
-                <p className="text-xs mt-1.5 text-white/30">Add a step to preview your conversation</p>
+                <p className="text-xs mt-1.5 text-white/30">Add an item in Journey to see it here</p>
               </div>
             </div>
           ) : (

@@ -391,7 +391,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
           <div className="mt-8 animate-cinematic-fade">
             <div className="border-2 border-dashed border-white/20 rounded-xl p-10 text-center text-white/50 hover:border-white/30 transition-colors">
               <svg className="w-8 h-8 mx-auto mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-              <p className="text-sm font-medium text-white/60">Drop files here or click to upload</p>
+              <p className="text-sm font-medium text-white/60">Drop a file here or click to browse</p>
               <p className="text-xs mt-1 text-white/30">PDF, images, documents up to 10MB</p>
             </div>
           </div>
@@ -642,7 +642,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
             )}
           </>
         ) : (
-          <p className="text-2xl font-semibold text-white">All set!</p>
+          <p className="text-2xl font-semibold text-white">Thank you!</p>
         )}
       </div>
     );
@@ -651,7 +651,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
   const renderSubmitting = () => (
     <div className="flex flex-col items-center justify-center text-center px-8">
       <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin mb-4" />
-      <p className="text-sm text-white/60">Submitting your response...</p>
+      <p className="text-sm text-white/60">Sending your answers…</p>
     </div>
   );
 
@@ -703,7 +703,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
         {phase === 'welcome' && config.welcomeEnabled && renderWelcome()}
         {phase === 'welcome' && !config.welcomeEnabled && isPreview && (
           <div className="text-center px-8">
-            <p className="text-sm text-white/50">Click a journey step to preview it</p>
+            <p className="text-sm text-white/50">Select a step in the Journey panel to preview it here</p>
           </div>
         )}
         {phase === 'questions' && renderCurrentStep()}
