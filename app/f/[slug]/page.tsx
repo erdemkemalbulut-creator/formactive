@@ -161,7 +161,7 @@ export default function PublicFormPage() {
     }
   };
 
-  const handleSubmit = async (answers: Record<string, any>) => {
+  const handleSubmit = useCallback(async (answers: Record<string, any>) => {
     if (!form) return;
 
     const res = await fetch(`/api/forms/${form.id}/submissions`, {
@@ -176,7 +176,43 @@ export default function PublicFormPage() {
       event_type: 'form_submit',
       duration_ms: getElapsedMs(),
     });
-  };
+  }, [form]);
+
+  const theme = form?.published_config?.theme;
+  const globalVisuals = form?.published_config?.visuals;
+  const fontFamily = FONT_MAP[theme?.fontFamily || 'Inter'] || FONT_MAP['Inter'];
+
+  const DEFAULT_GRADIENT = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+
+  const sortedQuestions = useMemo(() => {
+    if (!form) return [];
+    return [...form.published_config.questions].sort((a, b) => a.order - b.order);
+  }, [form]);
+
+  const activeVisualLayer: VisualLayer | null = useMemo(() => {
+    if (!form) return null;
+    const resolve = (): StepVisual | null => {
+      if (currentPhase === 'welcome' && form.published_config.welcomeVisual) {
+        const wv = form.published_config.welcomeVisual;
+        if (wv.kind && wv.kind !== 'none' && wv.url?.trim()) return wv;
+      }
+      if (currentPhase === 'done' && form.published_config.endVisual) {
+        const ev = form.published_config.endVisual;
+        if (ev.kind && ev.kind !== 'none' && ev.url?.trim()) return ev;
+      }
+      if (currentPhase === 'questions' && sortedQuestions[currentStepIdx]?.visual) {
+        const sv = sortedQuestions[currentStepIdx].visual!;
+        if (sv.kind && sv.kind !== 'none' && sv.url?.trim()) return sv;
+      }
+      if (globalVisuals?.kind && globalVisuals.kind !== 'none' && globalVisuals?.url?.trim()) {
+        return { kind: globalVisuals.kind as 'image' | 'video', url: globalVisuals.url, source: globalVisuals.source || 'url', layout: 'fill', opacity: 100 };
+      }
+      return null;
+    };
+    const sv = resolve();
+    if (!sv) return null;
+    return { kind: sv.kind as 'image' | 'video', url: sv.url, opacity: sv.opacity, layout: sv.layout };
+  }, [currentPhase, currentStepIdx, form, globalVisuals, sortedQuestions]);
 
   if (loading) {
     return (
@@ -203,38 +239,6 @@ export default function PublicFormPage() {
       </div>
     );
   }
-
-  const theme = form.published_config.theme;
-  const globalVisuals = form.published_config.visuals;
-  const fontFamily = FONT_MAP[theme?.fontFamily || 'Inter'] || FONT_MAP['Inter'];
-
-  const DEFAULT_GRADIENT = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-
-  const sortedQuestions = [...form.published_config.questions].sort((a, b) => a.order - b.order);
-
-  const activeVisualLayer: VisualLayer | null = useMemo(() => {
-    const resolve = (): StepVisual | null => {
-      if (currentPhase === 'welcome' && form.published_config.welcomeVisual) {
-        const wv = form.published_config.welcomeVisual;
-        if (wv.kind && wv.kind !== 'none' && wv.url?.trim()) return wv;
-      }
-      if (currentPhase === 'done' && form.published_config.endVisual) {
-        const ev = form.published_config.endVisual;
-        if (ev.kind && ev.kind !== 'none' && ev.url?.trim()) return ev;
-      }
-      if (currentPhase === 'questions' && sortedQuestions[currentStepIdx]?.visual) {
-        const sv = sortedQuestions[currentStepIdx].visual!;
-        if (sv.kind && sv.kind !== 'none' && sv.url?.trim()) return sv;
-      }
-      if (globalVisuals?.kind && globalVisuals.kind !== 'none' && globalVisuals?.url?.trim()) {
-        return { kind: globalVisuals.kind as 'image' | 'video', url: globalVisuals.url, source: globalVisuals.source || 'url', layout: 'fill', opacity: 100 };
-      }
-      return null;
-    };
-    const sv = resolve();
-    if (!sv) return null;
-    return { kind: sv.kind as 'image' | 'video', url: sv.url, opacity: sv.opacity, layout: sv.layout };
-  }, [currentPhase, currentStepIdx, form.published_config, globalVisuals, sortedQuestions]);
 
   return (
     <div className="min-h-screen relative" style={{ fontFamily }}>
