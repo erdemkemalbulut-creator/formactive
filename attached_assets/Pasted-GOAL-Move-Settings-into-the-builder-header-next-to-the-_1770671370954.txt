@@ -1,0 +1,73 @@
+GOAL: Move “Settings” into the builder header next to the form title (like Formless), and implement a structured Settings panel matching the screenshot: tabs (General / Advanced / Tracking) and the right set of controls. Do NOT touch preview/editor coupling, Journey, Visuals, or animations in this task.
+
+CONTEXT:
+- In our builder page (app/dashboard/forms/[id]/page.tsx), settings currently live in the left rail or elsewhere.
+- We want a small ⚙️/Settings button adjacent to the editable form Title in the header area.
+- Clicking it opens a modal/drawer “Settings” with tab navigation: General | Advanced | Tracking.
+- Settings should be “form-level” (theme/brand), not “inside the form step content”.
+
+REQUIREMENTS (UI + UX):
+1) Header placement
+- Put the form Title input (or editable title) in the builder header area.
+- Add a “Settings” control immediately to the right of the Title (icon + label is fine).
+- Make it visually lightweight (small button), aligned baseline with title.
+
+2) Settings modal structure (match Formless density & clarity)
+- Modal title: “Settings”
+- Tabs at top: General (default), Advanced, Tracking
+- Close button top-right
+- Keep spacing tight, clear section labels, helper text lines under labels.
+
+3) General tab fields (exact set)
+- Title: input (same value as builder title; editing here updates the same source of truth)
+- Colors: “Background, text & button colors” with 3 swatches/pickers (bg, text, button). Use existing theme config if present; otherwise create a simple object in form settings.
+- Font: dropdown (use existing fonts list if already implemented; otherwise provide 4–6 options)
+- Text size: dropdown (Small / Medium / Large) that maps to existing typography scale if any (otherwise create a simple scale)
+- Branding: toggle “Hide [our brand] logo” (keep behavior no-op if branding not implemented; still store the flag)
+- Close the form/conversation: toggle “Stop accepting additional responses” (store flag; enforcement can be later)
+
+4) Advanced tab (minimal v1)
+- Keep this tab present even if sparse.
+- Add placeholders with helper text for future:
+  - “Share settings” (coming soon)
+  - “Access control” (coming soon)
+  - “Custom domain” (coming soon)
+- No backend required; just UI placeholders.
+
+5) Tracking tab (minimal v1)
+- Provide toggles:
+  - “Collect basic analytics” (default ON)
+  - “Exclude preview/editor activity from analytics” (default ON)
+- Add helper text explaining what each does.
+- No analytics implementation required here—only store flags in settings.
+
+DATA + STATE:
+- Introduce/extend a `formSettings` object on the form record (or wherever form config is stored) with:
+  - title
+  - colors: { background, text, button }
+  - font
+  - textSize
+  - hideBranding
+  - isClosed
+  - tracking: { enabled, excludeBuilderPreview }
+- Wire the modal to existing save/update flow for the form (Supabase or API route). If the app already has a form update endpoint, reuse it. If not, add a minimal PATCH endpoint under app/api/forms/[id]/route.ts (or existing pattern) to persist settings.
+- Ensure updating settings does NOT cause step navigation or preview to change (no coupling changes).
+
+IMPLEMENTATION NOTES:
+- Prefer using existing UI components (shadcn) for Dialog, Tabs, Switch, Select, Input.
+- Keep code localized: builder header + new SettingsDialog component (e.g., components/settings-dialog.tsx).
+- Ensure keyboard accessibility: Esc closes, tab navigation works.
+
+ACCEPTANCE CRITERIA:
+- I can open builder → see Title with a Settings control right next to it.
+- Clicking Settings opens modal with tabs.
+- General tab matches the screenshot’s structure and labels.
+- Changing Title in Settings updates the same form title.
+- All toggles/fields persist (refresh page retains values).
+- No changes to preview behavior, Journey, Visuals, or animations.
+
+FILES TO TOUCH (suggested):
+- app/dashboard/forms/[id]/page.tsx (header + hook up dialog)
+- components/settings-dialog.tsx (new)
+- app/api/forms/[id]/route.ts OR existing update endpoint (persist settings)
+- types (if needed) for FormSettings

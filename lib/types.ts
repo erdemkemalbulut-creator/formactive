@@ -86,6 +86,29 @@ export interface StepVisual {
   opacity?: number;
 }
 
+export interface FormSettings {
+  colors?: {
+    background?: string;
+    text?: string;
+    button?: string;
+  };
+  textSize?: 'small' | 'medium' | 'large';
+  hideBranding?: boolean;
+  isClosed?: boolean;
+  tracking?: {
+    enabled?: boolean;
+    excludeBuilderPreview?: boolean;
+  };
+}
+
+export const DEFAULT_FORM_SETTINGS: FormSettings = {
+  colors: { background: '#667eea', text: '#ffffff', button: '#111827' },
+  textSize: 'medium',
+  hideBranding: false,
+  isClosed: false,
+  tracking: { enabled: true, excludeBuilderPreview: true },
+};
+
 export interface FormConfig {
   questions: Question[];
   welcomeEnabled: boolean;
@@ -105,6 +128,7 @@ export interface FormConfig {
   endVisual?: StepVisual;
   aboutYou?: string;
   trainAI?: string;
+  settings?: FormSettings;
 }
 
 export interface Form {

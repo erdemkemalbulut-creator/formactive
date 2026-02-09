@@ -21,7 +21,8 @@ FormActive is built on **Next.js 13.5.1 (App Router)** using **React 18** for th
 - **Theming System:** Customizable `primaryColor`, `fontFamily` (Inter/System/Serif), and `cardStyle` (light/dark) are available. Visual backgrounds (images/videos) can be applied per-step or globally.
 - **Cross-dissolve visual transitions:** Smooth cross-fade background transitions between steps and opacity + translateY animations for foreground content.
 - **Inert preview inputs:** All preview inputs are disabled/readOnly to clearly differentiate from live forms.
-- **Accordion Builder:** The left panel is structured into numbered, collapsible accordion sections for form configuration (e.g., Overview, Tone of voice, Welcome & End screens, Journey, Visuals, About you, Train AI, Settings).
+- **Settings Dialog:** A header-level Settings button opens a modal dialog with General (title, colors, font, text size, branding, close form), Advanced (placeholders for share/access/domain), and Tracking (analytics toggles) tabs. FormSettings type stored in FormConfig.settings.
+- **Accordion Builder:** The left panel is structured into numbered, collapsible accordion sections for form configuration (e.g., Overview, Tone of voice, Welcome & End screens, Journey, Visuals, About you, Train AI).
 
 **Technical Implementations:**
 - **ConversationalForm Component:** A reusable React component (`conversational-form.tsx`) handles the rendering of the single-step conversational UI, dynamic input types, and theme application. It supports a `isPreview` mode for builder integration.
