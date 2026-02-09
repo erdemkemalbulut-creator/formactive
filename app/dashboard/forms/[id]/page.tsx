@@ -22,19 +22,13 @@ import {
   ChevronDown,
   ChevronRight,
   MoreVertical,
-  ExternalLink,
   BarChart3,
   Sparkles,
   Loader2,
   Share2,
   Image,
   Video,
-  User,
-  Brain,
-  MessageSquare,
-  Eye,
   Send,
-  Palette,
   Upload,
   X,
   Link,
@@ -96,14 +90,22 @@ export default function FormBuilderPage() {
   const [generatingAllWording, setGeneratingAllWording] = useState(false);
   const [showTonePicker, setShowTonePicker] = useState(false);
   const [activeItemIndex, setActiveItemIndex] = useState<number | null>(null);
-  const [welcomeEndOpen, setWelcomeEndOpen] = useState(false);
-  const [trainAIOpen, setTrainAIOpen] = useState(false);
-  const [themeOpen, setThemeOpen] = useState(false);
   const [uploadingVisual, setUploadingVisual] = useState(false);
   const [showVisualUrlInput, setShowVisualUrlInput] = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<'editor' | 'analytics'>('editor');
+  const [openSections, setOpenSections] = useState<Set<number>>(new Set([1]));
+
+  const toggleSection = (num: number) => {
+    setOpenSections(prev => {
+      const next = new Set(prev);
+      if (next.has(num)) next.delete(num);
+      else next.add(num);
+      return next;
+    });
+  };
 
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -682,399 +684,462 @@ export default function FormBuilderPage() {
       {/* Split Layout */}
       <div className="flex flex-1 overflow-hidden">
         {/* Builder Panel (Left) */}
-        <div className="w-[440px] flex-shrink-0 border-r border-slate-200 bg-white overflow-y-auto">
-          <div className="p-5 space-y-6">
+        <div className="w-[440px] flex-shrink-0 border-r border-slate-200 bg-white flex flex-col">
+          {/* Editor / Analytics tabs */}
+          <div className="flex border-b border-slate-200 flex-shrink-0">
+            <button
+              onClick={() => setActiveTab('editor')}
+              className={`flex-1 py-2.5 text-sm font-medium text-center transition-colors relative ${
+                activeTab === 'editor'
+                  ? 'text-slate-900'
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              Editor
+              {activeTab === 'editor' && (
+                <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-slate-900 rounded-full" />
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`flex-1 py-2.5 text-sm font-medium text-center transition-colors relative ${
+                activeTab === 'analytics'
+                  ? 'text-slate-900'
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              Analytics
+              {activeTab === 'analytics' && (
+                <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-slate-900 rounded-full" />
+              )}
+            </button>
+          </div>
 
-            {/* 1. Context Section */}
-            <section>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                  <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
-                </div>
-                <h3 className="text-sm font-semibold text-slate-900">What is this conversation about?</h3>
+          {activeTab === 'analytics' ? (
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="text-center">
+                <BarChart3 className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                <p className="text-sm font-medium text-slate-500">Analytics coming soon</p>
+                <p className="text-xs text-slate-400 mt-1">Publish your form to start collecting data</p>
               </div>
-              <div className="relative">
-                <Textarea
-                  value={currentConfig.aiContext?.context || ''}
-                  onChange={(e) => {
-                    if (e.target.value.length <= CONTEXT_MAX_CHARS) {
-                      updateAIContext({ context: e.target.value });
-                    }
-                  }}
-                  placeholder={"Explain what this conversation is about...\n\ne.g., I'm organizing my wedding and want to send this form to my guests to know who will attend, which dates work for them, and their meal preferences."}
-                  className="text-sm min-h-[120px] resize-none pr-16"
-                />
-                <span className={`absolute bottom-2 right-3 text-[10px] tabular-nums ${contextLength > CONTEXT_MAX_CHARS * 0.9 ? 'text-amber-500' : 'text-slate-300'}`}>
-                  {contextLength}/{CONTEXT_MAX_CHARS}
-                </span>
-              </div>
-            </section>
+            </div>
+          ) : (
+          <div className="flex-1 overflow-y-auto">
+            <div className="divide-y divide-slate-100">
 
-            {/* 2. Tone Section */}
-            <section>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center">
-                  <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-                </div>
-                <h3 className="text-sm font-semibold text-slate-900">Tone of voice</h3>
-              </div>
-
-              {showTonePicker ? (
-                <div className="grid grid-cols-2 gap-2">
-                  {TONE_OPTIONS.map((t) => (
-                    <button
-                      key={t.value}
-                      onClick={() => {
-                        updateAIContext({ tone: t.value });
-                        setShowTonePicker(false);
-                      }}
-                      className={`px-3 py-2.5 rounded-lg border text-left transition-all ${
-                        currentConfig.aiContext?.tone === t.value
-                          ? 'border-purple-300 bg-purple-50 ring-1 ring-purple-200'
-                          : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span className="text-sm font-medium text-slate-800">{t.label}</span>
-                      <span className="block text-[11px] text-slate-500 mt-0.5">{t.description}</span>
-                    </button>
-                  ))}
-                </div>
-              ) : (
+              {/* 1. Overview */}
+              <div>
                 <button
-                  onClick={() => setShowTonePicker(true)}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors"
+                  onClick={() => toggleSection(1)}
+                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/80 transition-colors"
                 >
-                  <span className="text-sm text-slate-700">
-                    {TONE_OPTIONS.find(t => t.value === (currentConfig.aiContext?.tone || 'friendly'))?.label || 'Friendly'}
-                  </span>
-                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                  <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">1</span>
+                  <span className="text-[13px] font-semibold text-slate-800 flex-1 text-left">Overview</span>
+                  <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${openSections.has(1) ? 'rotate-90' : ''}`} />
                 </button>
-              )}
-
-              <div className="mt-2">
-                <Input
-                  value={currentConfig.aiContext?.audience || ''}
-                  onChange={(e) => updateAIContext({ audience: e.target.value })}
-                  placeholder="Audience (e.g., wedding guests, clients, students)"
-                  className="h-8 text-sm"
-                />
+                {openSections.has(1) && (
+                  <div className="px-5 pb-5 pt-1 pl-14 space-y-4">
+                    <div>
+                      <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1.5 block">What is this conversation about?</label>
+                      <div className="relative">
+                        <Textarea
+                          value={currentConfig.aiContext?.context || ''}
+                          onChange={(e) => {
+                            if (e.target.value.length <= CONTEXT_MAX_CHARS) {
+                              updateAIContext({ context: e.target.value });
+                            }
+                          }}
+                          placeholder={"Explain what this conversation is about...\n\ne.g., I'm organizing my wedding and want to send this form to my guests to know who will attend, which dates work for them, and their meal preferences."}
+                          className="text-sm min-h-[100px] resize-none pr-16"
+                        />
+                        <span className={`absolute bottom-2 right-3 text-[10px] tabular-nums ${contextLength > CONTEXT_MAX_CHARS * 0.9 ? 'text-amber-500' : 'text-slate-300'}`}>
+                          {contextLength}/{CONTEXT_MAX_CHARS}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            </section>
 
-            {/* 3. Welcome & End Section (collapsible) */}
-            <section className="border border-slate-200 rounded-lg overflow-hidden">
-              <button
-                onClick={() => setWelcomeEndOpen(!welcomeEndOpen)}
-                className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <Eye className="w-4 h-4 text-slate-500" />
-                  <span className="text-sm font-semibold text-slate-700">Welcome & End screens</span>
-                </div>
-                <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${welcomeEndOpen ? 'rotate-90' : ''}`} />
-              </button>
-
-              {welcomeEndOpen && (
-                <div className="px-4 pb-4 space-y-5 border-t border-slate-100">
-                  {/* Welcome */}
-                  <div className="pt-3 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Welcome screen</Label>
-                      <Switch
-                        checked={currentConfig.welcomeEnabled}
-                        onCheckedChange={(checked) => updateConfig({ welcomeEnabled: checked })}
+              {/* 2. Tone of voice */}
+              <div>
+                <button
+                  onClick={() => toggleSection(2)}
+                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/80 transition-colors"
+                >
+                  <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">2</span>
+                  <span className="text-[13px] font-semibold text-slate-800 flex-1 text-left">Tone of voice</span>
+                  <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${openSections.has(2) ? 'rotate-90' : ''}`} />
+                </button>
+                {openSections.has(2) && (
+                  <div className="px-5 pb-5 pt-1 pl-14 space-y-3">
+                    <div>
+                      <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1.5 block">Tone</label>
+                      {showTonePicker ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          {TONE_OPTIONS.map((t) => (
+                            <button
+                              key={t.value}
+                              onClick={() => {
+                                updateAIContext({ tone: t.value });
+                                setShowTonePicker(false);
+                              }}
+                              className={`px-3 py-2.5 rounded-lg border text-left transition-all ${
+                                currentConfig.aiContext?.tone === t.value
+                                  ? 'border-purple-300 bg-purple-50 ring-1 ring-purple-200'
+                                  : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                              }`}
+                            >
+                              <span className="text-sm font-medium text-slate-800">{t.label}</span>
+                              <span className="block text-[11px] text-slate-500 mt-0.5">{t.description}</span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setShowTonePicker(true)}
+                          className="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors"
+                        >
+                          <span className="text-sm text-slate-700">
+                            {TONE_OPTIONS.find(t => t.value === (currentConfig.aiContext?.tone || 'friendly'))?.label || 'Friendly'}
+                          </span>
+                          <ChevronDown className="w-4 h-4 text-slate-400" />
+                        </button>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1.5 block">Audience</label>
+                      <Input
+                        value={currentConfig.aiContext?.audience || ''}
+                        onChange={(e) => updateAIContext({ audience: e.target.value })}
+                        placeholder="e.g., wedding guests, clients, students"
+                        className="h-9 text-sm"
                       />
                     </div>
+                  </div>
+                )}
+              </div>
 
-                    {currentConfig.welcomeEnabled && (
-                      <div className="space-y-2 pl-0">
-                        <Input
-                          value={currentConfig.welcomeTitle}
-                          onChange={(e) => updateConfig({ welcomeTitle: e.target.value })}
-                          placeholder="Welcome title"
-                          className="h-8 text-sm"
-                        />
-                        <Textarea
-                          value={currentConfig.welcomeMessage}
-                          onChange={(e) => updateConfig({ welcomeMessage: e.target.value })}
-                          placeholder="A short description for respondents..."
-                          className="text-sm min-h-[50px] resize-none"
-                        />
-                        <Input
-                          value={currentConfig.welcomeCta}
-                          onChange={(e) => updateConfig({ welcomeCta: e.target.value })}
-                          placeholder="CTA button label (e.g., Start)"
-                          className="h-8 text-sm"
+              {/* 3. Welcome & End screens */}
+              <div>
+                <button
+                  onClick={() => toggleSection(3)}
+                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/80 transition-colors"
+                >
+                  <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">3</span>
+                  <span className="text-[13px] font-semibold text-slate-800 flex-1 text-left">Welcome & End screens</span>
+                  <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${openSections.has(3) ? 'rotate-90' : ''}`} />
+                </button>
+                {openSections.has(3) && (
+                  <div className="px-5 pb-5 pt-1 pl-14 space-y-5">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Welcome screen</label>
+                        <Switch
+                          checked={currentConfig.welcomeEnabled}
+                          onCheckedChange={(checked) => updateConfig({ welcomeEnabled: checked })}
                         />
                       </div>
-                    )}
-                  </div>
-
-                  {/* End */}
-                  <div className="space-y-3 border-t border-slate-100 pt-3">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">End screen</Label>
-                      <Switch
-                        checked={currentConfig.endEnabled ?? true}
-                        onCheckedChange={(checked) => updateConfig({ endEnabled: checked })}
-                      />
-                    </div>
-
-                    {(currentConfig.endEnabled ?? true) && (
-                      <div className="space-y-2">
-                        <Textarea
-                          value={currentConfig.endMessage}
-                          onChange={(e) => updateConfig({ endMessage: e.target.value })}
-                          placeholder="Thank you message"
-                          className="text-sm min-h-[50px] resize-none"
-                        />
-                        <Input
-                          value={currentConfig.endCtaText || ''}
-                          onChange={(e) => updateConfig({ endCtaText: e.target.value })}
-                          placeholder="Optional CTA text"
-                          className="h-8 text-sm"
-                        />
-                        {currentConfig.endCtaText && (
+                      {currentConfig.welcomeEnabled && (
+                        <div className="space-y-2">
                           <Input
-                            value={currentConfig.endCtaUrl || ''}
-                            onChange={(e) => updateConfig({ endCtaUrl: e.target.value })}
-                            placeholder="CTA URL (https://...)"
-                            className="h-8 text-sm"
+                            value={currentConfig.welcomeTitle}
+                            onChange={(e) => updateConfig({ welcomeTitle: e.target.value })}
+                            placeholder="Welcome title"
+                            className="h-9 text-sm"
                           />
-                        )}
+                          <Textarea
+                            value={currentConfig.welcomeMessage}
+                            onChange={(e) => updateConfig({ welcomeMessage: e.target.value })}
+                            placeholder="A short description for respondents..."
+                            className="text-sm min-h-[50px] resize-none"
+                          />
+                          <Input
+                            value={currentConfig.welcomeCta}
+                            onChange={(e) => updateConfig({ welcomeCta: e.target.value })}
+                            placeholder="CTA button label (e.g., Start)"
+                            className="h-9 text-sm"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <div className="border-t border-slate-100 pt-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">End screen</label>
+                        <Switch
+                          checked={currentConfig.endEnabled ?? true}
+                          onCheckedChange={(checked) => updateConfig({ endEnabled: checked })}
+                        />
                       </div>
-                    )}
+                      {(currentConfig.endEnabled ?? true) && (
+                        <div className="space-y-2">
+                          <Textarea
+                            value={currentConfig.endMessage}
+                            onChange={(e) => updateConfig({ endMessage: e.target.value })}
+                            placeholder="Thank you message"
+                            className="text-sm min-h-[50px] resize-none"
+                          />
+                          <Input
+                            value={currentConfig.endCtaText || ''}
+                            onChange={(e) => updateConfig({ endCtaText: e.target.value })}
+                            placeholder="Optional CTA text"
+                            className="h-9 text-sm"
+                          />
+                          {currentConfig.endCtaText && (
+                            <Input
+                              value={currentConfig.endCtaUrl || ''}
+                              onChange={(e) => updateConfig({ endCtaUrl: e.target.value })}
+                              placeholder="CTA URL (https://...)"
+                              className="h-9 text-sm"
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-            </section>
+                )}
+              </div>
 
-            {/* 4. Journey Section (core) */}
-            <section>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
-                    <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-slate-900">
+              {/* 4. Journey */}
+              <div>
+                <button
+                  onClick={() => toggleSection(4)}
+                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/80 transition-colors"
+                >
+                  <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">4</span>
+                  <span className="text-[13px] font-semibold text-slate-800 flex-1 text-left">
                     Journey
                     {currentConfig.questions.length > 0 && (
-                      <span className="text-slate-400 font-normal ml-1.5">({currentConfig.questions.length})</span>
+                      <span className="text-slate-400 font-normal ml-1">({currentConfig.questions.length})</span>
                     )}
-                  </h3>
-                </div>
-                <Button
-                  onClick={generateFullConversation}
-                  disabled={generatingConversation || generatingAllWording || !currentConfig.aiContext?.context?.trim()}
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs gap-1.5 border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                >
-                  {generatingConversation || generatingAllWording ? (
-                    <>
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      {generatingAllWording ? 'Wording...' : 'Generating...'}
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-3 h-3" />
-                      Generate with AI
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              <div className="space-y-2">
-                {currentConfig.questions.map((q, i) => (
-                  <JourneyItemRow
-                    key={q.id}
-                    question={q}
-                    index={i}
-                    isActive={activeItemIndex === i}
-                    isDragging={dragIndex === i}
-                    isDragOver={dragOverIndex === i}
-                    isGenerating={generatingWording === q.id}
-                    onUpdate={(updates) => updateQuestion(q.id, updates)}
-                    onFocus={() => setActiveItemIndex(i)}
-                    onDuplicate={() => duplicateJourneyItem(q.id)}
-                    onDelete={() => deleteJourneyItem(q.id)}
-                    onGenerateWording={() => generateWordingForQuestion(q.id)}
-                    onDragStart={() => handleDragStart(i)}
-                    onDragOver={(e) => handleDragOver(e, i)}
-                    onDragEnd={handleDragEnd}
-                  />
-                ))}
-
-                <button
-                  onClick={addJourneyItem}
-                  className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg border-2 border-dashed border-slate-200 text-sm text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add step
+                  </span>
+                  <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${openSections.has(4) ? 'rotate-90' : ''}`} />
                 </button>
-              </div>
-            </section>
+                {openSections.has(4) && (
+                  <div className="px-5 pb-5 pt-1 space-y-3">
+                    <div className="flex items-center justify-end">
+                      <Button
+                        onClick={generateFullConversation}
+                        disabled={generatingConversation || generatingAllWording || !currentConfig.aiContext?.context?.trim()}
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs gap-1.5 border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                      >
+                        {generatingConversation || generatingAllWording ? (
+                          <>
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            {generatingAllWording ? 'Wording...' : 'Generating...'}
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-3 h-3" />
+                            Generate with AI
+                          </>
+                        )}
+                      </Button>
+                    </div>
 
-            {/* 5. Theme Section (collapsible) */}
-            <section className="border border-slate-200 rounded-lg overflow-hidden">
-              <button
-                onClick={() => setThemeOpen(!themeOpen)}
-                className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <Palette className="w-4 h-4 text-slate-500" />
-                  <span className="text-sm font-semibold text-slate-700">Theme</span>
-                </div>
-                <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${themeOpen ? 'rotate-90' : ''}`} />
-              </button>
-
-              {themeOpen && (
-                <div className="px-4 pb-4 space-y-4 border-t border-slate-100 pt-3">
-                  <div>
-                    <Label className="text-xs font-medium text-slate-600 mb-1.5 block">Primary color</Label>
-                    <div className="flex items-center gap-2">
-                      <div className="relative">
-                        <input
-                          type="color"
-                          value={currentConfig.theme?.primaryColor || '#111827'}
-                          onChange={(e) => updateTheme({ primaryColor: e.target.value })}
-                          className="w-8 h-8 rounded-lg border border-slate-200 cursor-pointer p-0.5"
+                    <div className="space-y-2">
+                      {currentConfig.questions.map((q, i) => (
+                        <JourneyItemRow
+                          key={q.id}
+                          question={q}
+                          index={i}
+                          isActive={activeItemIndex === i}
+                          isDragging={dragIndex === i}
+                          isDragOver={dragOverIndex === i}
+                          isGenerating={generatingWording === q.id}
+                          onUpdate={(updates) => updateQuestion(q.id, updates)}
+                          onFocus={() => setActiveItemIndex(i)}
+                          onDuplicate={() => duplicateJourneyItem(q.id)}
+                          onDelete={() => deleteJourneyItem(q.id)}
+                          onGenerateWording={() => generateWordingForQuestion(q.id)}
+                          onDragStart={() => handleDragStart(i)}
+                          onDragOver={(e) => handleDragOver(e, i)}
+                          onDragEnd={handleDragEnd}
                         />
+                      ))}
+
+                      <button
+                        onClick={addJourneyItem}
+                        className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg border-2 border-dashed border-slate-200 text-sm text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-colors"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add step
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 5. Visuals */}
+              <div>
+                <button
+                  onClick={() => toggleSection(5)}
+                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/80 transition-colors"
+                >
+                  <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">5</span>
+                  <span className="text-[13px] font-semibold text-slate-800 flex-1 text-left">Visuals</span>
+                  <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${openSections.has(5) ? 'rotate-90' : ''}`} />
+                </button>
+                {openSections.has(5) && (
+                  <div className="px-5 pb-5 pt-1 pl-14 space-y-5">
+                    <div>
+                      <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1.5 block">Theme</label>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-[11px] text-slate-500 mb-1 block">Primary color</label>
+                          <div className="flex items-center gap-2">
+                            <div className="relative">
+                              <input
+                                type="color"
+                                value={currentConfig.theme?.primaryColor || '#111827'}
+                                onChange={(e) => updateTheme({ primaryColor: e.target.value })}
+                                className="w-8 h-8 rounded-lg border border-slate-200 cursor-pointer p-0.5"
+                              />
+                            </div>
+                            <Input
+                              value={currentConfig.theme?.primaryColor || '#111827'}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                if (/^#[0-9a-fA-F]{0,6}$/.test(v) || v === '') {
+                                  updateTheme({ primaryColor: v || '#111827' });
+                                }
+                              }}
+                              placeholder="#111827"
+                              className="h-8 text-sm font-mono flex-1"
+                              maxLength={7}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-slate-500 mb-1 block">Font</label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {(['Inter', 'System', 'Serif'] as const).map((font) => (
+                              <button
+                                key={font}
+                                onClick={() => updateTheme({ fontFamily: font })}
+                                className={`py-2 px-3 rounded-lg border text-sm transition-all ${
+                                  (currentConfig.theme?.fontFamily || 'Inter') === font
+                                    ? 'border-blue-300 bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                                    : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                                }`}
+                                style={{
+                                  fontFamily: font === 'Serif' ? 'Georgia, serif' : font === 'System' ? 'system-ui, sans-serif' : 'Inter, sans-serif'
+                                }}
+                              >
+                                {font}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-[11px] text-slate-500 mb-1 block">Card style</label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              onClick={() => updateTheme({ cardStyle: 'light' })}
+                              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border text-sm transition-all ${
+                                (currentConfig.theme?.cardStyle || 'light') === 'light'
+                                  ? 'border-blue-300 bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                                  : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                              }`}
+                            >
+                              <div className="w-4 h-4 rounded border border-slate-300 bg-white" />
+                              Light
+                            </button>
+                            <button
+                              onClick={() => updateTheme({ cardStyle: 'dark' })}
+                              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border text-sm transition-all ${
+                                currentConfig.theme?.cardStyle === 'dark'
+                                  ? 'border-blue-300 bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                                  : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                              }`}
+                            >
+                              <div className="w-4 h-4 rounded border border-slate-600 bg-slate-800" />
+                              Dark
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <Input
-                        value={currentConfig.theme?.primaryColor || '#111827'}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          if (/^#[0-9a-fA-F]{0,6}$/.test(v) || v === '') {
-                            updateTheme({ primaryColor: v || '#111827' });
-                          }
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-4">
+                      <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-2 block">Background</label>
+                      <VisualsSection
+                        visuals={currentConfig.visuals}
+                        uploadingVisual={uploadingVisual}
+                        showVisualUrlInput={showVisualUrlInput}
+                        onSetShowVisualUrlInput={setShowVisualUrlInput}
+                        onUpload={handleVisualUpload}
+                        onClear={clearVisual}
+                        onUrlChange={(url, kind) => {
+                          updateConfig({
+                            visuals: {
+                              kind,
+                              source: 'url',
+                              url,
+                              updatedAt: new Date().toISOString(),
+                            },
+                          });
                         }}
-                        placeholder="#111827"
-                        className="h-8 text-sm font-mono flex-1"
-                        maxLength={7}
                       />
                     </div>
                   </div>
-
-                  <div>
-                    <Label className="text-xs font-medium text-slate-600 mb-1.5 block">Font</Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(['Inter', 'System', 'Serif'] as const).map((font) => (
-                        <button
-                          key={font}
-                          onClick={() => updateTheme({ fontFamily: font })}
-                          className={`py-2 px-3 rounded-lg border text-sm transition-all ${
-                            (currentConfig.theme?.fontFamily || 'Inter') === font
-                              ? 'border-blue-300 bg-blue-50 text-blue-700 ring-1 ring-blue-200'
-                              : 'border-slate-200 text-slate-600 hover:border-slate-300'
-                          }`}
-                          style={{
-                            fontFamily: font === 'Serif' ? 'Georgia, serif' : font === 'System' ? 'system-ui, sans-serif' : 'Inter, sans-serif'
-                          }}
-                        >
-                          {font}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label className="text-xs font-medium text-slate-600 mb-1.5 block">Card style</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={() => updateTheme({ cardStyle: 'light' })}
-                        className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border text-sm transition-all ${
-                          (currentConfig.theme?.cardStyle || 'light') === 'light'
-                            ? 'border-blue-300 bg-blue-50 text-blue-700 ring-1 ring-blue-200'
-                            : 'border-slate-200 text-slate-600 hover:border-slate-300'
-                        }`}
-                      >
-                        <div className="w-4 h-4 rounded border border-slate-300 bg-white" />
-                        Light
-                      </button>
-                      <button
-                        onClick={() => updateTheme({ cardStyle: 'dark' })}
-                        className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border text-sm transition-all ${
-                          currentConfig.theme?.cardStyle === 'dark'
-                            ? 'border-blue-300 bg-blue-50 text-blue-700 ring-1 ring-blue-200'
-                            : 'border-slate-200 text-slate-600 hover:border-slate-300'
-                        }`}
-                      >
-                        <div className="w-4 h-4 rounded border border-slate-600 bg-slate-800" />
-                        Dark
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </section>
-
-            {/* 6. Visuals Section */}
-            <VisualsSection
-              visuals={currentConfig.visuals}
-              uploadingVisual={uploadingVisual}
-              showVisualUrlInput={showVisualUrlInput}
-              onSetShowVisualUrlInput={setShowVisualUrlInput}
-              onUpload={handleVisualUpload}
-              onClear={clearVisual}
-              onUrlChange={(url, kind) => {
-                updateConfig({
-                  visuals: {
-                    kind,
-                    source: 'url',
-                    url,
-                    updatedAt: new Date().toISOString(),
-                  },
-                });
-              }}
-            />
-
-            {/* 6. About You Section */}
-            <section>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center">
-                  <User className="w-3.5 h-3.5 text-amber-600" />
-                </div>
-                <h3 className="text-sm font-semibold text-slate-900">About you</h3>
+                )}
               </div>
-              <Textarea
-                value={currentConfig.aboutYou || ''}
-                onChange={(e) => updateConfig({ aboutYou: e.target.value })}
-                placeholder="Tell us about your brand or company. This helps AI match your voice..."
-                className="text-sm min-h-[60px] resize-none"
-              />
-            </section>
 
-            {/* 7. Train AI Section (collapsible) */}
-            <section className="border border-slate-200 rounded-lg overflow-hidden">
-              <button
-                onClick={() => setTrainAIOpen(!trainAIOpen)}
-                className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <Brain className="w-4 h-4 text-slate-500" />
-                  <span className="text-sm font-semibold text-slate-700">Train AI</span>
-                  <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">Advanced</span>
-                </div>
-                <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${trainAIOpen ? 'rotate-90' : ''}`} />
-              </button>
+              {/* 6. About you */}
+              <div>
+                <button
+                  onClick={() => toggleSection(6)}
+                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/80 transition-colors"
+                >
+                  <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">6</span>
+                  <span className="text-[13px] font-semibold text-slate-800 flex-1 text-left">About you</span>
+                  <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${openSections.has(6) ? 'rotate-90' : ''}`} />
+                </button>
+                {openSections.has(6) && (
+                  <div className="px-5 pb-5 pt-1 pl-14">
+                    <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1.5 block">Brand / company</label>
+                    <Textarea
+                      value={currentConfig.aboutYou || ''}
+                      onChange={(e) => updateConfig({ aboutYou: e.target.value })}
+                      placeholder="Tell us about your brand or company. This helps AI match your voice..."
+                      className="text-sm min-h-[60px] resize-none"
+                    />
+                  </div>
+                )}
+              </div>
 
-              {trainAIOpen && (
-                <div className="px-4 pb-4 border-t border-slate-100">
-                  <p className="text-xs text-slate-500 mt-3 mb-2">
-                    Give extra instructions to guide how AI generates your conversation.
-                  </p>
-                  <Textarea
-                    value={currentConfig.trainAI || ''}
-                    onChange={(e) => updateConfig({ trainAI: e.target.value })}
-                    placeholder={"e.g., Always ask for first name before last name.\nDon't mention competitors.\nKeep questions under 20 words."}
-                    className="text-sm min-h-[80px] resize-none font-mono text-xs"
-                  />
-                </div>
-              )}
-            </section>
+              {/* 7. Train AI */}
+              <div>
+                <button
+                  onClick={() => toggleSection(7)}
+                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/80 transition-colors"
+                >
+                  <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-500 text-xs font-semibold flex items-center justify-center flex-shrink-0">7</span>
+                  <span className="text-[13px] font-semibold text-slate-800 flex-1 text-left">Train AI</span>
+                  <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full mr-1">Optional</span>
+                  <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${openSections.has(7) ? 'rotate-90' : ''}`} />
+                </button>
+                {openSections.has(7) && (
+                  <div className="px-5 pb-5 pt-1 pl-14">
+                    <p className="text-xs text-slate-500 mb-2">
+                      Give extra instructions to guide how AI generates your conversation.
+                    </p>
+                    <Textarea
+                      value={currentConfig.trainAI || ''}
+                      onChange={(e) => updateConfig({ trainAI: e.target.value })}
+                      placeholder={"e.g., Always ask for first name before last name.\nDon't mention competitors.\nKeep questions under 20 words."}
+                      className="text-sm min-h-[80px] resize-none font-mono text-xs"
+                    />
+                  </div>
+                )}
+              </div>
 
+            </div>
           </div>
+          )}
         </div>
 
         {/* Live Preview Panel (Right) */}
@@ -1197,15 +1262,7 @@ function JourneyItemRow({
   );
 }
 
-function VisualsSection({
-  visuals,
-  uploadingVisual,
-  showVisualUrlInput,
-  onSetShowVisualUrlInput,
-  onUpload,
-  onClear,
-  onUrlChange,
-}: {
+interface VisualsSectionProps {
   visuals?: FormVisuals;
   uploadingVisual: boolean;
   showVisualUrlInput: boolean;
@@ -1213,7 +1270,10 @@ function VisualsSection({
   onUpload: (file: File, kind: 'image' | 'video') => void;
   onClear: () => void;
   onUrlChange: (url: string, kind: 'image' | 'video') => void;
-}) {
+}
+
+function VisualsSection(props: VisualsSectionProps) {
+  const { visuals, uploadingVisual, showVisualUrlInput, onSetShowVisualUrlInput, onUpload, onClear, onUrlChange } = props;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [urlInputValue, setUrlInputValue] = useState('');
   const currentKind = visuals?.kind && visuals.kind !== 'none' ? visuals.kind : 'image';
@@ -1227,131 +1287,122 @@ function VisualsSection({
   };
 
   return (
-    <section>
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-6 h-6 rounded-full bg-pink-100 flex items-center justify-center">
-          <Image className="w-3.5 h-3.5 text-pink-600" />
-        </div>
-        <h3 className="text-sm font-semibold text-slate-900">Visuals</h3>
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        {(['image', 'video'] as const).map((kind) => (
+          <button
+            key={kind}
+            onClick={() => {
+              if (hasVisual && visuals?.kind !== kind) {
+                onUrlChange(visuals?.url || '', kind);
+              }
+            }}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-sm transition-colors ${
+              currentKind === kind
+                ? 'border-pink-200 bg-pink-50 text-pink-700'
+                : 'border-slate-200 text-slate-500 hover:border-slate-300'
+            }`}
+          >
+            {kind === 'image' ? <Image className="w-3.5 h-3.5" /> : <Video className="w-3.5 h-3.5" />}
+            {kind.charAt(0).toUpperCase() + kind.slice(1)}
+          </button>
+        ))}
       </div>
 
-      <div className="space-y-3">
-        <div className="flex gap-2">
-          {(['image', 'video'] as const).map((kind) => (
-            <button
-              key={kind}
-              onClick={() => {
-                if (hasVisual && visuals?.kind !== kind) {
-                  onUrlChange(visuals?.url || '', kind);
-                }
-              }}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-sm transition-colors ${
-                currentKind === kind
-                  ? 'border-pink-200 bg-pink-50 text-pink-700'
-                  : 'border-slate-200 text-slate-500 hover:border-slate-300'
-              }`}
-            >
-              {kind === 'image' ? <Image className="w-3.5 h-3.5" /> : <Video className="w-3.5 h-3.5" />}
-              {kind.charAt(0).toUpperCase() + kind.slice(1)}
-            </button>
-          ))}
-        </div>
-
-        {hasVisual ? (
-          <div className="relative group">
-            {visuals!.kind === 'video' ? (
-              <video
-                src={visuals!.url}
-                autoPlay
-                loop
-                muted
-                playsInline
-                className="w-full h-32 object-cover rounded-lg"
-              />
-            ) : (
-              <div
-                className="w-full h-32 rounded-lg bg-cover bg-center border border-slate-200"
-                style={{ backgroundImage: `url(${visuals!.url})` }}
-              />
-            )}
-            <button
-              onClick={onClear}
-              className="absolute top-2 right-2 p-1 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        ) : (
-          <div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={currentKind === 'video' ? 'video/mp4,video/webm,video/quicktime' : 'image/jpeg,image/png,image/gif,image/webp'}
-              onChange={handleFileSelect}
-              className="hidden"
+      {hasVisual ? (
+        <div className="relative group">
+          {visuals!.kind === 'video' ? (
+            <video
+              src={visuals!.url}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="w-full h-32 object-cover rounded-lg"
             />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingVisual}
-              className="w-full flex items-center justify-center gap-2 py-6 rounded-lg border-2 border-dashed border-slate-200 text-sm text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-colors disabled:opacity-50"
-            >
-              {uploadingVisual ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Upload className="w-4 h-4" />
-                  Upload {currentKind}
-                </>
-              )}
-            </button>
-          </div>
-        )}
+          ) : (
+            <div
+              className="w-full h-32 rounded-lg bg-cover bg-center border border-slate-200"
+              style={{ backgroundImage: `url(${visuals!.url})` }}
+            />
+          )}
+          <button
+            onClick={onClear}
+            className="absolute top-2 right-2 p-1 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ) : (
+        <div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={currentKind === 'video' ? 'video/mp4,video/webm,video/quicktime' : 'image/jpeg,image/png,image/gif,image/webp'}
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingVisual}
+            className="w-full flex items-center justify-center gap-2 py-6 rounded-lg border-2 border-dashed border-slate-200 text-sm text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-colors disabled:opacity-50"
+          >
+            {uploadingVisual ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4" />
+                Upload {currentKind}
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
-        {!hasVisual && (
-          <div>
-            {showVisualUrlInput ? (
-              <div className="space-y-2">
-                <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <Link className="w-3 h-3" />
-                  Paste a URL instead
-                </div>
-                <Input
-                  value={urlInputValue}
-                  onChange={(e) => setUrlInputValue(e.target.value)}
-                  onBlur={() => {
+      {!hasVisual && (
+        <div>
+          {showVisualUrlInput ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                <Link className="w-3 h-3" />
+                Paste a URL instead
+              </div>
+              <Input
+                value={urlInputValue}
+                onChange={(e) => setUrlInputValue(e.target.value)}
+                onBlur={() => {
+                  const url = urlInputValue.trim();
+                  if (url) {
+                    onUrlChange(url, currentKind);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
                     const url = urlInputValue.trim();
                     if (url) {
                       onUrlChange(url, currentKind);
                     }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      const url = urlInputValue.trim();
-                      if (url) {
-                        onUrlChange(url, currentKind);
-                      }
-                    }
-                  }}
-                  placeholder={currentKind === 'video' ? 'https://example.com/video.mp4' : 'https://example.com/image.jpg'}
-                  className="h-8 text-sm"
-                />
-              </div>
-            ) : (
-              <button
-                onClick={() => onSetShowVisualUrlInput(true)}
-                className="text-xs text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1"
-              >
-                <Link className="w-3 h-3" />
-                Use a link instead (advanced)
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-    </section>
+                  }
+                }}
+                placeholder={currentKind === 'video' ? 'https://example.com/video.mp4' : 'https://example.com/image.jpg'}
+                className="h-8 text-sm"
+              />
+            </div>
+          ) : (
+            <button
+              onClick={() => onSetShowVisualUrlInput(true)}
+              className="text-xs text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1"
+            >
+              <Link className="w-3 h-3" />
+              Use a link instead (advanced)
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 

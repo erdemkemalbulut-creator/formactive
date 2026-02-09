@@ -4,11 +4,12 @@
 FormActive is a Next.js 13 application that provides an AI-powered conversational form builder. Users describe their full situation in natural language (e.g., "I'm organizing my wedding and want to know who will attend, which dates work, and meal preferences"), and AI generates a complete conversational form with proper question types and natural wording. Forms display as a Formless-style single-step progressive disclosure experience with customizable themes. Uses Supabase for authentication and database, and Replit AI Integrations for OpenAI access (gpt-4.1).
 
 ## Recent Changes
+- 2026-02-09: **Formless-style accordion builder** — Left panel restructured into 7 numbered collapsible accordion sections with circular step badges, Editor/Analytics tabs, and Theme merged into Visuals section
 - 2026-02-09: **Welcome hero on public form** — Welcome screen renders as full-bleed hero (no card) on public page with white glass-morphism styling; transitions to card-wrapped questions after CTA click
 - 2026-02-09: **Inert preview inputs** — All preview inputs are disabled/readOnly with tabIndex=-1, no Continue buttons, no validation, choice buttons disabled with reduced opacity
 - 2026-02-09: **onPhaseChange callback** — ConversationalForm notifies parent of phase transitions (welcome/questions/submitting/done) for conditional rendering
 - 2026-02-09: **Single-step respondent experience** — Replaced chat transcript UI with Formless-style single-step progressive disclosure (one question at a time, progress bar, no message history)
-- 2026-02-09: **Formless-style builder redesign** — Split layout with ordered builder sections (Context, Tone, Welcome/End, Journey, Visuals, About You, Train AI) and live preview with visual backgrounds
+- 2026-02-09: **Formless-style builder redesign** — Split layout with ordered builder sections and live preview with visual backgrounds
 - 2026-02-09: **Journey items as free-text** — Journey steps are now free-text textareas ("guidance for AI"), with drag-and-drop reordering, duplicate, and delete
 - 2026-02-09: **Theme section** — Collapsible theme section in builder with primaryColor (hex picker), fontFamily (Inter/System/Serif), cardStyle (light/dark)
 - 2026-02-09: **Visual upload** — Upload images/videos to Supabase Storage via POST /api/forms/[id]/visual, with fallback URL input
@@ -152,14 +153,16 @@ Each question has:
 ### Builder Features (Formless-style)
 - **Split layout**: Builder panel (left, 440px) + Live preview (right, flex)
 - **Top bar**: Editable title, status badge, Share, Publish, overflow menu
-- **Builder sections** (ordered, not tabs):
-  1. **Context** - "What is this conversation about?" textarea with character counter (2000 max)
-  2. **Tone** - Tone picker (friendly/professional/luxury/playful) + audience input
-  3. **Welcome & End** - Collapsible, toggles for welcome/end screens with fields
+- **Tab bar**: Editor | Analytics tabs (Analytics placeholder for now)
+- **Editor accordion** — 7 numbered collapsible sections with circular step badges, `divide-y` separators, consistent `pl-14` content indent:
+  1. **Overview** - "What is this conversation about?" textarea with character counter (2000 max)
+  2. **Tone of voice** - Tone picker (friendly/professional/luxury/playful) + audience input
+  3. **Welcome & End screens** - Toggles for welcome/end screens with fields
   4. **Journey** - Free-text textareas per step, drag-and-drop reorder, duplicate/delete, "Generate with AI" button; focused item highlights and drives preview
-  5. **Visuals** - Image/video URL for background behind conversation card
-  6. **About You** - Brand/company description textarea
-  7. **Train AI** - Collapsible advanced section for extra AI instructions
+  5. **Visuals** - Theme controls (primary color, font, card style) + background image/video upload/URL
+  6. **About you** - Brand/company description textarea
+  7. **Train AI** - Optional/advanced, extra AI instructions
+- **Accordion state**: `openSections` Set controls which sections are expanded; section 1 open by default
 - **Live preview**: Dark background, visual background support (image/video with overlay), centered white conversation card, follows focused journey item
 
 ## User Preferences
