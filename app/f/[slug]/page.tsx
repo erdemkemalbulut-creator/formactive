@@ -50,7 +50,15 @@ function normalizePublishedConfig(config: any): FormConfig {
     };
   });
 
-  return { ...config, questions };
+  return {
+    ...config,
+    questions,
+    endEnabled: config.endEnabled ?? true,
+    endCtaText: config.endCtaText || '',
+    endCtaUrl: config.endCtaUrl || '',
+    aboutYou: config.aboutYou || '',
+    trainAI: config.trainAI || '',
+  };
 }
 
 export default function PublicFormPage() {
@@ -129,12 +137,48 @@ export default function PublicFormPage() {
   }
 
   const theme = form.published_config.theme;
+  const visuals = form.published_config.visuals;
+  const hasVisual = visuals?.url?.trim();
+  const isVideo = visuals?.type === 'video';
+
   const bgStyle: React.CSSProperties = {
     backgroundColor: theme?.backgroundType === 'solid' ? (theme?.backgroundColor || '#ffffff') : '#ffffff',
     backgroundImage: theme?.backgroundType === 'gradient' ? theme?.backgroundGradient :
                       theme?.backgroundType === 'image' ? `url(${theme?.backgroundImage})` : undefined,
     backgroundSize: theme?.backgroundType === 'image' ? 'cover' : undefined,
   };
+
+  if (hasVisual) {
+    return (
+      <div className="min-h-screen relative">
+        {isVideo ? (
+          <video
+            src={visuals!.url}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="fixed inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <div
+            className="fixed inset-0 w-full h-full"
+            style={{ backgroundImage: `url(${visuals!.url})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+          />
+        )}
+        <div className="fixed inset-0 bg-black/30" />
+        <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl overflow-hidden" style={{ maxHeight: '90vh' }}>
+            <ConversationalForm
+              config={form.published_config}
+              formName={form.name}
+              onSubmit={handleSubmit}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen" style={bgStyle}>

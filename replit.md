@@ -4,11 +4,12 @@
 FormActive is a Next.js 13 application that provides an AI-powered conversational form builder. Users describe their full situation in natural language (e.g., "I'm organizing my wedding and want to know who will attend, which dates work, and meal preferences"), and AI generates a complete conversational form with proper question types and natural wording. Forms display as a friendly chat experience with customizable themes. Uses Supabase for authentication and database, and Replit AI Integrations for OpenAI access (gpt-4.1).
 
 ## Recent Changes
-- 2026-02-09: **Two-step AI system** — Step 1: Structure prompt generates question plan (label/type/required/options), Step 2: Wording prompt generates conversational message per question
+- 2026-02-09: **Formless-style builder redesign** — Split layout with ordered builder sections (Context, Tone, Welcome/End, Journey, Visuals, About You, Train AI) and live preview with visual backgrounds
+- 2026-02-09: **Journey items as free-text** — Journey steps are now free-text textareas ("guidance for AI"), with drag-and-drop reordering, duplicate, and delete
+- 2026-02-09: **New FormConfig fields** — Added `visuals` (image/video background), `aboutYou`, `trainAI`, `endEnabled`, `endCtaText`, `endCtaUrl`
+- 2026-02-09: **Visual background preview** — Preview panel supports background images/videos behind a centered conversation card
+- 2026-02-09: **Two-step AI with validation** — Generate step (temp 0.7) + Validate step (temp 0) ensures clean respondent-facing messages
 - 2026-02-09: **Simplified question types** — 9 types: short_text, long_text, single_choice, multiple_choice, yes_no, date, number, email, phone (plus CTA)
-- 2026-02-09: **Simplified data model** — Questions now have: label, message, type, required, options, key (removed data_type, extraction, validation, transition_before, followups)
-- 2026-02-09: **Per-question wording regenerate** — Each question has a "Generate" button for conversational wording
-- 2026-02-09: **AIContext simplified** — context, tone, audience (removed directness)
 - 2026-02-08: **Theme system** — Colors, fonts, backgrounds (solid/gradient/image), bubble styles, logo, custom CSS
 - 2026-02-08: **CTA nodes** — Call-to-action buttons with {{variable}} template support for dynamic URLs
 
@@ -23,7 +24,7 @@ FormActive is a Next.js 13 application that provides an AI-powered conversationa
 - `app/` - Next.js App Router pages and API routes
 - `app/api/forms/` - Form CRUD, publish, submissions API routes
 - `app/api/ai/` - AI generation endpoints
-- `app/dashboard/forms/[id]/` - Single-page form builder with AI generation
+- `app/dashboard/forms/[id]/` - Formless-style conversation builder
 - `app/f/[slug]/` - Public conversational form renderer
 - `components/` - React components (ui/, auth/, conversational-form)
 - `lib/` - Shared utilities (supabase client, auth context, types, openai)
@@ -32,13 +33,13 @@ FormActive is a Next.js 13 application that provides an AI-powered conversationa
 
 ### Key Files
 - `components/conversational-form.tsx` - Reusable conversational chat form UI with theme support
-- `lib/types.ts` - TypeScript types (Question, FormConfig, AIContext, Theme, CTA, etc.)
+- `lib/types.ts` - TypeScript types (Question, FormConfig, AIContext, Theme, CTA, FormVisuals, etc.)
 - `lib/openai.ts` - OpenAI client initialization (uses Replit AI Integrations)
 - `lib/supabase.ts` - Supabase client helpers (createServerClient, getAnonClient)
 - `lib/auth-context.tsx` - Auth context provider
 - `app/api/ai/generate-conversation/route.ts` - AI endpoint: context → JSON array of question structure (label/type/required/options)
-- `app/api/ai/generate-node/route.ts` - AI endpoint: journey item → conversational message text
-- `app/dashboard/forms/[id]/page.tsx` - Main form builder (editor + theme + AI + preview)
+- `app/api/ai/generate-node/route.ts` - AI endpoint: journey item → validated conversational message text (two-pass)
+- `app/dashboard/forms/[id]/page.tsx` - Formless-style builder with split layout
 - `app/f/[slug]/page.tsx` - Public conversational form renderer with theme
 
 ### Data Model
@@ -51,12 +52,23 @@ Each question has:
 - `id` - Unique identifier
 - `key` - Machine-readable key for storing answers (auto-generated from label)
 - `type` - One of: short_text, long_text, single_choice, multiple_choice, yes_no, date, number, email, phone, cta
-- `label` - What this question asks (the intent/description)
+- `label` - Free-text guidance for AI (what to ask)
 - `message` - AI-generated conversational wording shown to the respondent
 - `required` - Whether the question is mandatory
 - `options` - For single_choice/multiple_choice types
 - `order` - Display order
 - `cta` - For CTA type: { text, url, openInNewTab }
+
+### FormConfig Fields
+- `questions` - Array of Question objects
+- `welcomeEnabled`, `welcomeTitle`, `welcomeMessage`, `welcomeCta` - Welcome screen
+- `endEnabled`, `endMessage`, `endCtaText`, `endCtaUrl` - End screen
+- `endRedirectEnabled`, `endRedirectUrl` - Post-submission redirect
+- `theme` - FormTheme object (colors, fonts, backgrounds, bubble styles)
+- `aiContext` - AIContext { context, tone, audience }
+- `visuals` - FormVisuals { type: 'image'|'video', url } - Background for preview/public form
+- `aboutYou` - Brand/company description for AI context
+- `trainAI` - Advanced AI instructions
 
 ### Theme System (in current_config.theme)
 - `primaryColor`, `secondaryColor` - Brand colors
@@ -116,15 +128,18 @@ Each question has:
 - `isPreview` mode auto-plays first 3 questions with sample answers
 - `onSubmit` callback for real submissions, omitted for preview mode
 
-### Builder Features
-- Context-first workflow: describe your full situation (unlimited scenarios)
-- AI Context panel with context textarea, tone, audience
-- "Generate Full Conversation" button creates structure then auto-generates wording
-- Journey list shows all questions with green dot indicator for generated wording
-- Per-question "Generate" button for conversational wording
-- Manual editing of label, message, type, key, options
-- Theme editor panel (colors, fonts, backgrounds, bubble styles)
-- Live conversational preview on right side
+### Builder Features (Formless-style)
+- **Split layout**: Builder panel (left, 440px) + Live preview (right, flex)
+- **Top bar**: Editable title, status badge, Share, Publish, overflow menu
+- **Builder sections** (ordered, not tabs):
+  1. **Context** - "What is this conversation about?" textarea with character counter (2000 max)
+  2. **Tone** - Tone picker (friendly/professional/luxury/playful) + audience input
+  3. **Welcome & End** - Collapsible, toggles for welcome/end screens with fields
+  4. **Journey** - Free-text textareas per step, drag-and-drop reorder, duplicate/delete, "Generate with AI" button
+  5. **Visuals** - Image/video URL for background behind conversation card
+  6. **About You** - Brand/company description textarea
+  7. **Train AI** - Collapsible advanced section for extra AI instructions
+- **Live preview**: Dark background, visual background support (image/video with overlay), centered white conversation card, restart button
 
 ## User Preferences
 - No pricing/monetisation features
@@ -133,3 +148,4 @@ Each question has:
 - Single-page builder approach (no multi-step wizards)
 - AI-powered context-first workflow
 - Two-step AI: structure first, then wording
+- Formless-style UX: builder on left, live preview on right

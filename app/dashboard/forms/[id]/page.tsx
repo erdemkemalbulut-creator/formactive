@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
-import { FormConfig, Question, QuestionType, QUESTION_TYPES, ToneType, createDefaultCTA, FormTheme, DEFAULT_THEME, AIContext } from '@/lib/types';
+import { FormConfig, Question, QuestionType, QUESTION_TYPES, ToneType, createDefaultCTA, FormTheme, DEFAULT_THEME, AIContext, FormVisuals } from '@/lib/types';
 import { ConversationalForm } from '@/components/conversational-form';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -14,89 +14,28 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import {
   ArrowLeft,
   Plus,
   Trash2,
   Copy,
   GripVertical,
   ChevronDown,
+  ChevronRight,
   MoreVertical,
   ExternalLink,
-  Eye,
-  Check,
-  X,
-  Type,
-  AlignLeft,
-  Mail,
-  Phone,
-  Hash,
-  Calendar,
-  CheckSquare,
-  ToggleLeft,
   BarChart3,
-  Settings,
-  MessageSquare,
   Sparkles,
-  Wand2,
-  Palette,
-  Link2,
   Loader2,
+  RefreshCw,
+  Share2,
+  Image,
+  Video,
+  User,
+  Brain,
+  MessageSquare,
+  Eye,
+  Send,
 } from 'lucide-react';
-
-const ICON_MAP: Record<string, React.ReactNode> = {
-  Type: <Type className="w-4 h-4" />,
-  AlignLeft: <AlignLeft className="w-4 h-4" />,
-  Mail: <Mail className="w-4 h-4" />,
-  Phone: <Phone className="w-4 h-4" />,
-  Hash: <Hash className="w-4 h-4" />,
-  Calendar: <Calendar className="w-4 h-4" />,
-  ChevronDown: <ChevronDown className="w-4 h-4" />,
-  CheckSquare: <CheckSquare className="w-4 h-4" />,
-  ToggleLeft: <ToggleLeft className="w-4 h-4" />,
-  ExternalLink: <ExternalLink className="w-4 h-4" />,
-};
-
-function makeDefaultConfig(): FormConfig {
-  return {
-    questions: [],
-    welcomeEnabled: true,
-    welcomeTitle: '',
-    welcomeMessage: '',
-    welcomeCta: 'Start',
-    endMessage: 'Thank you for your submission!',
-    endRedirectEnabled: false,
-    endRedirectUrl: '',
-    theme: { buttonStyle: 'rounded', spacing: 'normal' },
-  };
-}
-
-function makeDefaultQuestion(order: number, type: QuestionType = 'short_text'): Question {
-  return {
-    id: `q_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    key: '',
-    type,
-    label: '',
-    message: '',
-    required: false,
-    options: type === 'single_choice' || type === 'multiple_choice'
-      ? [{ id: `o_${Date.now()}`, label: 'Option 1', value: 'option_1' }]
-      : [],
-    order,
-  };
-}
 
 function generateKeyFromLabel(label: string): string {
   return label
@@ -105,6 +44,32 @@ function generateKeyFromLabel(label: string): string {
     .replace(/(^_|_$)/g, '')
     .slice(0, 40);
 }
+
+function makeDefaultConfig(): FormConfig {
+  return {
+    questions: [],
+    welcomeEnabled: true,
+    welcomeTitle: '',
+    welcomeMessage: '',
+    welcomeCta: 'Start',
+    endEnabled: true,
+    endMessage: 'Thank you for your submission!',
+    endCtaText: '',
+    endCtaUrl: '',
+    endRedirectEnabled: false,
+    endRedirectUrl: '',
+    theme: { buttonStyle: 'rounded', spacing: 'normal' },
+  };
+}
+
+const TONE_OPTIONS: { value: ToneType; label: string; description: string }[] = [
+  { value: 'friendly', label: 'Friendly', description: 'Warm and approachable' },
+  { value: 'professional', label: 'Professional', description: 'Business-appropriate' },
+  { value: 'luxury', label: 'Luxury', description: 'Refined and elegant' },
+  { value: 'playful', label: 'Playful', description: 'Fun and casual' },
+];
+
+const CONTEXT_MAX_CHARS = 2000;
 
 export default function FormBuilderPage() {
   const params = useParams();
@@ -123,12 +88,15 @@ export default function FormBuilderPage() {
   const [publishedConfig, setPublishedConfig] = useState<FormConfig | null>(null);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
-  const [showTypePicker, setShowTypePicker] = useState(false);
-  const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(new Set());
-  const [overflowOpen, setOverflowOpen] = useState(false);
   const [generatingConversation, setGeneratingConversation] = useState(false);
   const [generatingWording, setGeneratingWording] = useState<string | null>(null);
   const [generatingAllWording, setGeneratingAllWording] = useState(false);
+  const [showTonePicker, setShowTonePicker] = useState(false);
+  const [welcomeEndOpen, setWelcomeEndOpen] = useState(false);
+  const [trainAIOpen, setTrainAIOpen] = useState(false);
+  const [overflowOpen, setOverflowOpen] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -197,7 +165,6 @@ export default function FormBuilderPage() {
     };
     const rawType = q.type || q.ui_type || 'short_text';
     const type: QuestionType = legacyTypeMap[rawType] || rawType;
-
     const message = q.message || q.user_prompt || '';
     const label = q.label || q.intent || '';
 
@@ -228,6 +195,11 @@ export default function FormBuilderPage() {
     const normalized = {
       ...config,
       aiContext: config.aiContext || { context: '', tone: 'friendly' as ToneType, audience: '' },
+      endEnabled: config.endEnabled ?? true,
+      endCtaText: config.endCtaText || '',
+      endCtaUrl: config.endCtaUrl || '',
+      aboutYou: config.aboutYou || '',
+      trainAI: config.trainAI || '',
     };
     if (normalized.questions) {
       normalized.questions = normalized.questions.map(normalizeQuestion);
@@ -298,23 +270,27 @@ export default function FormBuilderPage() {
     updateConfig({ questions: newQuestions });
   };
 
-  const addQuestion = (type: QuestionType) => {
-    const order = currentConfig.questions.length;
-    const q = makeDefaultQuestion(order, type);
-    updateConfig({ questions: [...currentConfig.questions, q] });
-    setExpandedQuestions((prev) => new Set(prev).add(q.id));
-    setShowTypePicker(false);
+  const updateAIContext = (updates: Partial<AIContext>) => {
+    const current = currentConfig.aiContext || { context: '', tone: 'friendly' as ToneType, audience: '' };
+    updateConfig({ aiContext: { ...current, ...updates } });
   };
 
-  const addCTA = () => {
+  const addJourneyItem = () => {
     const order = currentConfig.questions.length;
-    const q = createDefaultCTA(order);
+    const q: Question = {
+      id: `q_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      key: '',
+      type: 'short_text',
+      label: '',
+      message: '',
+      required: true,
+      options: [],
+      order,
+    };
     updateConfig({ questions: [...currentConfig.questions, q] });
-    setExpandedQuestions((prev) => new Set(prev).add(q.id));
-    setShowTypePicker(false);
   };
 
-  const duplicateQuestion = (questionId: string) => {
+  const duplicateJourneyItem = (questionId: string) => {
     const original = currentConfig.questions.find((q) => q.id === questionId);
     if (!original) return;
     const dup: Question = {
@@ -322,41 +298,9 @@ export default function FormBuilderPage() {
       id: `q_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       key: original.key ? `${original.key}_copy` : '',
       order: currentConfig.questions.length,
+      message: '',
     };
     updateConfig({ questions: [...currentConfig.questions, dup] });
-  };
-
-  const deleteQuestion = (questionId: string) => {
-    const newQuestions = currentConfig.questions
-      .filter((q) => q.id !== questionId)
-      .map((q, i) => ({ ...q, order: i }));
-    updateConfig({ questions: newQuestions });
-  };
-
-  const addOption = (questionId: string) => {
-    const q = currentConfig.questions.find((q) => q.id === questionId);
-    if (!q) return;
-    const newOpt = {
-      id: `o_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      label: `Option ${q.options.length + 1}`,
-      value: `option_${q.options.length + 1}`,
-    };
-    updateQuestion(questionId, { options: [...q.options, newOpt] });
-  };
-
-  const updateOption = (questionId: string, optionId: string, updates: { label?: string; value?: string }) => {
-    const q = currentConfig.questions.find((q) => q.id === questionId);
-    if (!q) return;
-    const newOptions = q.options.map((o) =>
-      o.id === optionId ? { ...o, ...updates } : o
-    );
-    updateQuestion(questionId, { options: newOptions });
-  };
-
-  const removeOption = (questionId: string, optionId: string) => {
-    const q = currentConfig.questions.find((q) => q.id === questionId);
-    if (!q) return;
-    updateQuestion(questionId, { options: q.options.filter((o) => o.id !== optionId) });
   };
 
   const generateWordingForQuestion = async (questionId: string) => {
@@ -380,9 +324,7 @@ export default function FormBuilderPage() {
 
       if (!res.ok) throw new Error('AI generation failed');
       const data = await res.json();
-
       updateQuestion(questionId, { message: data.message });
-      toast({ title: 'Done!', description: 'Wording generated for this question.' });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message || 'Failed to generate wording', variant: 'destructive' });
     } finally {
@@ -390,42 +332,32 @@ export default function FormBuilderPage() {
     }
   };
 
-  const generateAllWording = async (questions: Question[]) => {
-    const aiCtx = currentConfig.aiContext;
-    setGeneratingAllWording(true);
-    try {
-      const journeyItems = questions.map(q => ({ label: q.label, type: q.type }));
-      const updatedQuestions = [...questions];
+  const deleteJourneyItem = (questionId: string) => {
+    const newQuestions = currentConfig.questions
+      .filter((q) => q.id !== questionId)
+      .map((q, i) => ({ ...q, order: i }));
+    updateConfig({ questions: newQuestions });
+  };
 
-      for (let i = 0; i < questions.length; i++) {
-        const q = questions[i];
-        if (q.type === 'cta') continue;
+  const handleDragStart = (index: number) => {
+    setDragIndex(index);
+  };
 
-        try {
-          const res = await fetch('/api/ai/generate-node', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              description: aiCtx?.context || '',
-              tone: aiCtx?.tone || 'friendly',
-              journeyItems,
-              currentItem: { label: q.label, type: q.type },
-            }),
-          });
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    setDragOverIndex(index);
+  };
 
-          if (res.ok) {
-            const data = await res.json();
-            updatedQuestions[i] = { ...updatedQuestions[i], message: data.message };
-          }
-        } catch {}
-      }
-
-      updateConfig({ questions: updatedQuestions });
-    } catch (error: any) {
-      toast({ title: 'Error', description: 'Failed to generate wording', variant: 'destructive' });
-    } finally {
-      setGeneratingAllWording(false);
+  const handleDragEnd = () => {
+    if (dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex) {
+      const questions = [...currentConfig.questions];
+      const [removed] = questions.splice(dragIndex, 1);
+      questions.splice(dragOverIndex, 0, removed);
+      const reordered = questions.map((q, i) => ({ ...q, order: i }));
+      updateConfig({ questions: reordered });
     }
+    setDragIndex(null);
+    setDragOverIndex(null);
   };
 
   const generateFullConversation = async () => {
@@ -477,7 +409,6 @@ export default function FormBuilderPage() {
       }));
 
       updateConfig({ questions: newQuestions });
-      setExpandedQuestions(new Set());
       toast({
         title: 'Conversation generated!',
         description: `${newQuestions.length} questions created. Generating conversational wording...`,
@@ -495,9 +426,42 @@ export default function FormBuilderPage() {
     }
   };
 
-  const updateAIContext = (updates: Partial<AIContext>) => {
-    const current = currentConfig.aiContext || { context: '', tone: 'friendly' as ToneType, audience: '' };
-    updateConfig({ aiContext: { ...current, ...updates } });
+  const generateAllWording = async (questions: Question[]) => {
+    const aiCtx = currentConfig.aiContext;
+    setGeneratingAllWording(true);
+    try {
+      const journeyItems = questions.map(q => ({ label: q.label, type: q.type }));
+      const updatedQuestions = [...questions];
+
+      for (let i = 0; i < questions.length; i++) {
+        const q = questions[i];
+        if (q.type === 'cta') continue;
+
+        try {
+          const res = await fetch('/api/ai/generate-node', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              description: aiCtx?.context || '',
+              tone: aiCtx?.tone || 'friendly',
+              journeyItems,
+              currentItem: { label: q.label, type: q.type },
+            }),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            updatedQuestions[i] = { ...updatedQuestions[i], message: data.message };
+          }
+        } catch {}
+      }
+
+      updateConfig({ questions: updatedQuestions });
+    } catch (error: any) {
+      toast({ title: 'Error', description: 'Failed to generate wording', variant: 'destructive' });
+    } finally {
+      setGeneratingAllWording(false);
+    }
   };
 
   const handlePublish = async () => {
@@ -550,15 +514,6 @@ export default function FormBuilderPage() {
     setOverflowOpen(false);
   };
 
-  const toggleQuestionExpanded = (id: string) => {
-    setExpandedQuestions((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
   if (authLoading || loadingForm) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -571,14 +526,15 @@ export default function FormBuilderPage() {
   }
 
   const statusDisplay = getStatusDisplay();
-  const publicUrl = slug ? `${typeof window !== 'undefined' ? window.location.origin : ''}/f/${slug}` : '';
+  const contextLength = currentConfig.aiContext?.context?.length || 0;
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col">
-      <header className="sticky top-0 z-50 bg-white border-b border-slate-200 px-4 py-3">
+    <div className="h-screen bg-slate-100 flex flex-col overflow-hidden">
+      {/* Top Bar */}
+      <header className="sticky top-0 z-50 bg-white border-b border-slate-200 px-4 py-2.5 flex-shrink-0">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <Button variant="ghost" size="icon" onClick={() => router.push('/dashboard')}>
+            <Button variant="ghost" size="icon" onClick={() => router.push('/dashboard')} className="h-8 w-8">
               <ArrowLeft className="w-4 h-4" />
             </Button>
 
@@ -594,13 +550,13 @@ export default function FormBuilderPage() {
               />
             ) : (
               <h1
-                className="text-lg font-semibold text-slate-900 truncate cursor-pointer hover:text-slate-600"
+                className="text-lg font-semibold text-slate-900 truncate cursor-pointer hover:text-slate-600 transition-colors"
                 onClick={() => {
                   setEditingTitle(true);
                   setTimeout(() => titleInputRef.current?.focus(), 0);
                 }}
               >
-                {formName || 'Untitled Form'}
+                {formName || 'Untitled Conversation'}
               </h1>
             )}
 
@@ -608,47 +564,40 @@ export default function FormBuilderPage() {
               {statusDisplay.label}
             </Badge>
 
-            {saving && <span className="text-xs text-slate-400">Saving...</span>}
+            {saving && <span className="text-xs text-slate-400 animate-pulse">Saving...</span>}
           </div>
 
           <div className="flex items-center gap-2">
             {status === 'live' && slug && (
-              <span className="hidden md:flex items-center gap-1 text-xs text-slate-500 max-w-[200px] truncate">
-                <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                <span className="truncate">/f/{slug}</span>
-                <button onClick={copyPublicUrl} className="flex-shrink-0 hover:text-slate-700">
-                  <Copy className="w-3 h-3" />
-                </button>
-              </span>
+              <Button variant="ghost" size="sm" onClick={copyPublicUrl} className="text-xs gap-1.5 text-slate-500 hover:text-slate-700">
+                <Share2 className="w-3.5 h-3.5" />
+                Share
+              </Button>
             )}
 
             <Button
               onClick={handlePublish}
               disabled={isCTADisabled()}
               size="sm"
+              className="gap-1.5"
             >
+              <Send className="w-3.5 h-3.5" />
               {publishing ? 'Publishing...' : getCTALabel()}
             </Button>
 
             <div className="relative" ref={overflowRef}>
-              <Button variant="ghost" size="icon" onClick={() => setOverflowOpen(!overflowOpen)}>
+              <Button variant="ghost" size="icon" onClick={() => setOverflowOpen(!overflowOpen)} className="h-8 w-8">
                 <MoreVertical className="w-4 h-4" />
               </Button>
               {overflowOpen && (
-                <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-md shadow-lg py-1 z-50">
+                <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-50">
                   {status === 'live' && slug && (
-                    <button
-                      onClick={copyPublicUrl}
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 flex items-center gap-2"
-                    >
-                      <Copy className="w-4 h-4" /> Share (copy URL)
+                    <button onClick={copyPublicUrl} className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 flex items-center gap-2">
+                      <Copy className="w-4 h-4" /> Copy public URL
                     </button>
                   )}
                   <button
-                    onClick={() => {
-                      router.push(`/dashboard/forms/${formId}/results`);
-                      setOverflowOpen(false);
-                    }}
+                    onClick={() => { router.push(`/dashboard/forms/${formId}/results`); setOverflowOpen(false); }}
                     className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 flex items-center gap-2"
                   >
                     <BarChart3 className="w-4 h-4" /> View submissions
@@ -666,640 +615,332 @@ export default function FormBuilderPage() {
         </div>
       </header>
 
+      {/* Split Layout */}
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-[45%] border-r border-slate-200 bg-white overflow-y-auto">
-          <Accordion type="multiple" defaultValue={['ai-context', 'questions', 'screens', 'settings']} className="px-4">
-            <AccordionItem value="ai-context">
-              <AccordionTrigger className="text-sm font-semibold">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-blue-600" />
-                  <span className="text-blue-700">AI Context</span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-blue-700">Describe your situation</Label>
-                    <Textarea
-                      value={currentConfig.aiContext?.context || ''}
-                      onChange={(e) => updateAIContext({ context: e.target.value })}
-                      placeholder={"e.g., I'm organizing my wedding and want to send this form to my guests to know who will attend, which dates work for them, and their meal preferences.\n\nor: I'm a travel agent organizing a trip. Everything is planned, and I want to communicate the details and collect participant info."}
-                      className="text-sm min-h-[100px]"
-                    />
-                  </div>
+        {/* Builder Panel (Left) */}
+        <div className="w-[440px] flex-shrink-0 border-r border-slate-200 bg-white overflow-y-auto">
+          <div className="p-5 space-y-6">
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs text-blue-700">Tone</Label>
-                      <Select
-                        value={currentConfig.aiContext?.tone || 'friendly'}
-                        onValueChange={(val) => updateAIContext({ tone: val as ToneType })}
-                      >
-                        <SelectTrigger className="h-8 text-sm bg-white">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="friendly">Friendly</SelectItem>
-                          <SelectItem value="professional">Professional</SelectItem>
-                          <SelectItem value="luxury">Luxury</SelectItem>
-                          <SelectItem value="playful">Playful</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs text-blue-700">Audience</Label>
-                      <Input
-                        value={currentConfig.aiContext?.audience || ''}
-                        onChange={(e) => updateAIContext({ audience: e.target.value })}
-                        placeholder="e.g., wedding guests"
-                        className="h-8 text-sm bg-white"
+            {/* 1. Context Section */}
+            <section>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                  <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
+                </div>
+                <h3 className="text-sm font-semibold text-slate-900">What is this conversation about?</h3>
+              </div>
+              <div className="relative">
+                <Textarea
+                  value={currentConfig.aiContext?.context || ''}
+                  onChange={(e) => {
+                    if (e.target.value.length <= CONTEXT_MAX_CHARS) {
+                      updateAIContext({ context: e.target.value });
+                    }
+                  }}
+                  placeholder={"Explain what this conversation is about...\n\ne.g., I'm organizing my wedding and want to send this form to my guests to know who will attend, which dates work for them, and their meal preferences."}
+                  className="text-sm min-h-[120px] resize-none pr-16"
+                />
+                <span className={`absolute bottom-2 right-3 text-[10px] tabular-nums ${contextLength > CONTEXT_MAX_CHARS * 0.9 ? 'text-amber-500' : 'text-slate-300'}`}>
+                  {contextLength}/{CONTEXT_MAX_CHARS}
+                </span>
+              </div>
+            </section>
+
+            {/* 2. Tone Section */}
+            <section>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center">
+                  <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                </div>
+                <h3 className="text-sm font-semibold text-slate-900">Tone of voice</h3>
+              </div>
+
+              {showTonePicker ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {TONE_OPTIONS.map((t) => (
+                    <button
+                      key={t.value}
+                      onClick={() => {
+                        updateAIContext({ tone: t.value });
+                        setShowTonePicker(false);
+                      }}
+                      className={`px-3 py-2.5 rounded-lg border text-left transition-all ${
+                        currentConfig.aiContext?.tone === t.value
+                          ? 'border-purple-300 bg-purple-50 ring-1 ring-purple-200'
+                          : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="text-sm font-medium text-slate-800">{t.label}</span>
+                      <span className="block text-[11px] text-slate-500 mt-0.5">{t.description}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowTonePicker(true)}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors"
+                >
+                  <span className="text-sm text-slate-700">
+                    {TONE_OPTIONS.find(t => t.value === (currentConfig.aiContext?.tone || 'friendly'))?.label || 'Friendly'}
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                </button>
+              )}
+
+              <div className="mt-2">
+                <Input
+                  value={currentConfig.aiContext?.audience || ''}
+                  onChange={(e) => updateAIContext({ audience: e.target.value })}
+                  placeholder="Audience (e.g., wedding guests, clients, students)"
+                  className="h-8 text-sm"
+                />
+              </div>
+            </section>
+
+            {/* 3. Welcome & End Section (collapsible) */}
+            <section className="border border-slate-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setWelcomeEndOpen(!welcomeEndOpen)}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-slate-500" />
+                  <span className="text-sm font-semibold text-slate-700">Welcome & End screens</span>
+                </div>
+                <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${welcomeEndOpen ? 'rotate-90' : ''}`} />
+              </button>
+
+              {welcomeEndOpen && (
+                <div className="px-4 pb-4 space-y-5 border-t border-slate-100">
+                  {/* Welcome */}
+                  <div className="pt-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Welcome screen</Label>
+                      <Switch
+                        checked={currentConfig.welcomeEnabled}
+                        onCheckedChange={(checked) => updateConfig({ welcomeEnabled: checked })}
                       />
                     </div>
-                  </div>
 
-                  <Button
-                    onClick={generateFullConversation}
-                    disabled={generatingConversation || generatingAllWording || !currentConfig.aiContext?.context?.trim()}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                    size="sm"
-                  >
-                    {generatingConversation || generatingAllWording ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        {generatingAllWording ? 'Generating wording...' : 'Generating questions...'}
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-4 h-4 mr-2" />
-                        Generate Full Conversation
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="questions">
-              <AccordionTrigger className="text-sm font-semibold">
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4" />
-                  Journey ({currentConfig.questions.length})
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-2">
-                  {currentConfig.questions.map((q, i) => {
-                    const isExpanded = expandedQuestions.has(q.id);
-                    const typeInfo = QUESTION_TYPES.find((t) => t.value === q.type);
-                    const isCTA = q.type === 'cta';
-
-                    return (
-                      <div key={q.id} className="border border-slate-200 rounded-lg overflow-hidden">
-                        <div
-                          className="flex items-center gap-2 px-3 py-2 bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors"
-                          onClick={() => toggleQuestionExpanded(q.id)}
-                        >
-                          <GripVertical className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                          <span className="text-xs text-slate-400 font-mono w-5">{i + 1}</span>
-                          {typeInfo && ICON_MAP[typeInfo.icon] && (
-                            <span className="text-slate-500 flex-shrink-0">{ICON_MAP[typeInfo.icon]}</span>
-                          )}
-                          <span className="text-sm text-slate-700 truncate flex-1">
-                            {q.label || (isCTA ? 'Call to Action' : 'Untitled question')}
-                          </span>
-                          {q.message && <span className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" title="Has conversational wording" />}
-                          {q.required && <Badge className="text-[9px] bg-red-50 text-red-600 border-red-200 flex-shrink-0" variant="outline">req</Badge>}
-                          <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />
-                        </div>
-
-                        {isExpanded && (
-                          <div className="px-3 py-3 space-y-3 bg-white">
-                            {isCTA ? (
-                              <>
-                                <div className="space-y-1">
-                                  <Label className="text-xs">Button text</Label>
-                                  <Input
-                                    value={q.cta?.text || ''}
-                                    onChange={(e) => updateQuestion(q.id, { cta: { ...(q.cta || { text: '', url: '', openInNewTab: true }), text: e.target.value } })}
-                                    placeholder="Learn More"
-                                    className="h-8 text-sm"
-                                  />
-                                </div>
-                                <div className="space-y-1">
-                                  <Label className="text-xs">URL</Label>
-                                  <Input
-                                    value={q.cta?.url || ''}
-                                    onChange={(e) => updateQuestion(q.id, { cta: { ...(q.cta || { text: '', url: '', openInNewTab: true }), url: e.target.value } })}
-                                    placeholder="https://example.com"
-                                    className="h-8 text-sm font-mono"
-                                  />
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <Label className="text-xs">Open in new tab</Label>
-                                  <Switch
-                                    checked={q.cta?.openInNewTab ?? true}
-                                    onCheckedChange={(checked) => updateQuestion(q.id, { cta: { ...(q.cta || { text: '', url: '', openInNewTab: true }), openInNewTab: checked } })}
-                                  />
-                                </div>
-                              </>
-                            ) : (
-                              <>
-                                <div className="space-y-1">
-                                  <Label className="text-xs">What to ask (label)</Label>
-                                  <Input
-                                    value={q.label}
-                                    onChange={(e) => {
-                                      const updates: Partial<Question> = { label: e.target.value };
-                                      if (!q.key || q.key === generateKeyFromLabel(q.label)) {
-                                        updates.key = generateKeyFromLabel(e.target.value);
-                                      }
-                                      updateQuestion(q.id, updates);
-                                    }}
-                                    placeholder="e.g., Full name, Email address, Meal preference..."
-                                    className="h-8 text-sm"
-                                  />
-                                </div>
-
-                                <div className="space-y-1">
-                                  <div className="flex items-center justify-between">
-                                    <Label className="text-xs">Conversational message</Label>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => generateWordingForQuestion(q.id)}
-                                      disabled={generatingWording === q.id || !q.label}
-                                      className="h-6 text-xs text-blue-600 hover:text-blue-700 px-2"
-                                    >
-                                      {generatingWording === q.id ? (
-                                        <Loader2 className="w-3 h-3 animate-spin mr-1" />
-                                      ) : (
-                                        <Wand2 className="w-3 h-3 mr-1" />
-                                      )}
-                                      Generate
-                                    </Button>
-                                  </div>
-                                  <Textarea
-                                    value={q.message || ''}
-                                    onChange={(e) => updateQuestion(q.id, { message: e.target.value })}
-                                    placeholder="The conversational wording shown to the respondent..."
-                                    className="text-sm min-h-[50px]"
-                                  />
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-3">
-                                  <div className="space-y-1">
-                                    <Label className="text-xs">Type</Label>
-                                    <Select
-                                      value={q.type}
-                                      onValueChange={(val) => {
-                                        const updates: Partial<Question> = { type: val as QuestionType };
-                                        if ((val === 'single_choice' || val === 'multiple_choice') && q.options.length === 0) {
-                                          updates.options = [{ id: `o_${Date.now()}`, label: 'Option 1', value: 'option_1' }];
-                                        }
-                                        updateQuestion(q.id, updates);
-                                      }}
-                                    >
-                                      <SelectTrigger className="h-8 text-sm">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {QUESTION_TYPES.filter(t => t.value !== 'cta').map((t) => (
-                                          <SelectItem key={t.value} value={t.value}>
-                                            <span className="flex items-center gap-2">
-                                              {ICON_MAP[t.icon]}
-                                              {t.label}
-                                            </span>
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <div className="space-y-1">
-                                    <Label className="text-xs">Field key</Label>
-                                    <Input
-                                      value={q.key}
-                                      onChange={(e) => updateQuestion(q.id, { key: e.target.value })}
-                                      placeholder="field_key"
-                                      className="h-8 text-xs font-mono"
-                                    />
-                                  </div>
-                                </div>
-
-                                <div className="flex items-center justify-between">
-                                  <Label className="text-xs">Required</Label>
-                                  <Switch
-                                    checked={q.required}
-                                    onCheckedChange={(checked) => updateQuestion(q.id, { required: checked })}
-                                  />
-                                </div>
-
-                                {(q.type === 'single_choice' || q.type === 'multiple_choice') && (
-                                  <div className="space-y-2">
-                                    <Label className="text-xs">Options</Label>
-                                    {q.options.map((opt) => (
-                                      <div key={opt.id} className="flex items-center gap-2">
-                                        <Input
-                                          value={opt.label}
-                                          onChange={(e) => {
-                                            updateOption(q.id, opt.id, {
-                                              label: e.target.value,
-                                              value: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, ''),
-                                            });
-                                          }}
-                                          className="h-7 text-sm flex-1"
-                                        />
-                                        <button onClick={() => removeOption(q.id, opt.id)} className="text-slate-400 hover:text-red-500">
-                                          <X className="w-3.5 h-3.5" />
-                                        </button>
-                                      </div>
-                                    ))}
-                                    <Button variant="ghost" size="sm" onClick={() => addOption(q.id)} className="text-xs h-7">
-                                      <Plus className="w-3 h-3 mr-1" /> Add option
-                                    </Button>
-                                  </div>
-                                )}
-                              </>
-                            )}
-
-                            <div className="flex items-center gap-1 pt-2 border-t border-slate-100">
-                              <Button variant="ghost" size="sm" onClick={() => duplicateQuestion(q.id)} className="text-xs h-7 text-slate-500">
-                                <Copy className="w-3 h-3 mr-1" /> Duplicate
-                              </Button>
-                              <Button variant="ghost" size="sm" onClick={() => deleteQuestion(q.id)} className="text-xs h-7 text-red-500 hover:text-red-700">
-                                <Trash2 className="w-3 h-3 mr-1" /> Delete
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-
-                  {showTypePicker ? (
-                    <div className="border border-slate-200 rounded-lg p-3 bg-white">
-                      <p className="text-xs text-slate-500 font-medium mb-2">Choose question type:</p>
-                      <div className="grid grid-cols-2 gap-1">
-                        {QUESTION_TYPES.filter(t => t.value !== 'cta').map((t) => (
-                          <button
-                            key={t.value}
-                            onClick={() => addQuestion(t.value)}
-                            className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded transition-colors text-left"
-                          >
-                            {ICON_MAP[t.icon]}
-                            {t.label}
-                          </button>
-                        ))}
-                        <button
-                          onClick={addCTA}
-                          className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded transition-colors text-left"
-                        >
-                          {ICON_MAP['ExternalLink']}
-                          Call to Action
-                        </button>
-                      </div>
-                      <Button variant="ghost" size="sm" onClick={() => setShowTypePicker(false)} className="w-full mt-2 text-xs">
-                        Cancel
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button variant="outline" size="sm" onClick={() => setShowTypePicker(true)} className="w-full text-sm">
-                      <Plus className="w-4 h-4 mr-1" /> Add question
-                    </Button>
-                  )}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="screens">
-              <AccordionTrigger className="text-sm font-semibold">
-                <div className="flex items-center gap-2">
-                  <Eye className="w-4 h-4" />
-                  Welcome & End Screen
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm">Show welcome screen</Label>
-                    <Switch
-                      checked={currentConfig.welcomeEnabled}
-                      onCheckedChange={(checked) => updateConfig({ welcomeEnabled: checked })}
-                    />
-                  </div>
-
-                  {currentConfig.welcomeEnabled && (
-                    <>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Welcome title</Label>
+                    {currentConfig.welcomeEnabled && (
+                      <div className="space-y-2 pl-0">
                         <Input
                           value={currentConfig.welcomeTitle}
                           onChange={(e) => updateConfig({ welcomeTitle: e.target.value })}
-                          placeholder="Welcome to our form"
+                          placeholder="Welcome title"
                           className="h-8 text-sm"
                         />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Welcome message</Label>
                         <Textarea
                           value={currentConfig.welcomeMessage}
                           onChange={(e) => updateConfig({ welcomeMessage: e.target.value })}
-                          placeholder="A short description..."
-                          className="text-sm min-h-[60px]"
+                          placeholder="A short description for respondents..."
+                          className="text-sm min-h-[50px] resize-none"
                         />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">CTA button label</Label>
                         <Input
                           value={currentConfig.welcomeCta}
                           onChange={(e) => updateConfig({ welcomeCta: e.target.value })}
-                          placeholder="Start"
+                          placeholder="CTA button label (e.g., Start)"
                           className="h-8 text-sm"
                         />
                       </div>
+                    )}
+                  </div>
+
+                  {/* End */}
+                  <div className="space-y-3 border-t border-slate-100 pt-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">End screen</Label>
+                      <Switch
+                        checked={currentConfig.endEnabled ?? true}
+                        onCheckedChange={(checked) => updateConfig({ endEnabled: checked })}
+                      />
+                    </div>
+
+                    {(currentConfig.endEnabled ?? true) && (
+                      <div className="space-y-2">
+                        <Textarea
+                          value={currentConfig.endMessage}
+                          onChange={(e) => updateConfig({ endMessage: e.target.value })}
+                          placeholder="Thank you message"
+                          className="text-sm min-h-[50px] resize-none"
+                        />
+                        <Input
+                          value={currentConfig.endCtaText || ''}
+                          onChange={(e) => updateConfig({ endCtaText: e.target.value })}
+                          placeholder="Optional CTA text"
+                          className="h-8 text-sm"
+                        />
+                        {currentConfig.endCtaText && (
+                          <Input
+                            value={currentConfig.endCtaUrl || ''}
+                            onChange={(e) => updateConfig({ endCtaUrl: e.target.value })}
+                            placeholder="CTA URL (https://...)"
+                            className="h-8 text-sm"
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* 4. Journey Section (core) */}
+            <section>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    Journey
+                    {currentConfig.questions.length > 0 && (
+                      <span className="text-slate-400 font-normal ml-1.5">({currentConfig.questions.length})</span>
+                    )}
+                  </h3>
+                </div>
+                <Button
+                  onClick={generateFullConversation}
+                  disabled={generatingConversation || generatingAllWording || !currentConfig.aiContext?.context?.trim()}
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs gap-1.5 border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                >
+                  {generatingConversation || generatingAllWording ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      {generatingAllWording ? 'Wording...' : 'Generating...'}
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3 h-3" />
+                      Generate with AI
                     </>
                   )}
+                </Button>
+              </div>
 
-                  <div className="border-t border-slate-200 pt-4">
-                    <div className="space-y-1">
-                      <Label className="text-xs">End screen message</Label>
-                      <Textarea
-                        value={currentConfig.endMessage}
-                        onChange={(e) => updateConfig({ endMessage: e.target.value })}
-                        placeholder="Thank you!"
-                        className="text-sm min-h-[60px]"
-                      />
-                    </div>
-                  </div>
+              <div className="space-y-2">
+                {currentConfig.questions.map((q, i) => (
+                  <JourneyItemRow
+                    key={q.id}
+                    question={q}
+                    index={i}
+                    isDragging={dragIndex === i}
+                    isDragOver={dragOverIndex === i}
+                    isGenerating={generatingWording === q.id}
+                    onUpdate={(updates) => updateQuestion(q.id, updates)}
+                    onDuplicate={() => duplicateJourneyItem(q.id)}
+                    onDelete={() => deleteJourneyItem(q.id)}
+                    onGenerateWording={() => generateWordingForQuestion(q.id)}
+                    onDragStart={() => handleDragStart(i)}
+                    onDragOver={(e) => handleDragOver(e, i)}
+                    onDragEnd={handleDragEnd}
+                  />
+                ))}
 
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm">Redirect after submission</Label>
-                    <Switch
-                      checked={currentConfig.endRedirectEnabled}
-                      onCheckedChange={(checked) => updateConfig({ endRedirectEnabled: checked })}
-                    />
-                  </div>
+                <button
+                  onClick={addJourneyItem}
+                  className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg border-2 border-dashed border-slate-200 text-sm text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add step
+                </button>
+              </div>
+            </section>
 
-                  {currentConfig.endRedirectEnabled && (
-                    <div className="space-y-1">
-                      <Label className="text-xs">Redirect URL</Label>
-                      <Input
-                        value={currentConfig.endRedirectUrl}
-                        onChange={(e) => updateConfig({ endRedirectUrl: e.target.value })}
-                        placeholder="https://example.com/thank-you"
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                  )}
+            {/* 5. Visuals Section */}
+            <section>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-full bg-pink-100 flex items-center justify-center">
+                  <Image className="w-3.5 h-3.5 text-pink-600" />
                 </div>
-              </AccordionContent>
-            </AccordionItem>
+                <h3 className="text-sm font-semibold text-slate-900">Visuals</h3>
+              </div>
 
-            <AccordionItem value="theme">
-              <AccordionTrigger className="text-sm font-semibold">
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => updateConfig({ visuals: { type: 'image', url: currentConfig.visuals?.url || '' } })}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-sm transition-colors ${
+                      (!currentConfig.visuals || currentConfig.visuals.type === 'image')
+                        ? 'border-pink-200 bg-pink-50 text-pink-700'
+                        : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                    }`}
+                  >
+                    <Image className="w-3.5 h-3.5" /> Image
+                  </button>
+                  <button
+                    onClick={() => updateConfig({ visuals: { type: 'video', url: currentConfig.visuals?.url || '' } })}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-sm transition-colors ${
+                      currentConfig.visuals?.type === 'video'
+                        ? 'border-pink-200 bg-pink-50 text-pink-700'
+                        : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                    }`}
+                  >
+                    <Video className="w-3.5 h-3.5" /> Video
+                  </button>
+                </div>
+                <Input
+                  value={currentConfig.visuals?.url || ''}
+                  onChange={(e) => updateConfig({ visuals: { type: currentConfig.visuals?.type || 'image', url: e.target.value } })}
+                  placeholder={currentConfig.visuals?.type === 'video' ? 'https://example.com/video.mp4' : 'https://example.com/image.jpg'}
+                  className="h-8 text-sm"
+                />
+              </div>
+            </section>
+
+            {/* 6. About You Section */}
+            <section>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center">
+                  <User className="w-3.5 h-3.5 text-amber-600" />
+                </div>
+                <h3 className="text-sm font-semibold text-slate-900">About you</h3>
+              </div>
+              <Textarea
+                value={currentConfig.aboutYou || ''}
+                onChange={(e) => updateConfig({ aboutYou: e.target.value })}
+                placeholder="Tell us about your brand or company. This helps AI match your voice..."
+                className="text-sm min-h-[60px] resize-none"
+              />
+            </section>
+
+            {/* 7. Train AI Section (collapsible) */}
+            <section className="border border-slate-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setTrainAIOpen(!trainAIOpen)}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
+              >
                 <div className="flex items-center gap-2">
-                  <Palette className="w-4 h-4" />
-                  Theme
+                  <Brain className="w-4 h-4 text-slate-500" />
+                  <span className="text-sm font-semibold text-slate-700">Train AI</span>
+                  <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">Advanced</span>
                 </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Logo URL</Label>
-                    <Input
-                      value={currentConfig.theme.logoUrl || ''}
-                      onChange={(e) => updateConfig({ theme: { ...currentConfig.theme, logoUrl: e.target.value } })}
-                      placeholder="https://example.com/logo.png"
-                      className="h-8 text-sm"
-                    />
-                  </div>
+                <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${trainAIOpen ? 'rotate-90' : ''}`} />
+              </button>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Primary color</Label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="color"
-                          value={currentConfig.theme.primaryColor || '#2563eb'}
-                          onChange={(e) => updateConfig({ theme: { ...currentConfig.theme, primaryColor: e.target.value } })}
-                          className="w-8 h-8 rounded cursor-pointer border border-slate-200"
-                        />
-                        <Input
-                          value={currentConfig.theme.primaryColor || '#2563eb'}
-                          onChange={(e) => updateConfig({ theme: { ...currentConfig.theme, primaryColor: e.target.value } })}
-                          className="h-8 text-xs font-mono flex-1"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Secondary color</Label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="color"
-                          value={currentConfig.theme.secondaryColor || '#64748b'}
-                          onChange={(e) => updateConfig({ theme: { ...currentConfig.theme, secondaryColor: e.target.value } })}
-                          className="w-8 h-8 rounded cursor-pointer border border-slate-200"
-                        />
-                        <Input
-                          value={currentConfig.theme.secondaryColor || '#64748b'}
-                          onChange={(e) => updateConfig({ theme: { ...currentConfig.theme, secondaryColor: e.target.value } })}
-                          className="h-8 text-xs font-mono flex-1"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Bot bubble color</Label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="color"
-                          value={currentConfig.theme.botBubbleColor || '#f1f5f9'}
-                          onChange={(e) => updateConfig({ theme: { ...currentConfig.theme, botBubbleColor: e.target.value } })}
-                          className="w-8 h-8 rounded cursor-pointer border border-slate-200"
-                        />
-                        <Input
-                          value={currentConfig.theme.botBubbleColor || '#f1f5f9'}
-                          onChange={(e) => updateConfig({ theme: { ...currentConfig.theme, botBubbleColor: e.target.value } })}
-                          className="h-8 text-xs font-mono flex-1"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">User bubble color</Label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="color"
-                          value={currentConfig.theme.userBubbleColor || '#2563eb'}
-                          onChange={(e) => updateConfig({ theme: { ...currentConfig.theme, userBubbleColor: e.target.value } })}
-                          className="w-8 h-8 rounded cursor-pointer border border-slate-200"
-                        />
-                        <Input
-                          value={currentConfig.theme.userBubbleColor || '#2563eb'}
-                          onChange={(e) => updateConfig({ theme: { ...currentConfig.theme, userBubbleColor: e.target.value } })}
-                          className="h-8 text-xs font-mono flex-1"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label className="text-xs">Background</Label>
-                    <Select
-                      value={currentConfig.theme.backgroundType || 'solid'}
-                      onValueChange={(val) => updateConfig({ theme: { ...currentConfig.theme, backgroundType: val as any } })}
-                    >
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="solid">Solid color</SelectItem>
-                        <SelectItem value="gradient">Gradient</SelectItem>
-                        <SelectItem value="image">Image URL</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {currentConfig.theme.backgroundType === 'solid' && (
-                    <div className="space-y-1">
-                      <Label className="text-xs">Background color</Label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="color"
-                          value={currentConfig.theme.backgroundColor || '#ffffff'}
-                          onChange={(e) => updateConfig({ theme: { ...currentConfig.theme, backgroundColor: e.target.value } })}
-                          className="w-8 h-8 rounded cursor-pointer border border-slate-200"
-                        />
-                        <Input
-                          value={currentConfig.theme.backgroundColor || '#ffffff'}
-                          onChange={(e) => updateConfig({ theme: { ...currentConfig.theme, backgroundColor: e.target.value } })}
-                          className="h-8 text-xs font-mono flex-1"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {currentConfig.theme.backgroundType === 'gradient' && (
-                    <div className="space-y-1">
-                      <Label className="text-xs">CSS gradient</Label>
-                      <Input
-                        value={currentConfig.theme.backgroundGradient || ''}
-                        onChange={(e) => updateConfig({ theme: { ...currentConfig.theme, backgroundGradient: e.target.value } })}
-                        placeholder="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-                        className="h-8 text-xs font-mono"
-                      />
-                    </div>
-                  )}
-
-                  {currentConfig.theme.backgroundType === 'image' && (
-                    <div className="space-y-1">
-                      <Label className="text-xs">Background image URL</Label>
-                      <Input
-                        value={currentConfig.theme.backgroundImage || ''}
-                        onChange={(e) => updateConfig({ theme: { ...currentConfig.theme, backgroundImage: e.target.value } })}
-                        placeholder="https://example.com/bg.jpg"
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                  )}
-
-                  <div className="space-y-1">
-                    <Label className="text-xs">Font family</Label>
-                    <Select
-                      value={currentConfig.theme.fontFamily || 'Inter'}
-                      onValueChange={(val) => updateConfig({ theme: { ...currentConfig.theme, fontFamily: val } })}
-                    >
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Inter">Inter</SelectItem>
-                        <SelectItem value="system-ui">System UI</SelectItem>
-                        <SelectItem value="Georgia">Georgia (Serif)</SelectItem>
-                        <SelectItem value="Courier New">Courier New (Mono)</SelectItem>
-                        <SelectItem value="Helvetica">Helvetica</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label className="text-xs">Bubble style</Label>
-                    <Select
-                      value={currentConfig.theme.bubbleStyle || 'rounded'}
-                      onValueChange={(val) => updateConfig({ theme: { ...currentConfig.theme, bubbleStyle: val as any } })}
-                    >
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="rounded">Rounded</SelectItem>
-                        <SelectItem value="minimal">Minimal</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label className="text-xs">Custom CSS (advanced)</Label>
-                    <Textarea
-                      value={currentConfig.theme.customCss || ''}
-                      onChange={(e) => updateConfig({ theme: { ...currentConfig.theme, customCss: e.target.value } })}
-                      placeholder=".chat-bubble { ... }"
-                      className="text-xs font-mono min-h-[60px]"
-                    />
-                  </div>
+              {trainAIOpen && (
+                <div className="px-4 pb-4 border-t border-slate-100">
+                  <p className="text-xs text-slate-500 mt-3 mb-2">
+                    Give extra instructions to guide how AI generates your conversation.
+                  </p>
+                  <Textarea
+                    value={currentConfig.trainAI || ''}
+                    onChange={(e) => updateConfig({ trainAI: e.target.value })}
+                    placeholder={"e.g., Always ask for first name before last name.\nDon't mention competitors.\nKeep questions under 20 words."}
+                    className="text-sm min-h-[80px] resize-none font-mono text-xs"
+                  />
                 </div>
-              </AccordionContent>
-            </AccordionItem>
+              )}
+            </section>
 
-            <AccordionItem value="settings">
-              <AccordionTrigger className="text-sm font-semibold">
-                <div className="flex items-center gap-2">
-                  <Settings className="w-4 h-4" />
-                  Settings
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Button style</Label>
-                    <Select
-                      value={currentConfig.theme.buttonStyle || 'rounded'}
-                      onValueChange={(val) => updateConfig({ theme: { ...currentConfig.theme, buttonStyle: val } })}
-                    >
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="rounded">Rounded</SelectItem>
-                        <SelectItem value="square">Square</SelectItem>
-                        <SelectItem value="pill">Pill</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Spacing</Label>
-                    <Select
-                      value={currentConfig.theme.spacing || 'normal'}
-                      onValueChange={(val) => updateConfig({ theme: { ...currentConfig.theme, spacing: val } })}
-                    >
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="compact">Compact</SelectItem>
-                        <SelectItem value="normal">Normal</SelectItem>
-                        <SelectItem value="relaxed">Relaxed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+          </div>
         </div>
 
-        <div className="w-[55%] bg-slate-950 overflow-y-auto">
-          <FormPreview
+        {/* Live Preview Panel (Right) */}
+        <div className="flex-1 overflow-hidden">
+          <LivePreviewPanel
             config={currentConfig}
             formName={formName}
           />
@@ -1309,7 +950,107 @@ export default function FormBuilderPage() {
   );
 }
 
-function FormPreview({
+function JourneyItemRow({
+  question,
+  index,
+  isDragging,
+  isDragOver,
+  isGenerating,
+  onUpdate,
+  onDuplicate,
+  onDelete,
+  onGenerateWording,
+  onDragStart,
+  onDragOver,
+  onDragEnd,
+}: {
+  question: Question;
+  index: number;
+  isDragging: boolean;
+  isDragOver: boolean;
+  isGenerating: boolean;
+  onUpdate: (updates: Partial<Question>) => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
+  onGenerateWording: () => void;
+  onDragStart: () => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDragEnd: () => void;
+}) {
+  const [showActions, setShowActions] = useState(false);
+
+  return (
+    <div
+      draggable
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDragEnd={onDragEnd}
+      onMouseEnter={() => setShowActions(true)}
+      onMouseLeave={() => setShowActions(false)}
+      className={`group relative rounded-lg border transition-all ${
+        isDragging
+          ? 'opacity-40 border-blue-300 bg-blue-50'
+          : isDragOver
+          ? 'border-blue-300 bg-blue-50/50 border-dashed'
+          : 'border-slate-200 hover:border-slate-300'
+      }`}
+    >
+      <div className="flex items-start gap-2 p-3">
+        <div className="flex items-center gap-1.5 pt-2 flex-shrink-0">
+          <GripVertical className="w-3.5 h-3.5 text-slate-300 cursor-grab active:cursor-grabbing" />
+          <span className="text-[11px] text-slate-400 font-mono w-4 text-center">{index + 1}</span>
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <textarea
+            value={question.label}
+            onChange={(e) => {
+              const updates: Partial<Question> = { label: e.target.value };
+              if (!question.key || question.key === generateKeyFromLabel(question.label)) {
+                updates.key = generateKeyFromLabel(e.target.value);
+              }
+              onUpdate(updates);
+            }}
+            placeholder="What should AI ask at this step?"
+            rows={2}
+            className="w-full text-sm text-slate-800 bg-transparent border-0 p-0 resize-none focus:outline-none focus:ring-0 placeholder:text-slate-400"
+          />
+          {question.message && (
+            <p className="text-[11px] text-green-600 mt-1 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+              Wording generated
+            </p>
+          )}
+        </div>
+      </div>
+
+      {showActions && (
+        <div className="absolute top-2 right-2 flex items-center gap-0.5 bg-white border border-slate-200 rounded-md shadow-sm p-0.5">
+          <button
+            onClick={onGenerateWording}
+            disabled={isGenerating || !question.label}
+            className="p-1 rounded hover:bg-blue-50 transition-colors disabled:opacity-40"
+            title="Generate wording"
+          >
+            {isGenerating ? (
+              <Loader2 className="w-3 h-3 text-blue-500 animate-spin" />
+            ) : (
+              <Sparkles className="w-3 h-3 text-blue-500" />
+            )}
+          </button>
+          <button onClick={onDuplicate} className="p-1 rounded hover:bg-slate-100 transition-colors" title="Duplicate">
+            <Copy className="w-3 h-3 text-slate-500" />
+          </button>
+          <button onClick={onDelete} className="p-1 rounded hover:bg-red-50 transition-colors" title="Delete">
+            <Trash2 className="w-3 h-3 text-red-400" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LivePreviewPanel({
   config,
   formName,
 }: {
@@ -1317,14 +1058,22 @@ function FormPreview({
   formName: string;
 }) {
   const [previewKey, setPreviewKey] = useState(0);
+  const restartPreview = () => setPreviewKey(k => k + 1);
 
-  const restartPreview = () => {
-    setPreviewKey(k => k + 1);
-  };
+  const hasVisual = config.visuals?.url?.trim();
+  const isVideo = config.visuals?.type === 'video';
+
+  const bgStyle: React.CSSProperties = {};
+  if (hasVisual && !isVideo) {
+    bgStyle.backgroundImage = `url(${config.visuals!.url})`;
+    bgStyle.backgroundSize = 'cover';
+    bgStyle.backgroundPosition = 'center';
+  }
 
   return (
-    <div className="flex flex-col min-h-full">
-      <div className="flex items-center justify-center gap-4 py-3 px-4 border-b border-slate-800">
+    <div className="flex flex-col h-full bg-slate-950 relative">
+      {/* Preview header */}
+      <div className="flex items-center justify-center gap-4 py-2.5 px-4 border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm z-10 flex-shrink-0">
         <div className="flex items-center gap-2">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
@@ -1334,31 +1083,54 @@ function FormPreview({
         </div>
         <button
           onClick={restartPreview}
-          className="px-3 py-1 text-xs rounded-full bg-slate-800 text-slate-400 hover:text-white transition-colors"
-          title="Restart preview"
+          className="flex items-center gap-1.5 px-3 py-1 text-xs rounded-full bg-slate-800 text-slate-400 hover:text-white transition-colors"
         >
+          <RefreshCw className="w-3 h-3" />
           Restart
         </button>
       </div>
 
-      <div className="flex-1 overflow-hidden">
-        <div className="h-full bg-white rounded-t-xl mx-2 mt-2 overflow-hidden">
-          {config.questions.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-slate-400">
-              <div className="text-center">
-                <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
-                <p className="text-sm">No questions yet</p>
-                <p className="text-xs mt-1">Describe your situation in the AI Context panel to generate a conversation</p>
+      {/* Preview body with visual background */}
+      <div className="flex-1 relative overflow-hidden">
+        {/* Visual background */}
+        {hasVisual && (
+          <div className="absolute inset-0">
+            {isVideo ? (
+              <video
+                src={config.visuals!.url}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full" style={bgStyle} />
+            )}
+            <div className="absolute inset-0 bg-black/30" />
+          </div>
+        )}
+
+        {/* Centered conversation card */}
+        <div className="relative z-10 flex items-center justify-center h-full p-4">
+          <div className={`w-full max-w-md h-full max-h-[600px] rounded-2xl overflow-hidden shadow-2xl ${hasVisual ? 'bg-white/95 backdrop-blur-sm' : 'bg-white'}`}>
+            {config.questions.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-slate-400">
+                <div className="text-center px-8">
+                  <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm font-medium">No steps yet</p>
+                  <p className="text-xs mt-1.5 text-slate-400">Describe your conversation and click "Generate with AI" to create the journey</p>
+                </div>
               </div>
-            </div>
-          ) : (
-            <ConversationalForm
-              key={previewKey}
-              config={config}
-              formName={formName || 'Form'}
-              isPreview={true}
-            />
-          )}
+            ) : (
+              <ConversationalForm
+                key={previewKey}
+                config={config}
+                formName={formName || 'Form'}
+                isPreview={true}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>

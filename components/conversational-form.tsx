@@ -210,7 +210,9 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
         }
         setTimeout(() => {
           setShowTyping(false);
-          addBotMessage(config.endMessage || 'Thank you for your submission!', { isEnd: true });
+          if (config.endEnabled !== false) {
+            addBotMessage(config.endMessage || 'Thank you for your submission!', { isEnd: true });
+          }
           setPhase('done');
         }, 400);
       };
@@ -250,7 +252,9 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
         }
         setTimeout(() => {
           setShowTyping(false);
-          addBotMessage(config.endMessage || 'Thank you!', { isEnd: true });
+          if (config.endEnabled !== false) {
+            addBotMessage(config.endMessage || 'Thank you!', { isEnd: true });
+          }
           setPhase('done');
         }, 400);
       };
@@ -300,7 +304,9 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
         setShowTyping(true);
         setTimeout(() => {
           setShowTyping(false);
-          addBotMessage(config.endMessage || 'Thank you for your submission!', { isEnd: true });
+          if (config.endEnabled !== false) {
+            addBotMessage(config.endMessage || 'Thank you for your submission!', { isEnd: true });
+          }
           setPhase('done');
         }, 400);
       } else {
@@ -345,7 +351,9 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
         }
         setTimeout(() => {
           setShowTyping(false);
-          addBotMessage(config.endMessage || 'Thank you for your submission!', { isEnd: true });
+          if (config.endEnabled !== false) {
+            addBotMessage(config.endMessage || 'Thank you for your submission!', { isEnd: true });
+          }
           setPhase('done');
         }, 400);
       };
@@ -384,7 +392,9 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
         }
         setTimeout(() => {
           setShowTyping(false);
-          addBotMessage(config.endMessage || 'Thank you for your submission!', { isEnd: true });
+          if (config.endEnabled !== false) {
+            addBotMessage(config.endMessage || 'Thank you for your submission!', { isEnd: true });
+          }
           setPhase('done');
         }, 400);
       };
