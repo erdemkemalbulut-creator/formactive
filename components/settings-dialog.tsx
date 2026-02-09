@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FormConfig, FormTheme, FormSettings, DEFAULT_FORM_SETTINGS } from '@/lib/types';
-import { Lock, Globe, Link2 } from 'lucide-react';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -30,6 +29,18 @@ const TEXT_SIZE_OPTIONS = [
   { value: 'large', label: 'Large' },
 ];
 
+function ToggleRow({ label, helper, checked, onChange }: { label: string; helper: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-between py-1">
+      <div>
+        <label className="text-[13px] font-medium text-slate-700 block">{label}</label>
+        <p className="text-[11px] text-slate-400 mt-0.5">{helper}</p>
+      </div>
+      <Switch checked={checked} onCheckedChange={onChange} />
+    </div>
+  );
+}
+
 export function SettingsDialog({
   open,
   onOpenChange,
@@ -43,11 +54,10 @@ export function SettingsDialog({
   const colors = { ...DEFAULT_FORM_SETTINGS.colors, ...settings.colors };
   const tracking = { ...DEFAULT_FORM_SETTINGS.tracking, ...settings.tracking };
   const legalDisclaimer = { ...DEFAULT_FORM_SETTINGS.legalDisclaimer, ...settings.legalDisclaimer };
+  const notifications = { ...DEFAULT_FORM_SETTINGS.notifications, ...settings.notifications };
 
   const updateColors = (key: 'background' | 'text' | 'button', value: string) => {
-    onSettingsChange({
-      colors: { ...colors, [key]: value },
-    });
+    onSettingsChange({ colors: { ...colors, [key]: value } });
   };
 
   return (
@@ -67,6 +77,7 @@ export function SettingsDialog({
             </TabsList>
           </div>
 
+          {/* GENERAL — identity + look & feel */}
           <TabsContent value="general" className="px-6 pb-6 pt-4 space-y-5 mt-0">
             <div>
               <label className="text-[13px] font-medium text-slate-700 mb-1.5 block">Title</label>
@@ -82,42 +93,24 @@ export function SettingsDialog({
               <label className="text-[13px] font-medium text-slate-700 mb-1 block">Colors</label>
               <p className="text-[11px] text-slate-400 mb-2.5">Background, text & button colors</p>
               <div className="flex items-center gap-4">
-                <div className="flex flex-col items-center gap-1">
-                  <div className="relative">
+                {([
+                  { key: 'background' as const, label: 'Background' },
+                  { key: 'text' as const, label: 'Text' },
+                  { key: 'button' as const, label: 'Button' },
+                ] as const).map(({ key, label }) => (
+                  <div key={key} className="flex flex-col items-center gap-1">
                     <input
                       type="color"
-                      value={colors.background}
-                      onChange={(e) => updateColors('background', e.target.value)}
-                      className="w-9 h-9 rounded-lg border border-slate-200 cursor-pointer p-0.5"
-                    />
-                  </div>
-                  <span className="text-[10px] text-slate-400">Background</span>
-                </div>
-                <div className="flex flex-col items-center gap-1">
-                  <div className="relative">
-                    <input
-                      type="color"
-                      value={colors.text}
-                      onChange={(e) => updateColors('text', e.target.value)}
-                      className="w-9 h-9 rounded-lg border border-slate-200 cursor-pointer p-0.5"
-                    />
-                  </div>
-                  <span className="text-[10px] text-slate-400">Text</span>
-                </div>
-                <div className="flex flex-col items-center gap-1">
-                  <div className="relative">
-                    <input
-                      type="color"
-                      value={colors.button}
+                      value={colors[key]}
                       onChange={(e) => {
-                        updateColors('button', e.target.value);
-                        onThemeChange({ primaryColor: e.target.value });
+                        updateColors(key, e.target.value);
+                        if (key === 'button') onThemeChange({ primaryColor: e.target.value });
                       }}
                       className="w-9 h-9 rounded-lg border border-slate-200 cursor-pointer p-0.5"
                     />
+                    <span className="text-[10px] text-slate-400">{label}</span>
                   </div>
-                  <span className="text-[10px] text-slate-400">Button</span>
-                </div>
+                ))}
               </div>
             </div>
 
@@ -132,9 +125,7 @@ export function SettingsDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {FONT_OPTIONS.map((f) => (
-                    <SelectItem key={f.value} value={f.value} className="text-sm">
-                      {f.label}
-                    </SelectItem>
+                    <SelectItem key={f.value} value={f.value} className="text-sm">{f.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -151,105 +142,106 @@ export function SettingsDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {TEXT_SIZE_OPTIONS.map((s) => (
-                    <SelectItem key={s.value} value={s.value} className="text-sm">
-                      {s.label}
-                    </SelectItem>
+                    <SelectItem key={s.value} value={s.value} className="text-sm">{s.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="flex items-center justify-between py-1">
-              <div>
-                <label className="text-[13px] font-medium text-slate-700 block">Hide FormActive logo</label>
-                <p className="text-[11px] text-slate-400 mt-0.5">Remove branding from your form</p>
-              </div>
-              <Switch
-                checked={settings.hideBranding || false}
-                onCheckedChange={(v) => onSettingsChange({ hideBranding: v })}
-              />
-            </div>
-
-            <div className="flex items-center justify-between py-1">
-              <div>
-                <label className="text-[13px] font-medium text-slate-700 block">Close form</label>
-                <p className="text-[11px] text-slate-400 mt-0.5">Stop accepting additional responses</p>
-              </div>
-              <Switch
-                checked={settings.isClosed || false}
-                onCheckedChange={(v) => onSettingsChange({ isClosed: v })}
-              />
-            </div>
-
-            <div className="flex items-center justify-between py-1">
-              <div>
-                <label className="text-[13px] font-medium text-slate-700 block">Show legal disclaimer</label>
-                <p className="text-[11px] text-slate-400 mt-0.5">Display fine print at the bottom of your form</p>
-              </div>
-              <Switch
-                checked={legalDisclaimer.enabled || false}
-                onCheckedChange={(v) => onSettingsChange({ legalDisclaimer: { ...legalDisclaimer, enabled: v } })}
-              />
-            </div>
-            {legalDisclaimer.enabled && (
-              <div>
-                <label className="text-[13px] font-medium text-slate-700 mb-1.5 block">Disclaimer text</label>
-                <textarea
-                  value={legalDisclaimer.text || ''}
-                  onChange={(e) => onSettingsChange({ legalDisclaimer: { ...legalDisclaimer, text: e.target.value } })}
-                  placeholder="By continuing, you agree to our Terms of Service and Privacy Policy."
-                  rows={3}
-                  className="w-full text-sm rounded-md border border-slate-200 px-3 py-2 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1 resize-none"
-                />
-              </div>
-            )}
+            <ToggleRow
+              label="Hide FormActive logo"
+              helper="Remove branding from your form"
+              checked={settings.hideBranding || false}
+              onChange={(v) => onSettingsChange({ hideBranding: v })}
+            />
           </TabsContent>
 
+          {/* ADVANCED — behavior */}
           <TabsContent value="advanced" className="px-6 pb-6 pt-4 space-y-5 mt-0">
-            <div className="flex items-start gap-3 p-3.5 rounded-lg bg-slate-50 border border-slate-100">
-              <Globe className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-[13px] font-medium text-slate-600">Share settings</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">Control who can view and fill out this form. Coming soon.</p>
-              </div>
+            <ToggleRow
+              label="Close form"
+              helper="Stop accepting new responses"
+              checked={settings.isClosed || false}
+              onChange={(v) => onSettingsChange({ isClosed: v })}
+            />
+
+            <ToggleRow
+              label="Skip welcome screen"
+              helper="Jump straight to the first question"
+              checked={settings.skipWelcome || false}
+              onChange={(v) => onSettingsChange({ skipWelcome: v })}
+            />
+
+            <ToggleRow
+              label="Enable restore chat"
+              helper="Let returning visitors resume where they left off"
+              checked={settings.restoreChat || false}
+              onChange={(v) => onSettingsChange({ restoreChat: v })}
+            />
+
+            <div className="border-t border-slate-100 pt-4">
+              <ToggleRow
+                label="Email notifications"
+                helper="Get notified when someone completes your form"
+                checked={notifications.enabled || false}
+                onChange={(v) => onSettingsChange({ notifications: { ...notifications, enabled: v } })}
+              />
+              {notifications.enabled && (
+                <div className="mt-3">
+                  <Input
+                    type="email"
+                    value={notifications.email || ''}
+                    onChange={(e) => onSettingsChange({ notifications: { ...notifications, email: e.target.value } })}
+                    placeholder="you@example.com"
+                    className="h-9 text-sm"
+                  />
+                </div>
+              )}
             </div>
-            <div className="flex items-start gap-3 p-3.5 rounded-lg bg-slate-50 border border-slate-100">
-              <Lock className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-[13px] font-medium text-slate-600">Access control</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">Restrict access with passwords or allowed email domains. Coming soon.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-3.5 rounded-lg bg-slate-50 border border-slate-100">
-              <Link2 className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-[13px] font-medium text-slate-600">Custom domain</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">Host your form on your own domain. Coming soon.</p>
-              </div>
+
+            <div className="border-t border-slate-100 pt-4">
+              <ToggleRow
+                label="Legal disclaimer"
+                helper="Show fine print at the bottom of your form"
+                checked={legalDisclaimer.enabled || false}
+                onChange={(v) => onSettingsChange({ legalDisclaimer: { ...legalDisclaimer, enabled: v } })}
+              />
+              {legalDisclaimer.enabled && (
+                <div className="mt-3">
+                  <textarea
+                    value={legalDisclaimer.text || ''}
+                    onChange={(e) => onSettingsChange({ legalDisclaimer: { ...legalDisclaimer, text: e.target.value } })}
+                    placeholder="By continuing, you agree to our Terms of Service and Privacy Policy."
+                    rows={3}
+                    className="w-full text-sm rounded-md border border-slate-200 px-3 py-2 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1 resize-none"
+                  />
+                </div>
+              )}
             </div>
           </TabsContent>
 
+          {/* TRACKING — analytics */}
           <TabsContent value="tracking" className="px-6 pb-6 pt-4 space-y-5 mt-0">
-            <div className="flex items-center justify-between py-1">
-              <div>
-                <label className="text-[13px] font-medium text-slate-700 block">Collect basic analytics</label>
-                <p className="text-[11px] text-slate-400 mt-0.5">Track views, completions, and drop-off rates</p>
-              </div>
-              <Switch
-                checked={tracking.enabled !== false}
-                onCheckedChange={(v) => onSettingsChange({ tracking: { ...tracking, enabled: v } })}
-              />
-            </div>
-            <div className="flex items-center justify-between py-1">
-              <div>
-                <label className="text-[13px] font-medium text-slate-700 block">Exclude preview activity</label>
-                <p className="text-[11px] text-slate-400 mt-0.5">Don't count editor previews in your analytics</p>
-              </div>
-              <Switch
-                checked={tracking.excludeBuilderPreview !== false}
-                onCheckedChange={(v) => onSettingsChange({ tracking: { ...tracking, excludeBuilderPreview: v } })}
-              />
-            </div>
+            <ToggleRow
+              label="Collect analytics"
+              helper="Track views, completions, and drop-off rates"
+              checked={tracking.enabled !== false}
+              onChange={(v) => onSettingsChange({ tracking: { ...tracking, enabled: v } })}
+            />
+
+            <ToggleRow
+              label="Exclude preview activity"
+              helper="Don't count editor previews in analytics"
+              checked={tracking.excludeBuilderPreview !== false}
+              onChange={(v) => onSettingsChange({ tracking: { ...tracking, excludeBuilderPreview: v } })}
+            />
+
+            <ToggleRow
+              label="Anonymize responses"
+              helper="Don't store IP addresses or device info"
+              checked={tracking.anonymize || false}
+              onChange={(v) => onSettingsChange({ tracking: { ...tracking, anonymize: v } })}
+            />
           </TabsContent>
         </Tabs>
       </DialogContent>

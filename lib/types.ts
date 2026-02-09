@@ -98,11 +98,18 @@ export interface FormSettings {
   tracking?: {
     enabled?: boolean;
     excludeBuilderPreview?: boolean;
+    anonymize?: boolean;
   };
   legalDisclaimer?: {
     enabled?: boolean;
     text?: string;
   };
+  notifications?: {
+    enabled?: boolean;
+    email?: string;
+  };
+  skipWelcome?: boolean;
+  restoreChat?: boolean;
 }
 
 export const DEFAULT_FORM_SETTINGS: FormSettings = {
@@ -110,8 +117,11 @@ export const DEFAULT_FORM_SETTINGS: FormSettings = {
   textSize: 'medium',
   hideBranding: false,
   isClosed: false,
-  tracking: { enabled: true, excludeBuilderPreview: true },
+  tracking: { enabled: true, excludeBuilderPreview: true, anonymize: false },
   legalDisclaimer: { enabled: false, text: '' },
+  notifications: { enabled: false, email: '' },
+  skipWelcome: false,
+  restoreChat: false,
 };
 
 export interface FormConfig {
