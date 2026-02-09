@@ -336,12 +336,6 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
         transform: contentVisible ? 'translateY(0)' : 'translateY(8px)',
         transition: reducedMotion ? 'none' : `opacity ${FADE_DURATION}ms ease-out, transform ${FADE_DURATION}ms ease-out`,
       }}>
-        <div
-          className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-semibold mb-8"
-          style={{ backgroundColor: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)' }}
-        >
-          {formName.charAt(0).toUpperCase()}
-        </div>
         {config.welcomeTitle ? (
           <h1 className="font-bold mb-4 leading-tight text-white" style={{ fontSize: 'clamp(2.2rem, 5.5vw, 3.5rem)' }}>{config.welcomeTitle}</h1>
         ) : (
@@ -700,7 +694,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
       {isPreview && (
         <div className="absolute top-4 left-8 right-8 z-20">
           <p className="text-[11px] font-medium tracking-wide uppercase text-white/40">
-            {phase === 'welcome' && config.welcomeEnabled ? 'Welcome' : phase === 'done' ? 'End screen' : phase === 'questions' && sortedQuestions.length > 0 ? `Step ${currentStepIndex + 1} of ${sortedQuestions.length}` : '\u00A0'}
+            {phase === 'welcome' ? '\u00A0' : phase === 'done' ? 'End screen' : phase === 'questions' && sortedQuestions.length > 0 ? `Step ${currentStepIndex + 1} of ${sortedQuestions.length}` : '\u00A0'}
           </p>
         </div>
       )}
