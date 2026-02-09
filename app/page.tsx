@@ -311,10 +311,10 @@ export default function Home() {
                   <Shield className="w-6 h-6 text-slate-600" />
                 </div>
                 <h3 className="text-xl font-semibold text-slate-900 mb-3">
-                  14 question types
+                  9 question types
                 </h3>
                 <p className="text-slate-600 leading-relaxed mb-4">
-                  From simple text fields to star ratings, file uploads, and consent checkboxes — cover every use case.
+                  From simple text fields to choice-based selections and yes/no — cover every use case naturally.
                 </p>
                 <ul className="space-y-2">
                   <li className="flex items-start gap-2 text-sm text-slate-600">
@@ -323,11 +323,11 @@ export default function Home() {
                   </li>
                   <li className="flex items-start gap-2 text-sm text-slate-600">
                     <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Dropdowns, multi-select, yes/no</span>
+                    <span>Single choice, multiple choice, yes/no</span>
                   </li>
                   <li className="flex items-start gap-2 text-sm text-slate-600">
                     <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Rating, file upload, consent</span>
+                    <span>Call-to-action buttons with dynamic URLs</span>
                   </li>
                 </ul>
               </Card>

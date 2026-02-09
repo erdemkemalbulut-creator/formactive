@@ -10,7 +10,6 @@ interface ChatMessage {
   isWelcome?: boolean;
   isEnd?: boolean;
   welcomeCta?: string;
-  isTransition?: boolean;
   isCTA?: boolean;
   ctaUrl?: string;
   ctaOpenNewTab?: boolean;
@@ -30,57 +29,47 @@ const SAMPLE_ANSWERS: Record<QuestionType, string> = {
   phone: '+1 (555) 123-4567',
   number: '42',
   date: '2026-01-15',
-  time: '14:30',
-  dropdown: '',
-  multi_select: '',
-  checkbox: 'Yes',
+  single_choice: '',
+  multiple_choice: '',
   yes_no: 'Yes',
-  rating: '⭐⭐⭐⭐⭐',
-  file_upload: 'document.pdf',
-  consent: 'I agree',
   cta: '',
 };
 
 function getSampleAnswer(question: Question): string {
-  if (question.type === 'dropdown' && question.options.length > 0) {
+  if (question.type === 'single_choice' && question.options.length > 0) {
     return question.options[0].label;
   }
-  if (question.type === 'multi_select' && question.options.length > 0) {
+  if (question.type === 'multiple_choice' && question.options.length > 0) {
     return question.options.slice(0, 2).map(o => o.label).join(', ');
   }
   return SAMPLE_ANSWERS[question.type] || 'Sample';
 }
 
 function getSampleValue(question: Question): any {
-  if (question.type === 'dropdown' && question.options.length > 0) {
+  if (question.type === 'single_choice' && question.options.length > 0) {
     return question.options[0].value;
   }
-  if (question.type === 'multi_select' && question.options.length > 0) {
+  if (question.type === 'multiple_choice' && question.options.length > 0) {
     return question.options.slice(0, 2).map(o => o.value);
   }
-  if (question.type === 'checkbox' || question.type === 'consent') return true;
   if (question.type === 'yes_no') return 'Yes';
-  if (question.type === 'rating') return 5;
   if (question.type === 'number') return 42;
   return SAMPLE_ANSWERS[question.type] || 'Sample';
 }
 
 function formatAnswer(value: any, question: Question): string {
   if (value === undefined || value === null || value === '') return '';
-  if (question.type === 'multi_select' && Array.isArray(value)) {
+  if (question.type === 'multiple_choice' && Array.isArray(value)) {
     const labels = value.map(v => {
       const opt = question.options.find(o => o.value === v);
       return opt ? opt.label : v;
     });
     return labels.join(', ');
   }
-  if (question.type === 'dropdown') {
+  if (question.type === 'single_choice') {
     const opt = question.options.find(o => o.value === value);
     return opt ? opt.label : String(value);
   }
-  if (question.type === 'checkbox') return value ? 'Yes' : 'No';
-  if (question.type === 'consent') return value ? 'I agree' : 'I disagree';
-  if (question.type === 'rating') return '⭐'.repeat(Number(value));
   return String(value);
 }
 
@@ -228,48 +217,25 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
       doSubmit();
       return;
     }
-    
+
     setShowTyping(true);
     const q = sortedQuestions[index];
-    
-    if (q.transition_before) {
-      setTimeout(() => {
-        addBotMessage(q.transition_before!);
-        setTimeout(() => {
-          setShowTyping(false);
-          if (q.type === 'cta' && q.cta) {
-            addBotMessage(q.label || 'Check this out:', { isCTA: true, ctaUrl: q.cta.url, ctaOpenNewTab: q.cta.openInNewTab, content: q.cta.text });
-            setCurrentQuestionIndex(index);
-            setTimeout(() => showNextQuestion(index + 1), 800);
-          } else {
-            let content = q.user_prompt || q.label;
-            if (q.helpText) content += '\n' + q.helpText;
-            addBotMessage(content);
-            setCurrentQuestionIndex(index);
-            setInputValue('');
-            setMultiSelectValues([]);
-            setError(null);
-          }
-        }, 600);
-      }, 400);
-    } else {
-      setTimeout(() => {
-        setShowTyping(false);
-        if (q.type === 'cta' && q.cta) {
-          addBotMessage(q.label || 'Check this out:', { isCTA: true, ctaUrl: q.cta.url, ctaOpenNewTab: q.cta.openInNewTab, content: q.cta.text });
-          setCurrentQuestionIndex(index);
-          setTimeout(() => showNextQuestion(index + 1), 800);
-        } else {
-          let content = q.user_prompt || q.label;
-          if (q.helpText) content += '\n' + q.helpText;
-          addBotMessage(content);
-          setCurrentQuestionIndex(index);
-          setInputValue('');
-          setMultiSelectValues([]);
-          setError(null);
-        }
-      }, 400);
-    }
+
+    setTimeout(() => {
+      setShowTyping(false);
+      if (q.type === 'cta' && q.cta) {
+        addBotMessage(q.label || 'Check this out:', { isCTA: true, ctaUrl: q.cta.url, ctaOpenNewTab: q.cta.openInNewTab, content: q.cta.text });
+        setCurrentQuestionIndex(index);
+        setTimeout(() => showNextQuestion(index + 1), 800);
+      } else {
+        const content = q.message || q.label;
+        addBotMessage(content);
+        setCurrentQuestionIndex(index);
+        setInputValue('');
+        setMultiSelectValues([]);
+        setError(null);
+      }
+    }, 400);
   }, [sortedQuestions, answers, onSubmit, config.endMessage, addBotMessage]);
 
   const startForm = useCallback(() => {
@@ -351,7 +317,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
     const q = sortedQuestions[currentQuestionIndex];
     let value: any = inputValue;
 
-    if (q.type === 'multi_select') {
+    if (q.type === 'multiple_choice') {
       value = multiSelectValues;
     }
 
@@ -450,6 +416,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
     switch (q.type) {
       case 'cta':
         return null;
+
       case 'yes_no':
         return (
           <div className="p-4 border-t border-gray-200 bg-white">
@@ -471,49 +438,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
           </div>
         );
 
-      case 'checkbox':
-        return (
-          <div className="p-4 border-t border-gray-200 bg-white">
-            {error && <p className="text-xs text-red-500 mb-2">{error}</p>}
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleDirectAnswer(true, 'Yes')}
-                className="flex-1 py-2.5 px-4 bg-gray-100 hover:bg-blue-50 hover:text-blue-700 border border-gray-200 hover:border-blue-300 rounded-full text-sm font-medium transition-colors"
-              >
-                Yes
-              </button>
-              <button
-                onClick={() => handleDirectAnswer(false, 'No')}
-                className="flex-1 py-2.5 px-4 bg-gray-100 hover:bg-blue-50 hover:text-blue-700 border border-gray-200 hover:border-blue-300 rounded-full text-sm font-medium transition-colors"
-              >
-                No
-              </button>
-            </div>
-          </div>
-        );
-
-      case 'consent':
-        return (
-          <div className="p-4 border-t border-gray-200 bg-white">
-            {error && <p className="text-xs text-red-500 mb-2">{error}</p>}
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleDirectAnswer(true, 'I agree')}
-                className="flex-1 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-sm font-medium transition-colors"
-              >
-                I agree
-              </button>
-              <button
-                onClick={() => handleDirectAnswer(false, 'I disagree')}
-                className="flex-1 py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 rounded-full text-sm font-medium transition-colors"
-              >
-                I disagree
-              </button>
-            </div>
-          </div>
-        );
-
-      case 'dropdown':
+      case 'single_choice':
         return (
           <div className="p-4 border-t border-gray-200 bg-white">
             {error && <p className="text-xs text-red-500 mb-2">{error}</p>}
@@ -531,7 +456,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
           </div>
         );
 
-      case 'multi_select':
+      case 'multiple_choice':
         return (
           <div className="p-4 border-t border-gray-200 bg-white">
             {error && <p className="text-xs text-red-500 mb-2">{error}</p>}
@@ -569,55 +494,6 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
           </div>
         );
 
-      case 'rating':
-        return (
-          <div className="p-4 border-t border-gray-200 bg-white">
-            {error && <p className="text-xs text-red-500 mb-2">{error}</p>}
-            <div className="flex justify-center gap-2">
-              {[1, 2, 3, 4, 5].map(star => (
-                <button
-                  key={star}
-                  onClick={() => handleDirectAnswer(star, '⭐'.repeat(star))}
-                  className="focus:outline-none transition-transform hover:scale-110"
-                >
-                  <svg
-                    className={`w-10 h-10 ${star <= (inputValue || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 hover:text-yellow-300'}`}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  >
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                  </svg>
-                </button>
-              ))}
-            </div>
-          </div>
-        );
-
-      case 'file_upload':
-        return (
-          <div className="p-4 border-t border-gray-200 bg-white">
-            {error && <p className="text-xs text-red-500 mb-2">{error}</p>}
-            <label className="flex items-center justify-center gap-2 py-3 px-4 bg-gray-100 hover:bg-gray-200 border border-gray-200 border-dashed rounded-xl cursor-pointer transition-colors">
-              <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
-              <span className="text-sm text-gray-600 font-medium">Upload a file</span>
-              <input
-                type="file"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    handleDirectAnswer(file.name, file.name);
-                  }
-                }}
-              />
-            </label>
-          </div>
-        );
-
       case 'date':
         return (
           <div className="p-4 border-t border-gray-200 bg-white">
@@ -626,31 +502,6 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
               <input
                 ref={inputRef}
                 type="date"
-                value={inputValue || ''}
-                onChange={(e) => { setInputValue(e.target.value); setError(null); }}
-                onKeyDown={handleKeyDown}
-                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <button
-                onClick={handleSubmitAnswer}
-                className="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        );
-
-      case 'time':
-        return (
-          <div className="p-4 border-t border-gray-200 bg-white">
-            {error && <p className="text-xs text-red-500 mb-2">{error}</p>}
-            <div className="flex gap-2">
-              <input
-                ref={inputRef}
-                type="time"
                 value={inputValue || ''}
                 onChange={(e) => { setInputValue(e.target.value); setError(null); }}
                 onKeyDown={handleKeyDown}
@@ -683,7 +534,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
                     handleSubmitAnswer();
                   }
                 }}
-                placeholder={q.placeholder || 'Type your answer...'}
+                placeholder="Type your answer..."
                 rows={2}
                 className="flex-1 px-4 py-2.5 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 style={{ minHeight: '44px', maxHeight: '120px' }}
@@ -711,7 +562,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
                 value={inputValue || ''}
                 onChange={(e) => { setInputValue(q.type === 'number' && e.target.value !== '' ? Number(e.target.value) : e.target.value); setError(null); }}
                 onKeyDown={handleKeyDown}
-                placeholder={q.placeholder || 'Type your answer...'}
+                placeholder="Type your answer..."
                 className="flex-1 px-4 py-2.5 border border-gray-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               <button
@@ -729,9 +580,9 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
   };
 
   return (
-    <div className="flex flex-col h-full" style={{ 
+    <div className="flex flex-col h-full" style={{
       backgroundColor: config.theme?.backgroundType === 'solid' ? (config.theme?.backgroundColor || '#ffffff') : '#ffffff',
-      backgroundImage: config.theme?.backgroundType === 'gradient' ? config.theme?.backgroundGradient : 
+      backgroundImage: config.theme?.backgroundType === 'gradient' ? config.theme?.backgroundGradient :
                         config.theme?.backgroundType === 'image' ? `url(${config.theme?.backgroundImage})` : undefined,
       backgroundSize: config.theme?.backgroundType === 'image' ? 'cover' : undefined,
       fontFamily: config.theme?.fontFamily || 'Inter, sans-serif',

@@ -3,13 +3,54 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { FormConfig } from '@/lib/types';
+import { FormConfig, Question, QuestionType } from '@/lib/types';
 import { ConversationalForm } from '@/components/conversational-form';
 
 interface FormData {
   id: string;
   name: string;
   published_config: FormConfig;
+}
+
+function normalizePublishedConfig(config: any): FormConfig {
+  const legacyTypeMap: Record<string, QuestionType> = {
+    dropdown: 'single_choice',
+    multi_select: 'multiple_choice',
+    checkbox: 'yes_no',
+    consent: 'yes_no',
+    rating: 'number',
+    file_upload: 'short_text',
+    time: 'short_text',
+  };
+
+  const questions = (config.questions || []).map((q: any, i: number) => {
+    const rawType = q.type || q.ui_type || 'short_text';
+    const type: QuestionType = legacyTypeMap[rawType] || rawType;
+
+    let options = q.options || [];
+    if (Array.isArray(options)) {
+      options = options.map((opt: any, j: number) => {
+        if (typeof opt === 'string') {
+          return { id: `o_${j}`, label: opt, value: opt.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, '') };
+        }
+        return { id: opt.id || `o_${j}`, label: opt.label || String(opt), value: opt.value || String(opt) };
+      });
+    }
+
+    return {
+      id: q.id || `q_${i}`,
+      key: q.key || q.field_key || `q_${i}`,
+      type,
+      label: q.label || q.intent || '',
+      message: q.message || q.user_prompt || '',
+      required: Boolean(q.required),
+      options,
+      order: q.order ?? i,
+      cta: q.cta,
+    };
+  });
+
+  return { ...config, questions };
 }
 
 export default function PublicFormPage() {
@@ -38,7 +79,10 @@ export default function PublicFormPage() {
         return;
       }
 
-      setForm(data);
+      setForm({
+        ...data,
+        published_config: normalizePublishedConfig(data.published_config),
+      });
     } catch {
       setNotFound(true);
     } finally {

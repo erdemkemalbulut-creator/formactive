@@ -1,88 +1,97 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { openai } from '@/lib/openai';
-import type { GenerateConversationRequest, GenerateNodeResponse } from '@/lib/types';
+import type { GenerateConversationRequest, GenerateConversationItem } from '@/lib/types';
 
-const SYSTEM_PROMPT = `You are an expert conversational form designer. Given a form creator's context describing their situation and what they need to learn from respondents, generate a complete conversation flow as an array of conversation nodes.
+const SYSTEM_PROMPT = `You are an expert conversation designer for interactive forms.
 
-You MUST return ONLY valid JSON with this exact structure:
+Your task is to transform a high-level situation description into a complete, structured conversational form.
+
+You will be given:
+
+* A **form context** describing the situation, goals, and audience
+* Desired **tone** and **audience type**
+
+### Your objectives
+
+1. Understand the real-world situation described in the context
+2. Identify what information the form creator needs to collect
+3. Design a logical, natural conversation that gathers this information efficiently
+4. Generate clear, human-friendly questions that feel appropriate for the audience
+5. Choose the most suitable question type for each question
+
+### Rules you must follow
+
+* Think in terms of a **conversation**, not a survey
+* Questions should follow a natural order (e.g. confirmation → details → preferences)
+* Do NOT ask redundant or unnecessary questions
+* Use simple, clear language — avoid corporate or robotic phrasing
+* Match the requested tone consistently
+* Assume respondents are real people, not internal users
+* Do NOT include explanations, commentary, or metadata in your response
+
+### Question types you may use
+
+Only use the following types:
+
+* short_text
+* long_text
+* single_choice
+* multiple_choice
+* yes_no
+* date
+* number
+* email
+* phone
+
+### Output format (strict)
+
+Return ONLY a JSON object with a "questions" array.
+Each item in the array must be a question object with this exact shape:
 
 {
-  "nodes": [
-    {
-      "field_key": "snake_case_key_for_data_storage",
-      "data_type": "string|number|boolean|date|email|phone|categorical|rating",
-      "ui_type": "short_text|long_text|email|phone|number|date|time|dropdown|multi_select|checkbox|yes_no|rating|file_upload|consent",
-      "user_prompt": "The conversational question shown to the respondent",
-      "transition_before": "A short, warm bridge message (1 sentence) to transition into this question",
-      "required": true/false,
-      "validation": {
-        "minLength": number or omit,
-        "maxLength": number or omit,
-        "min": number or omit,
-        "max": number or omit,
-        "pattern": "regex string or omit",
-        "allowedValues": ["array", "of", "strings"] or omit
-      },
-      "options": [{"id": "unique_id", "label": "Display Label", "value": "stored_value"}],
-      "extraction": {"type": "the_data_type", "description": "what this field captures"},
-      "followups": []
-    }
-  ]
+  "label": string,
+  "type": string,
+  "required": boolean,
+  "options": string[] | null
 }
 
-Guidelines:
-- Analyze the context to determine ALL questions needed to fulfill the creator's intent
-- Order questions in a natural conversational flow (easy/warm questions first, detailed ones later)
-- The first question should NOT have a transition_before (it's the opening)
-- Each subsequent question should have a transition_before that acknowledges what came before and flows naturally
-- user_prompt should be conversational, warm, and match the requested tone
-- field_key must be unique and descriptive (snake_case)
-- Choose the most appropriate ui_type for each piece of information
-- For dropdown/multi_select, generate 3-7 relevant options
-- Generate between 3-10 questions depending on the complexity of the context
-- End with a consent or confirmation question if appropriate
-- validation should be sensible defaults based on data type
-- Only add followups when genuinely useful (max 1-2 per node)
-- Do NOT wrap the JSON in markdown code blocks`;
+### Important constraints
+
+* Do NOT invent information not implied by the context
+* Do NOT include internal instructions or system language
+* Do NOT reference the form creator or the AI
+* Do NOT generate more questions than necessary to satisfy the context
+* If dates, attendance, preferences, or interest are implied, include them
+* If something is optional or sensitive, mark it as not required
+
+Design the conversation so it feels natural, respectful, and easy to answer.`;
 
 function buildUserPrompt(req: GenerateConversationRequest): string {
   let prompt = `Context: "${req.context}"`;
   prompt += `\nTone: ${req.tone}`;
-  prompt += `\nDirectness: ${req.directness}`;
   if (req.audience) {
-    prompt += `\nTarget audience: ${req.audience}`;
+    prompt += `\nAudience: ${req.audience}`;
   }
   return prompt;
 }
 
-function validateNode(data: any): GenerateNodeResponse | null {
+function validateItem(data: any): GenerateConversationItem | null {
   if (!data || typeof data !== 'object') return null;
-  if (!data.field_key || !data.data_type || !data.ui_type || !data.user_prompt) return null;
+  if (!data.label || !data.type) return null;
 
-  const validUiTypes = [
-    'short_text', 'long_text', 'email', 'phone', 'number', 'date', 'time',
-    'dropdown', 'multi_select', 'checkbox', 'yes_no', 'rating', 'file_upload', 'consent'
+  const validTypes = [
+    'short_text', 'long_text', 'single_choice', 'multiple_choice',
+    'yes_no', 'date', 'number', 'email', 'phone'
   ];
-  if (!validUiTypes.includes(data.ui_type)) {
-    data.ui_type = 'short_text';
-  }
-
-  const validDataTypes = ['string', 'number', 'boolean', 'date', 'email', 'phone', 'categorical', 'rating'];
-  if (!validDataTypes.includes(data.data_type)) {
-    data.data_type = 'string';
+  if (!validTypes.includes(data.type)) {
+    data.type = 'short_text';
   }
 
   return {
-    field_key: String(data.field_key),
-    data_type: data.data_type,
-    ui_type: data.ui_type,
-    user_prompt: String(data.user_prompt),
-    transition_before: String(data.transition_before || ''),
+    label: String(data.label),
+    type: data.type,
     required: Boolean(data.required ?? true),
-    validation: data.validation || {},
-    options: Array.isArray(data.options) ? data.options : [],
-    extraction: data.extraction || {},
-    followups: Array.isArray(data.followups) ? data.followups : [],
+    options: Array.isArray(data.options) ? data.options.map(String) : null,
   };
 }
 
@@ -97,7 +106,6 @@ export async function POST(request: NextRequest) {
     const userPrompt = buildUserPrompt({
       context: body.context,
       tone: body.tone || 'friendly',
-      directness: body.directness || 'balanced',
       audience: body.audience,
     });
 
@@ -113,7 +121,7 @@ export async function POST(request: NextRequest) {
         if (attempt === 1 && lastError) {
           messages.push({
             role: 'user',
-            content: `Your previous response was invalid. Please try again and return ONLY valid JSON with a "nodes" array. Error: ${lastError}`,
+            content: `Your previous response was invalid. Please try again and return ONLY valid JSON with a "questions" array. Error: ${lastError}`,
           });
         }
 
@@ -132,33 +140,28 @@ export async function POST(request: NextRequest) {
         }
 
         const parsed = JSON.parse(content);
-        const nodesArray = parsed.nodes || parsed.questions || [];
+        const questionsArray = parsed.questions || parsed.nodes || [];
 
-        if (!Array.isArray(nodesArray) || nodesArray.length === 0) {
-          lastError = 'Response did not contain a valid nodes array';
+        if (!Array.isArray(questionsArray) || questionsArray.length === 0) {
+          lastError = 'Response did not contain a valid questions array';
           continue;
         }
 
-        const validatedNodes: GenerateNodeResponse[] = [];
-        const seenKeys = new Set<string>();
+        const validatedItems: GenerateConversationItem[] = [];
 
-        for (const node of nodesArray) {
-          const validated = validateNode(node);
+        for (const item of questionsArray) {
+          const validated = validateItem(item);
           if (validated) {
-            if (seenKeys.has(validated.field_key)) {
-              validated.field_key = `${validated.field_key}_${validatedNodes.length}`;
-            }
-            seenKeys.add(validated.field_key);
-            validatedNodes.push(validated);
+            validatedItems.push(validated);
           }
         }
 
-        if (validatedNodes.length === 0) {
-          lastError = 'No valid nodes in the response';
+        if (validatedItems.length === 0) {
+          lastError = 'No valid questions in the response';
           continue;
         }
 
-        return NextResponse.json({ nodes: validatedNodes });
+        return NextResponse.json({ questions: validatedItems });
       } catch (parseError: any) {
         lastError = parseError.message;
         if (attempt === 1) throw parseError;

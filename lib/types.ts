@@ -1,21 +1,14 @@
 export type QuestionType =
   | 'short_text'
   | 'long_text'
+  | 'single_choice'
+  | 'multiple_choice'
+  | 'yes_no'
+  | 'date'
+  | 'number'
   | 'email'
   | 'phone'
-  | 'number'
-  | 'date'
-  | 'time'
-  | 'dropdown'
-  | 'multi_select'
-  | 'checkbox'
-  | 'yes_no'
-  | 'rating'
-  | 'file_upload'
-  | 'consent'
   | 'cta';
-
-export type DataType = 'string' | 'number' | 'boolean' | 'date' | 'email' | 'phone' | 'categorical' | 'rating';
 
 export type ToneType = 'friendly' | 'professional' | 'luxury' | 'playful';
 
@@ -25,32 +18,6 @@ export interface QuestionOption {
   id: string;
   label: string;
   value: string;
-}
-
-export interface QuestionValidation {
-  minLength?: number;
-  maxLength?: number;
-  min?: number;
-  max?: number;
-  pattern?: string;
-  fileTypes?: string[];
-  maxFileSize?: number;
-  allowedValues?: string[];
-}
-
-export interface FollowUpCondition {
-  field_key: string;
-  operator: 'equals' | 'not_equals' | 'contains' | 'empty' | 'not_empty';
-  value?: string;
-}
-
-export interface FollowUpNode {
-  id: string;
-  condition: FollowUpCondition;
-  prompt: string;
-  field_key: string;
-  data_type: DataType;
-  ui_type: QuestionType;
 }
 
 export interface CTAConfig {
@@ -64,25 +31,10 @@ export interface Question {
   key: string;
   type: QuestionType;
   label: string;
-  placeholder: string;
-  helpText: string;
+  message: string;
   required: boolean;
-  validation: QuestionValidation;
   options: QuestionOption[];
   order: number;
-
-  intent?: string;
-  field_key?: string;
-  data_type?: DataType;
-  user_prompt?: string;
-  transition_before?: string;
-  extraction?: Record<string, any>;
-  followups?: FollowUpNode[];
-
-  tone?: ToneType;
-  directness?: DirectnessType;
-  audience?: string;
-
   cta?: CTAConfig;
 }
 
@@ -106,7 +58,6 @@ export interface FormTheme {
 export interface AIContext {
   context: string;
   tone: ToneType;
-  directness: DirectnessType;
   audience: string;
 }
 
@@ -153,32 +104,24 @@ export interface FormVersion {
   created_at: string;
 }
 
-export interface GenerateNodeRequest {
-  intent: string;
-  tone: ToneType;
-  directness: DirectnessType;
-  audience?: string;
-  existing_fields: string[];
-}
-
 export interface GenerateConversationRequest {
   context: string;
   tone: ToneType;
-  directness: DirectnessType;
   audience?: string;
 }
 
-export interface GenerateNodeResponse {
-  field_key: string;
-  data_type: DataType;
-  ui_type: QuestionType;
-  user_prompt: string;
-  transition_before: string;
+export interface GenerateConversationItem {
+  label: string;
+  type: QuestionType;
   required: boolean;
-  validation: QuestionValidation;
-  options?: QuestionOption[];
-  extraction: Record<string, any>;
-  followups: FollowUpNode[];
+  options: string[] | null;
+}
+
+export interface GenerateWordingRequest {
+  description: string;
+  tone: ToneType;
+  journeyItems: { label: string; type: string }[];
+  currentItem: { label: string; type: string };
 }
 
 export const QUESTION_TYPES: { value: QuestionType; label: string; icon: string }[] = [
@@ -188,14 +131,9 @@ export const QUESTION_TYPES: { value: QuestionType; label: string; icon: string 
   { value: 'phone', label: 'Phone', icon: 'Phone' },
   { value: 'number', label: 'Number', icon: 'Hash' },
   { value: 'date', label: 'Date', icon: 'Calendar' },
-  { value: 'time', label: 'Time', icon: 'Clock' },
-  { value: 'dropdown', label: 'Dropdown', icon: 'ChevronDown' },
-  { value: 'multi_select', label: 'Multi-select', icon: 'CheckSquare' },
-  { value: 'checkbox', label: 'Checkbox', icon: 'CheckCircle' },
+  { value: 'single_choice', label: 'Single choice', icon: 'ChevronDown' },
+  { value: 'multiple_choice', label: 'Multiple choice', icon: 'CheckSquare' },
   { value: 'yes_no', label: 'Yes / No', icon: 'ToggleLeft' },
-  { value: 'rating', label: 'Rating', icon: 'Star' },
-  { value: 'file_upload', label: 'File upload', icon: 'Upload' },
-  { value: 'consent', label: 'Consent', icon: 'Shield' },
   { value: 'cta', label: 'Call to Action', icon: 'ExternalLink' },
 ];
 
@@ -205,10 +143,8 @@ export function createDefaultQuestion(order: number): Question {
     key: '',
     type: 'short_text',
     label: '',
-    placeholder: '',
-    helpText: '',
+    message: '',
     required: false,
-    validation: {},
     options: [],
     order,
   };
@@ -220,10 +156,8 @@ export function createDefaultCTA(order: number): Question {
     key: `cta_${order}`,
     type: 'cta',
     label: 'Call to Action',
-    placeholder: '',
-    helpText: '',
+    message: '',
     required: false,
-    validation: {},
     options: [],
     order,
     cta: {

@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
-import { FormConfig, Question, QuestionType, QUESTION_TYPES, ToneType, DirectnessType, createDefaultCTA, FormTheme, DEFAULT_THEME, AIContext } from '@/lib/types';
+import { FormConfig, Question, QuestionType, QUESTION_TYPES, ToneType, createDefaultCTA, FormTheme, DEFAULT_THEME, AIContext } from '@/lib/types';
 import { ConversationalForm } from '@/components/conversational-form';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -44,12 +44,8 @@ import {
   Phone,
   Hash,
   Calendar,
-  Clock,
   CheckSquare,
   ToggleLeft,
-  Star,
-  Upload,
-  Shield,
   BarChart3,
   Settings,
   MessageSquare,
@@ -57,7 +53,6 @@ import {
   Wand2,
   Palette,
   Link2,
-  Bug,
   Loader2,
 } from 'lucide-react';
 
@@ -68,14 +63,9 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   Phone: <Phone className="w-4 h-4" />,
   Hash: <Hash className="w-4 h-4" />,
   Calendar: <Calendar className="w-4 h-4" />,
-  Clock: <Clock className="w-4 h-4" />,
   ChevronDown: <ChevronDown className="w-4 h-4" />,
   CheckSquare: <CheckSquare className="w-4 h-4" />,
-  CheckCircle: <Check className="w-4 h-4" />,
   ToggleLeft: <ToggleLeft className="w-4 h-4" />,
-  Star: <Star className="w-4 h-4" />,
-  Upload: <Upload className="w-4 h-4" />,
-  Shield: <Shield className="w-4 h-4" />,
   ExternalLink: <ExternalLink className="w-4 h-4" />,
 };
 
@@ -99,11 +89,9 @@ function makeDefaultQuestion(order: number, type: QuestionType = 'short_text'): 
     key: '',
     type,
     label: '',
-    placeholder: '',
-    helpText: '',
+    message: '',
     required: false,
-    validation: {},
-    options: type === 'dropdown' || type === 'multi_select'
+    options: type === 'single_choice' || type === 'multiple_choice'
       ? [{ id: `o_${Date.now()}`, label: 'Option 1', value: 'option_1' }]
       : [],
     order,
@@ -138,10 +126,9 @@ export default function FormBuilderPage() {
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(new Set());
   const [overflowOpen, setOverflowOpen] = useState(false);
-  const [previewMode, setPreviewMode] = useState<'welcome' | 'form' | 'end'>('form');
-  const [generatingAI, setGeneratingAI] = useState<string | null>(null);
   const [generatingConversation, setGeneratingConversation] = useState(false);
-  const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [generatingWording, setGeneratingWording] = useState<string | null>(null);
+  const [generatingAllWording, setGeneratingAllWording] = useState(false);
 
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -198,11 +185,54 @@ export default function FormBuilderPage() {
     };
   };
 
-  const normalizeConfig = (config: FormConfig): FormConfig => {
-    return {
-      ...config,
-      aiContext: config.aiContext || { context: '', tone: 'friendly' as ToneType, directness: 'balanced' as DirectnessType, audience: '' },
+  const normalizeQuestion = (q: any): Question => {
+    const legacyTypeMap: Record<string, QuestionType> = {
+      dropdown: 'single_choice',
+      multi_select: 'multiple_choice',
+      checkbox: 'yes_no',
+      consent: 'yes_no',
+      rating: 'number',
+      file_upload: 'short_text',
+      time: 'short_text',
     };
+    const rawType = q.type || q.ui_type || 'short_text';
+    const type: QuestionType = legacyTypeMap[rawType] || rawType;
+
+    const message = q.message || q.user_prompt || '';
+    const label = q.label || q.intent || '';
+
+    let options = q.options || [];
+    if (Array.isArray(options)) {
+      options = options.map((opt: any, j: number) => {
+        if (typeof opt === 'string') {
+          return { id: `o_${Date.now()}_${j}`, label: opt, value: opt.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, '') };
+        }
+        return { id: opt.id || `o_${Date.now()}_${j}`, label: opt.label || String(opt), value: opt.value || String(opt) };
+      });
+    }
+
+    return {
+      id: q.id || `q_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      key: q.key || q.field_key || '',
+      type,
+      label,
+      message,
+      required: Boolean(q.required),
+      options,
+      order: q.order ?? 0,
+      cta: q.cta,
+    };
+  };
+
+  const normalizeConfig = (config: FormConfig): FormConfig => {
+    const normalized = {
+      ...config,
+      aiContext: config.aiContext || { context: '', tone: 'friendly' as ToneType, audience: '' },
+    };
+    if (normalized.questions) {
+      normalized.questions = normalized.questions.map(normalizeQuestion);
+    }
+    return normalized;
   };
 
   const loadForm = async () => {
@@ -329,52 +359,72 @@ export default function FormBuilderPage() {
     updateQuestion(questionId, { options: q.options.filter((o) => o.id !== optionId) });
   };
 
-  const generateWithAI = async (questionId: string) => {
+  const generateWordingForQuestion = async (questionId: string) => {
     const question = currentConfig.questions.find(q => q.id === questionId);
-    if (!question || !question.intent) return;
+    if (!question || !question.label) return;
 
     const aiCtx = currentConfig.aiContext;
-    setGeneratingAI(questionId);
+    setGeneratingWording(questionId);
     try {
-      const existingFields = currentConfig.questions
-        .filter(q => q.id !== questionId && q.key)
-        .map(q => q.key);
-
+      const journeyItems = currentConfig.questions.map(q => ({ label: q.label, type: q.type }));
       const res = await fetch('/api/ai/generate-node', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          intent: question.intent,
+          description: aiCtx?.context || '',
           tone: aiCtx?.tone || 'friendly',
-          directness: aiCtx?.directness || 'balanced',
-          audience: aiCtx?.audience || '',
-          existing_fields: existingFields,
+          journeyItems,
+          currentItem: { label: question.label, type: question.type },
         }),
       });
 
       if (!res.ok) throw new Error('AI generation failed');
-      const node = await res.json();
+      const data = await res.json();
 
-      updateQuestion(questionId, {
-        key: node.field_key,
-        type: node.ui_type,
-        label: node.user_prompt,
-        user_prompt: node.user_prompt,
-        data_type: node.data_type,
-        field_key: node.field_key,
-        transition_before: node.transition_before,
-        required: node.required,
-        validation: node.validation || {},
-        options: node.options || [],
-        extraction: node.extraction || {},
-        followups: node.followups || [],
-      });
-
-      toast({ title: 'Generated!', description: 'AI created your conversation node.' });
+      updateQuestion(questionId, { message: data.message });
+      toast({ title: 'Done!', description: 'Wording generated for this question.' });
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message || 'Failed to generate', variant: 'destructive' });
+      toast({ title: 'Error', description: error.message || 'Failed to generate wording', variant: 'destructive' });
     } finally {
-      setGeneratingAI(null);
+      setGeneratingWording(null);
+    }
+  };
+
+  const generateAllWording = async (questions: Question[]) => {
+    const aiCtx = currentConfig.aiContext;
+    setGeneratingAllWording(true);
+    try {
+      const journeyItems = questions.map(q => ({ label: q.label, type: q.type }));
+      const updatedQuestions = [...questions];
+
+      for (let i = 0; i < questions.length; i++) {
+        const q = questions[i];
+        if (q.type === 'cta') continue;
+
+        try {
+          const res = await fetch('/api/ai/generate-node', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              description: aiCtx?.context || '',
+              tone: aiCtx?.tone || 'friendly',
+              journeyItems,
+              currentItem: { label: q.label, type: q.type },
+            }),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            updatedQuestions[i] = { ...updatedQuestions[i], message: data.message };
+          }
+        } catch {}
+      }
+
+      updateConfig({ questions: updatedQuestions });
+    } catch (error: any) {
+      toast({ title: 'Error', description: 'Failed to generate wording', variant: 'destructive' });
+    } finally {
+      setGeneratingAllWording(false);
     }
   };
 
@@ -398,7 +448,6 @@ export default function FormBuilderPage() {
         body: JSON.stringify({
           context: aiCtx.context,
           tone: aiCtx.tone || 'friendly',
-          directness: aiCtx.directness || 'balanced',
           audience: aiCtx.audience || '',
         }),
       });
@@ -406,35 +455,38 @@ export default function FormBuilderPage() {
       if (!res.ok) throw new Error('AI generation failed');
       const data = await res.json();
 
-      if (!data.nodes || data.nodes.length === 0) {
+      if (!data.questions || data.questions.length === 0) {
         throw new Error('No questions were generated');
       }
 
-      const newQuestions: Question[] = data.nodes.map((node: any, i: number) => ({
+      const newQuestions: Question[] = data.questions.map((item: any, i: number) => ({
         id: `q_${Date.now()}_${Math.random().toString(36).slice(2, 7)}_${i}`,
-        key: node.field_key,
-        type: node.ui_type,
-        label: node.user_prompt,
-        placeholder: '',
-        helpText: '',
-        required: node.required ?? true,
-        validation: node.validation || {},
-        options: node.options || [],
+        key: generateKeyFromLabel(item.label || `question_${i}`),
+        type: item.type as QuestionType,
+        label: item.label,
+        message: '',
+        required: item.required ?? true,
+        options: Array.isArray(item.options)
+          ? item.options.map((opt: string, j: number) => ({
+              id: `o_${Date.now()}_${j}`,
+              label: opt,
+              value: opt.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, ''),
+            }))
+          : [],
         order: i,
-        intent: '',
-        field_key: node.field_key,
-        data_type: node.data_type,
-        user_prompt: node.user_prompt,
-        transition_before: node.transition_before || '',
-        extraction: node.extraction || {},
-        followups: node.followups || [],
       }));
 
       updateConfig({ questions: newQuestions });
       setExpandedQuestions(new Set());
       toast({
         title: 'Conversation generated!',
-        description: `AI created ${newQuestions.length} questions from your context.`,
+        description: `${newQuestions.length} questions created. Generating conversational wording...`,
+      });
+
+      await generateAllWording(newQuestions);
+      toast({
+        title: 'All done!',
+        description: 'Questions and conversational wording are ready.',
       });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message || 'Failed to generate conversation', variant: 'destructive' });
@@ -444,7 +496,7 @@ export default function FormBuilderPage() {
   };
 
   const updateAIContext = (updates: Partial<AIContext>) => {
-    const current = currentConfig.aiContext || { context: '', tone: 'friendly' as ToneType, directness: 'balanced' as DirectnessType, audience: '' };
+    const current = currentConfig.aiContext || { context: '', tone: 'friendly' as ToneType, audience: '' };
     updateConfig({ aiContext: { ...current, ...updates } });
   };
 
@@ -631,19 +683,19 @@ export default function FormBuilderPage() {
                     <Textarea
                       value={currentConfig.aiContext?.context || ''}
                       onChange={(e) => updateAIContext({ context: e.target.value })}
-                      placeholder={"e.g., I'm organizing my wedding and want to send this form to my guests to know who will attend, which dates work for them, and their meal preferences.\n\nor: I'm a travel agent organizing a trip. Everything is planned, and I want to communicate the details to my clients and see who might be interested."}
-                      className="text-sm min-h-[100px] bg-white"
+                      placeholder={"e.g., I'm organizing my wedding and want to send this form to my guests to know who will attend, which dates work for them, and their meal preferences.\n\nor: I'm a travel agent organizing a trip. Everything is planned, and I want to communicate the details and collect participant info."}
+                      className="text-sm min-h-[100px]"
                     />
-                    <p className="text-[10px] text-blue-500">The more detail you provide, the better the AI-generated conversation will be.</p>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <Label className="text-[10px] text-slate-500">Tone</Label>
+                      <Label className="text-xs text-blue-700">Tone</Label>
                       <Select
                         value={currentConfig.aiContext?.tone || 'friendly'}
-                        onValueChange={(val: ToneType) => updateAIContext({ tone: val })}
+                        onValueChange={(val) => updateAIContext({ tone: val as ToneType })}
                       >
-                        <SelectTrigger className="h-7 text-xs">
+                        <SelectTrigger className="h-8 text-sm bg-white">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -655,40 +707,32 @@ export default function FormBuilderPage() {
                       </Select>
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-[10px] text-slate-500">Directness</Label>
-                      <Select
-                        value={currentConfig.aiContext?.directness || 'balanced'}
-                        onValueChange={(val: DirectnessType) => updateAIContext({ directness: val })}
-                      >
-                        <SelectTrigger className="h-7 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="casual">Casual</SelectItem>
-                          <SelectItem value="balanced">Balanced</SelectItem>
-                          <SelectItem value="precise">Precise</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] text-slate-500">Audience</Label>
+                      <Label className="text-xs text-blue-700">Audience</Label>
                       <Input
                         value={currentConfig.aiContext?.audience || ''}
                         onChange={(e) => updateAIContext({ audience: e.target.value })}
                         placeholder="e.g., wedding guests"
-                        className="h-7 text-xs"
+                        className="h-8 text-sm bg-white"
                       />
                     </div>
                   </div>
+
                   <Button
                     onClick={generateFullConversation}
-                    disabled={!currentConfig.aiContext?.context?.trim() || generatingConversation}
+                    disabled={generatingConversation || generatingAllWording || !currentConfig.aiContext?.context?.trim()}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    size="sm"
                   >
-                    {generatingConversation ? (
-                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating conversation...</>
+                    {generatingConversation || generatingAllWording ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        {generatingAllWording ? 'Generating wording...' : 'Generating questions...'}
+                      </>
                     ) : (
-                      <><Wand2 className="w-4 h-4 mr-2" /> Generate full conversation</>
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Generate Full Conversation
+                      </>
                     )}
                   </Button>
                 </div>
@@ -699,248 +743,189 @@ export default function FormBuilderPage() {
               <AccordionTrigger className="text-sm font-semibold">
                 <div className="flex items-center gap-2">
                   <MessageSquare className="w-4 h-4" />
-                  Questions ({currentConfig.questions.length})
+                  Journey ({currentConfig.questions.length})
                 </div>
               </AccordionTrigger>
               <AccordionContent>
-                <div className="space-y-3">
-                  {currentConfig.questions.length === 0 && (
-                    <div className="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center">
-                      <Sparkles className="w-6 h-6 text-blue-400 mx-auto mb-2" />
-                      <p className="text-slate-600 text-sm font-medium mb-1">No questions yet</p>
-                      <p className="text-slate-400 text-xs mb-3">Describe your situation above and let AI generate the conversation, or add questions manually.</p>
-                      <Button variant="outline" size="sm" onClick={() => setShowTypePicker(true)}>
-                        <Plus className="w-4 h-4 mr-1" /> Add manually
-                      </Button>
-                    </div>
-                  )}
-
-                  {currentConfig.questions.map((question) => {
-                    const isExpanded = expandedQuestions.has(question.id);
-                    const typeInfo = QUESTION_TYPES.find((t) => t.value === question.type);
+                <div className="space-y-2">
+                  {currentConfig.questions.map((q, i) => {
+                    const isExpanded = expandedQuestions.has(q.id);
+                    const typeInfo = QUESTION_TYPES.find((t) => t.value === q.type);
+                    const isCTA = q.type === 'cta';
 
                     return (
-                      <div key={question.id} className="border border-slate-200 rounded-lg">
-                        <div className="flex items-center gap-2 p-3">
-                          <GripVertical className="w-4 h-4 text-slate-300 flex-shrink-0 cursor-grab" />
-                          <Input
-                            value={question.label}
-                            onChange={(e) => {
-                              const label = e.target.value;
-                              const updates: Partial<Question> = { label };
-                              if (!question.key || question.key === generateKeyFromLabel(question.label)) {
-                                updates.key = generateKeyFromLabel(label);
-                              }
-                              updateQuestion(question.id, updates);
-                            }}
-                            placeholder="Question label"
-                            className="flex-1 h-8 text-sm border-0 shadow-none focus-visible:ring-0 px-1"
-                          />
-                          <Badge variant="secondary" className="text-xs flex-shrink-0">
-                            {typeInfo?.label || question.type}
-                          </Badge>
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            <Switch
-                              checked={question.required}
-                              onCheckedChange={(checked) => updateQuestion(question.id, { required: checked })}
-                              className="scale-75"
-                            />
-                            <span className="text-[10px] text-slate-400">Req</span>
-                          </div>
-                          <button
-                            onClick={() => toggleQuestionExpanded(question.id)}
-                            className="p-1 hover:bg-slate-100 rounded"
-                          >
-                            <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                          </button>
+                      <div key={q.id} className="border border-slate-200 rounded-lg overflow-hidden">
+                        <div
+                          className="flex items-center gap-2 px-3 py-2 bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors"
+                          onClick={() => toggleQuestionExpanded(q.id)}
+                        >
+                          <GripVertical className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                          <span className="text-xs text-slate-400 font-mono w-5">{i + 1}</span>
+                          {typeInfo && ICON_MAP[typeInfo.icon] && (
+                            <span className="text-slate-500 flex-shrink-0">{ICON_MAP[typeInfo.icon]}</span>
+                          )}
+                          <span className="text-sm text-slate-700 truncate flex-1">
+                            {q.label || (isCTA ? 'Call to Action' : 'Untitled question')}
+                          </span>
+                          {q.message && <span className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" title="Has conversational wording" />}
+                          {q.required && <Badge className="text-[9px] bg-red-50 text-red-600 border-red-200 flex-shrink-0" variant="outline">req</Badge>}
+                          <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />
                         </div>
 
                         {isExpanded && (
-                          <div className="border-t border-slate-100 p-3 space-y-3 bg-slate-50/50">
-                            {question.type !== 'cta' && (
-                              <div className="space-y-2 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
-                                <div className="space-y-1.5">
-                                  <div className="flex items-center gap-2">
-                                    <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                                    <Label className="text-xs font-semibold text-blue-700">Regenerate this question</Label>
-                                  </div>
-                                  <Textarea
-                                    value={question.intent || ''}
-                                    onChange={(e) => updateQuestion(question.id, { intent: e.target.value })}
-                                    placeholder="Describe what you want this specific question to ask, e.g., Ask about their dietary restrictions"
-                                    className="text-sm min-h-[40px] bg-white"
-                                  />
-                                </div>
-                                <Button
-                                  onClick={() => generateWithAI(question.id)}
-                                  disabled={!question.intent || generatingAI === question.id}
-                                  size="sm"
-                                  variant="outline"
-                                  className="w-full border-blue-200 text-blue-700 hover:bg-blue-50"
-                                >
-                                  {generatingAI === question.id ? (
-                                    <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Regenerating...</>
-                                  ) : (
-                                    <><Wand2 className="w-3 h-3 mr-1" /> Regenerate with AI</>
-                                  )}
-                                </Button>
-                              </div>
-                            )}
-
-                            <div className="space-y-1">
-                              <Label className="text-xs">Type</Label>
-                              <Select
-                                value={question.type}
-                                onValueChange={(val: QuestionType) => {
-                                  const updates: Partial<Question> = { type: val };
-                                  if ((val === 'dropdown' || val === 'multi_select') && question.options.length === 0) {
-                                    updates.options = [{ id: `o_${Date.now()}`, label: 'Option 1', value: 'option_1' }];
-                                  }
-                                  updateQuestion(question.id, updates);
-                                }}
-                              >
-                                <SelectTrigger className="h-8 text-sm">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {QUESTION_TYPES.map((qt) => (
-                                    <SelectItem key={qt.value} value={qt.value}>
-                                      <span className="flex items-center gap-2">
-                                        {ICON_MAP[qt.icon]}
-                                        {qt.label}
-                                      </span>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            {question.type === 'cta' && (
-                              <div className="space-y-3">
+                          <div className="px-3 py-3 space-y-3 bg-white">
+                            {isCTA ? (
+                              <>
                                 <div className="space-y-1">
                                   <Label className="text-xs">Button text</Label>
                                   <Input
-                                    value={question.cta?.text || ''}
-                                    onChange={(e) => updateQuestion(question.id, { cta: { ...question.cta!, text: e.target.value } })}
+                                    value={q.cta?.text || ''}
+                                    onChange={(e) => updateQuestion(q.id, { cta: { ...(q.cta || { text: '', url: '', openInNewTab: true }), text: e.target.value } })}
                                     placeholder="Learn More"
                                     className="h-8 text-sm"
                                   />
                                 </div>
                                 <div className="space-y-1">
-                                  <Label className="text-xs">Link URL</Label>
+                                  <Label className="text-xs">URL</Label>
                                   <Input
-                                    value={question.cta?.url || ''}
-                                    onChange={(e) => updateQuestion(question.id, { cta: { ...question.cta!, url: e.target.value } })}
-                                    placeholder="https://example.com/book?name={{name}}"
+                                    value={q.cta?.url || ''}
+                                    onChange={(e) => updateQuestion(q.id, { cta: { ...(q.cta || { text: '', url: '', openInNewTab: true }), url: e.target.value } })}
+                                    placeholder="https://example.com"
                                     className="h-8 text-sm font-mono"
                                   />
-                                  <p className="text-[10px] text-slate-400">Use {"{{field_key}}"} to insert collected answers</p>
                                 </div>
                                 <div className="flex items-center justify-between">
                                   <Label className="text-xs">Open in new tab</Label>
                                   <Switch
-                                    checked={question.cta?.openInNewTab ?? true}
-                                    onCheckedChange={(checked) => updateQuestion(question.id, { cta: { ...question.cta!, openInNewTab: checked } })}
-                                  />
-                                </div>
-                              </div>
-                            )}
-
-                            {question.type !== 'cta' && (
-                              <>
-                                <div className="space-y-1">
-                                  <Label className="text-xs">Key / Slug</Label>
-                                  <Input
-                                    value={question.key}
-                                    onChange={(e) => updateQuestion(question.id, { key: e.target.value })}
-                                    placeholder="auto_generated_key"
-                                    className="h-8 text-sm font-mono"
-                                  />
-                                </div>
-
-                                <div className="space-y-1">
-                                  <Label className="text-xs">Placeholder</Label>
-                                  <Input
-                                    value={question.placeholder}
-                                    onChange={(e) => updateQuestion(question.id, { placeholder: e.target.value })}
-                                    placeholder="Placeholder text..."
-                                    className="h-8 text-sm"
-                                  />
-                                </div>
-
-                                <div className="space-y-1">
-                                  <Label className="text-xs">Help text</Label>
-                                  <Input
-                                    value={question.helpText}
-                                    onChange={(e) => updateQuestion(question.id, { helpText: e.target.value })}
-                                    placeholder="Additional context..."
-                                    className="h-8 text-sm"
-                                  />
-                                </div>
-
-                                <div className="space-y-1">
-                                  <Label className="text-xs">Transition message</Label>
-                                  <Input
-                                    value={question.transition_before || ''}
-                                    onChange={(e) => updateQuestion(question.id, { transition_before: e.target.value })}
-                                    placeholder="e.g., Great, thanks! Now..."
-                                    className="h-8 text-sm"
+                                    checked={q.cta?.openInNewTab ?? true}
+                                    onCheckedChange={(checked) => updateQuestion(q.id, { cta: { ...(q.cta || { text: '', url: '', openInNewTab: true }), openInNewTab: checked } })}
                                   />
                                 </div>
                               </>
-                            )}
+                            ) : (
+                              <>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">What to ask (label)</Label>
+                                  <Input
+                                    value={q.label}
+                                    onChange={(e) => {
+                                      const updates: Partial<Question> = { label: e.target.value };
+                                      if (!q.key || q.key === generateKeyFromLabel(q.label)) {
+                                        updates.key = generateKeyFromLabel(e.target.value);
+                                      }
+                                      updateQuestion(q.id, updates);
+                                    }}
+                                    placeholder="e.g., Full name, Email address, Meal preference..."
+                                    className="h-8 text-sm"
+                                  />
+                                </div>
 
-                            {(question.type === 'dropdown' || question.type === 'multi_select') && (
-                              <div className="space-y-2">
-                                <Label className="text-xs">Options</Label>
-                                {question.options.map((opt) => (
-                                  <div key={opt.id} className="flex items-center gap-2">
-                                    <Input
-                                      value={opt.label}
-                                      onChange={(e) => updateOption(question.id, opt.id, { label: e.target.value })}
-                                      placeholder="Label"
-                                      className="h-7 text-xs flex-1"
-                                    />
-                                    <Input
-                                      value={opt.value}
-                                      onChange={(e) => updateOption(question.id, opt.id, { value: e.target.value })}
-                                      placeholder="Value"
-                                      className="h-7 text-xs flex-1 font-mono"
-                                    />
-                                    <button
-                                      onClick={() => removeOption(question.id, opt.id)}
-                                      className="p-1 hover:bg-red-50 rounded text-red-400 hover:text-red-600"
+                                <div className="space-y-1">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs">Conversational message</Label>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => generateWordingForQuestion(q.id)}
+                                      disabled={generatingWording === q.id || !q.label}
+                                      className="h-6 text-xs text-blue-600 hover:text-blue-700 px-2"
                                     >
-                                      <X className="w-3 h-3" />
-                                    </button>
+                                      {generatingWording === q.id ? (
+                                        <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                                      ) : (
+                                        <Wand2 className="w-3 h-3 mr-1" />
+                                      )}
+                                      Generate
+                                    </Button>
                                   </div>
-                                ))}
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => addOption(question.id)}
-                                  className="h-7 text-xs"
-                                >
-                                  <Plus className="w-3 h-3 mr-1" /> Add option
-                                </Button>
-                              </div>
+                                  <Textarea
+                                    value={q.message || ''}
+                                    onChange={(e) => updateQuestion(q.id, { message: e.target.value })}
+                                    placeholder="The conversational wording shown to the respondent..."
+                                    className="text-sm min-h-[50px]"
+                                  />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div className="space-y-1">
+                                    <Label className="text-xs">Type</Label>
+                                    <Select
+                                      value={q.type}
+                                      onValueChange={(val) => {
+                                        const updates: Partial<Question> = { type: val as QuestionType };
+                                        if ((val === 'single_choice' || val === 'multiple_choice') && q.options.length === 0) {
+                                          updates.options = [{ id: `o_${Date.now()}`, label: 'Option 1', value: 'option_1' }];
+                                        }
+                                        updateQuestion(q.id, updates);
+                                      }}
+                                    >
+                                      <SelectTrigger className="h-8 text-sm">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {QUESTION_TYPES.filter(t => t.value !== 'cta').map((t) => (
+                                          <SelectItem key={t.value} value={t.value}>
+                                            <span className="flex items-center gap-2">
+                                              {ICON_MAP[t.icon]}
+                                              {t.label}
+                                            </span>
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <Label className="text-xs">Field key</Label>
+                                    <Input
+                                      value={q.key}
+                                      onChange={(e) => updateQuestion(q.id, { key: e.target.value })}
+                                      placeholder="field_key"
+                                      className="h-8 text-xs font-mono"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center justify-between">
+                                  <Label className="text-xs">Required</Label>
+                                  <Switch
+                                    checked={q.required}
+                                    onCheckedChange={(checked) => updateQuestion(q.id, { required: checked })}
+                                  />
+                                </div>
+
+                                {(q.type === 'single_choice' || q.type === 'multiple_choice') && (
+                                  <div className="space-y-2">
+                                    <Label className="text-xs">Options</Label>
+                                    {q.options.map((opt) => (
+                                      <div key={opt.id} className="flex items-center gap-2">
+                                        <Input
+                                          value={opt.label}
+                                          onChange={(e) => {
+                                            updateOption(q.id, opt.id, {
+                                              label: e.target.value,
+                                              value: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, ''),
+                                            });
+                                          }}
+                                          className="h-7 text-sm flex-1"
+                                        />
+                                        <button onClick={() => removeOption(q.id, opt.id)} className="text-slate-400 hover:text-red-500">
+                                          <X className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    ))}
+                                    <Button variant="ghost" size="sm" onClick={() => addOption(q.id)} className="text-xs h-7">
+                                      <Plus className="w-3 h-3 mr-1" /> Add option
+                                    </Button>
+                                  </div>
+                                )}
+                              </>
                             )}
 
-                            <div className="flex items-center gap-2 pt-2 border-t border-slate-200">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => duplicateQuestion(question.id)}
-                                className="h-7 text-xs"
-                              >
+                            <div className="flex items-center gap-1 pt-2 border-t border-slate-100">
+                              <Button variant="ghost" size="sm" onClick={() => duplicateQuestion(q.id)} className="text-xs h-7 text-slate-500">
                                 <Copy className="w-3 h-3 mr-1" /> Duplicate
                               </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => deleteQuestion(question.id)}
-                                className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
+                              <Button variant="ghost" size="sm" onClick={() => deleteQuestion(q.id)} className="text-xs h-7 text-red-500 hover:text-red-700">
                                 <Trash2 className="w-3 h-3 mr-1" /> Delete
                               </Button>
                             </div>
@@ -950,46 +935,36 @@ export default function FormBuilderPage() {
                     );
                   })}
 
-                  {currentConfig.questions.length > 0 && (
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowTypePicker(true)}
-                      className="w-full"
-                    >
-                      <Plus className="w-4 h-4 mr-2" /> Add question
-                    </Button>
-                  )}
-
-                  {showTypePicker && (
-                    <div className="border border-slate-200 rounded-lg p-4 bg-white">
-                      <div className="flex items-center justify-between mb-3">
-                        <p className="text-sm font-medium">Choose question type</p>
-                        <button onClick={() => setShowTypePicker(false)} className="p-1 hover:bg-slate-100 rounded">
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        {QUESTION_TYPES.filter((qt) => qt.value !== 'cta').map((qt) => (
+                  {showTypePicker ? (
+                    <div className="border border-slate-200 rounded-lg p-3 bg-white">
+                      <p className="text-xs text-slate-500 font-medium mb-2">Choose question type:</p>
+                      <div className="grid grid-cols-2 gap-1">
+                        {QUESTION_TYPES.filter(t => t.value !== 'cta').map((t) => (
                           <button
-                            key={qt.value}
-                            onClick={() => addQuestion(qt.value)}
-                            className="flex items-center gap-2 p-2 text-left text-sm rounded-md border border-slate-200 hover:border-slate-400 hover:bg-slate-50 transition-colors"
+                            key={t.value}
+                            onClick={() => addQuestion(t.value)}
+                            className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded transition-colors text-left"
                           >
-                            <span className="text-slate-500">{ICON_MAP[qt.icon]}</span>
-                            {qt.label}
+                            {ICON_MAP[t.icon]}
+                            {t.label}
                           </button>
                         ))}
-                      </div>
-                      <div className="border-t border-slate-200 mt-3 pt-3">
                         <button
-                          onClick={() => addCTA()}
-                          className="flex items-center gap-2 p-2 w-full text-left text-sm rounded-md border border-blue-200 hover:border-blue-400 hover:bg-blue-50 transition-colors text-blue-700"
+                          onClick={addCTA}
+                          className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded transition-colors text-left"
                         >
-                          <Link2 className="w-4 h-4" />
-                          Call to Action (CTA)
+                          {ICON_MAP['ExternalLink']}
+                          Call to Action
                         </button>
                       </div>
+                      <Button variant="ghost" size="sm" onClick={() => setShowTypePicker(false)} className="w-full mt-2 text-xs">
+                        Cancel
+                      </Button>
                     </div>
+                  ) : (
+                    <Button variant="outline" size="sm" onClick={() => setShowTypePicker(true)} className="w-full text-sm">
+                      <Plus className="w-4 h-4 mr-1" /> Add question
+                    </Button>
                   )}
                 </div>
               </AccordionContent>
@@ -1327,10 +1302,6 @@ export default function FormBuilderPage() {
           <FormPreview
             config={currentConfig}
             formName={formName}
-            previewMode={previewMode}
-            onPreviewModeChange={setPreviewMode}
-            showDebug={showDebugPanel}
-            onToggleDebug={() => setShowDebugPanel(!showDebugPanel)}
           />
         </div>
       </div>
@@ -1341,17 +1312,9 @@ export default function FormBuilderPage() {
 function FormPreview({
   config,
   formName,
-  previewMode,
-  onPreviewModeChange,
-  showDebug,
-  onToggleDebug,
 }: {
   config: FormConfig;
   formName: string;
-  previewMode: 'welcome' | 'form' | 'end';
-  onPreviewModeChange: (mode: 'welcome' | 'form' | 'end') => void;
-  showDebug?: boolean;
-  onToggleDebug?: () => void;
 }) {
   const [previewKey, setPreviewKey] = useState(0);
 
@@ -1376,14 +1339,6 @@ function FormPreview({
         >
           Restart
         </button>
-        <button
-          onClick={() => onToggleDebug?.()}
-          className={`px-3 py-1 text-xs rounded-full transition-colors ${showDebug ? 'bg-amber-500 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
-          title="Toggle AI debug panel"
-        >
-          <Bug className="w-3 h-3 inline mr-1" />
-          Debug
-        </button>
       </div>
 
       <div className="flex-1 overflow-hidden">
@@ -1406,36 +1361,6 @@ function FormPreview({
           )}
         </div>
       </div>
-
-      {showDebug && config.questions.length > 0 && (
-        <div className="border-t border-slate-800 bg-slate-900 p-3 max-h-[300px] overflow-y-auto">
-          <p className="text-xs font-semibold text-amber-400 mb-2 flex items-center gap-1">
-            <Bug className="w-3 h-3" /> AI Debug Panel
-          </p>
-          <div className="space-y-2">
-            {config.questions.map((q, i) => (
-              <div key={q.id} className="bg-slate-800 rounded p-2 text-xs text-slate-300">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-slate-500">#{i + 1}</span>
-                  <span className="font-medium text-slate-200">{q.label || q.intent || 'Untitled'}</span>
-                  <Badge className="text-[9px] bg-slate-700 text-slate-300">{q.type}</Badge>
-                </div>
-                {q.intent && <div><span className="text-slate-500">Intent:</span> {q.intent}</div>}
-                {q.field_key && <div><span className="text-slate-500">Field:</span> <span className="font-mono">{q.field_key}</span></div>}
-                {q.data_type && <div><span className="text-slate-500">Data type:</span> {q.data_type}</div>}
-                {q.transition_before && <div><span className="text-slate-500">Transition:</span> {q.transition_before}</div>}
-                {q.extraction && Object.keys(q.extraction).length > 0 && (
-                  <div><span className="text-slate-500">Extraction:</span> <span className="font-mono text-[10px]">{JSON.stringify(q.extraction)}</span></div>
-                )}
-                <div><span className="text-slate-500">Required:</span> {q.required ? 'Yes' : 'No'}</div>
-                {Object.keys(q.validation).length > 0 && (
-                  <div><span className="text-slate-500">Validation:</span> <span className="font-mono text-[10px]">{JSON.stringify(q.validation)}</span></div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

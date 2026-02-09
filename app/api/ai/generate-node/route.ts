@@ -1,104 +1,72 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { openai } from '@/lib/openai';
-import type { GenerateNodeRequest, GenerateNodeResponse } from '@/lib/types';
+import type { GenerateWordingRequest } from '@/lib/types';
 
-const SYSTEM_PROMPT = `You are an expert conversational form designer. Given a form creator's intent (what they want to learn from a respondent), generate a conversation node that feels natural and friendly.
+const SYSTEM_PROMPT = `You are a conversational interface speaking directly to an end user who is answering a guided interaction.
 
-You MUST return ONLY valid JSON matching this exact schema:
+You are NOT assisting the form creator.
+You are NOT allowed to ask configuration, product, or meta questions.
 
-{
-  "field_key": "snake_case_key_for_data_storage",
-  "data_type": "string|number|boolean|date|email|phone|categorical|rating",
-  "ui_type": "short_text|long_text|email|phone|number|date|time|dropdown|multi_select|checkbox|yes_no|rating|file_upload|consent",
-  "user_prompt": "The conversational question shown to the respondent",
-  "transition_before": "A short, warm bridge message (1 sentence) to transition into this question",
-  "required": true/false,
-  "validation": {
-    "minLength": number or omit,
-    "maxLength": number or omit,
-    "min": number or omit,
-    "max": number or omit,
-    "pattern": "regex string or omit",
-    "allowedValues": ["array", "of", "strings"] or omit
-  },
-  "options": [{"id": "unique_id", "label": "Display Label", "value": "stored_value"}] (only for dropdown/multi_select, otherwise empty array),
-  "extraction": {"type": "the_data_type", "description": "what this field captures"},
-  "followups": [
-    {
-      "id": "unique_id",
-      "condition": {"field_key": "this_field_key", "operator": "empty", "value": ""},
-      "prompt": "A clarifying follow-up question if the answer is unclear",
-      "field_key": "followup_field_key",
-      "data_type": "string",
-      "ui_type": "short_text"
-    }
-  ]
-}
+You will be given:
 
-Guidelines:
-- user_prompt should be conversational, warm, and match the requested tone
-- transition_before should acknowledge previous context and bridge naturally (e.g., "Great, now let's talk about...", "Thanks for that!")
-- field_key should be descriptive and snake_case
-- Choose the most appropriate ui_type for the intent
-- Only add followups when genuinely useful (max 1-2)
-- For dropdown/multi_select, generate 3-7 relevant options
-- validation should be sensible defaults based on data type
-- Do NOT wrap the JSON in markdown code blocks`;
+* A global conversation description (for background only)
+* A tone of voice
+* ONE journey item describing what to ask or say to the respondent
 
-function buildUserPrompt(req: GenerateNodeRequest): string {
-  let prompt = `Intent: "${req.intent}"`;
+### Your task
+
+Turn the journey item into a single message shown to the respondent.
+
+### Absolute rules
+
+* Speak ONLY to the respondent
+* NEVER ask questions about how the form works
+* NEVER ask questions to clarify instructions
+* NEVER reference the form, the system, the AI, or the creator
+* NEVER introduce new topics beyond the journey item
+* Produce exactly ONE message per step
+
+### Message guidelines
+
+* If the journey item is a question, ask it naturally
+* If the journey item is an instruction, present it clearly
+* Use simple, human language
+* Match the selected tone of voice
+* Be neutral and professional for sensitive inputs (email, phone, company name)
+
+### Correction behavior
+
+* If unrealistic answers are expected (e.g. age, number), gently guide without joking unless tone allows it
+* Do not validate answers unless explicitly implied
+
+### Output
+
+Return ONLY the message text shown to the respondent.
+No explanations.
+No formatting.
+No metadata.`;
+
+function buildUserPrompt(req: GenerateWordingRequest): string {
+  let prompt = `Global description: "${req.description}"`;
   prompt += `\nTone: ${req.tone}`;
-  prompt += `\nDirectness: ${req.directness}`;
-  if (req.audience) {
-    prompt += `\nTarget audience: ${req.audience}`;
-  }
-  if (req.existing_fields.length > 0) {
-    prompt += `\nExisting fields in this form: ${req.existing_fields.join(', ')}`;
-    prompt += `\nMake sure the field_key is unique and doesn't conflict with existing fields.`;
-  }
+  prompt += `\nFull journey: ${req.journeyItems.map((item, i) => `${i + 1}. ${item.label} (${item.type})`).join(', ')}`;
+  prompt += `\nCurrent journey item to generate: "${req.currentItem.label}" (type: ${req.currentItem.type})`;
   return prompt;
-}
-
-function validateResponse(data: any): GenerateNodeResponse | null {
-  if (!data || typeof data !== 'object') return null;
-  if (!data.field_key || !data.data_type || !data.ui_type || !data.user_prompt) return null;
-
-  const validUiTypes = [
-    'short_text', 'long_text', 'email', 'phone', 'number', 'date', 'time',
-    'dropdown', 'multi_select', 'checkbox', 'yes_no', 'rating', 'file_upload', 'consent'
-  ];
-  if (!validUiTypes.includes(data.ui_type)) {
-    data.ui_type = 'short_text';
-  }
-
-  return {
-    field_key: String(data.field_key),
-    data_type: data.data_type,
-    ui_type: data.ui_type,
-    user_prompt: String(data.user_prompt),
-    transition_before: String(data.transition_before || ''),
-    required: Boolean(data.required ?? true),
-    validation: data.validation || {},
-    options: Array.isArray(data.options) ? data.options : [],
-    extraction: data.extraction || {},
-    followups: Array.isArray(data.followups) ? data.followups : [],
-  };
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body: GenerateNodeRequest = await request.json();
+    const body: GenerateWordingRequest = await request.json();
 
-    if (!body.intent || body.intent.trim().length === 0) {
-      return NextResponse.json({ error: 'Intent is required' }, { status: 400 });
+    if (!body.currentItem?.label) {
+      return NextResponse.json({ error: 'Current item label is required' }, { status: 400 });
     }
 
     const userPrompt = buildUserPrompt({
-      intent: body.intent,
+      description: body.description || '',
       tone: body.tone || 'friendly',
-      directness: body.directness || 'balanced',
-      audience: body.audience,
-      existing_fields: body.existing_fields || [],
+      journeyItems: body.journeyItems || [],
+      currentItem: body.currentItem,
     });
 
     let lastError: any = null;
@@ -113,7 +81,7 @@ export async function POST(request: NextRequest) {
         if (attempt === 1 && lastError) {
           messages.push({
             role: 'user',
-            content: `Your previous response was invalid JSON. Please try again and return ONLY valid JSON matching the schema. Error: ${lastError}`,
+            content: `Your previous response was empty. Please return ONLY the message text for the respondent. No JSON, no formatting.`,
           });
         }
 
@@ -121,36 +89,27 @@ export async function POST(request: NextRequest) {
           model: 'gpt-4.1',
           messages,
           temperature: 0.7,
-          max_tokens: 1500,
-          response_format: { type: 'json_object' },
+          max_tokens: 500,
         });
 
-        const content = completion.choices[0]?.message?.content;
+        const content = completion.choices[0]?.message?.content?.trim();
         if (!content) {
           lastError = 'Empty response from AI';
           continue;
         }
 
-        const parsed = JSON.parse(content);
-        const validated = validateResponse(parsed);
-
-        if (!validated) {
-          lastError = 'Response did not match expected schema';
-          continue;
-        }
-
-        return NextResponse.json(validated);
-      } catch (parseError: any) {
-        lastError = parseError.message;
-        if (attempt === 1) throw parseError;
+        return NextResponse.json({ message: content });
+      } catch (err: any) {
+        lastError = err.message;
+        if (attempt === 1) throw err;
       }
     }
 
-    return NextResponse.json({ error: 'Failed to generate valid node after retries' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to generate wording after retries' }, { status: 500 });
   } catch (error: any) {
-    console.error('Generate node error:', error);
+    console.error('Generate wording error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to generate conversation node' },
+      { error: error.message || 'Failed to generate wording' },
       { status: 500 }
     );
   }
