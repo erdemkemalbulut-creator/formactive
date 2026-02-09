@@ -1,0 +1,44 @@
+Fix ONLY two things in the builder live preview (do not change styling, theme, visuals, AI generation, or respondent flow):
+
+STEP 1 — Strong preview coupling to the active Journey item
+
+* In the builder (app/dashboard/forms/[id]/page.tsx), track which Journey step the user is actively editing.
+
+  * When a Journey textarea receives focus or is clicked, set activeJourneyIndex to that item index.
+  * When focus leaves the Journey list entirely, you may keep the last active index (do not reset to Welcome automatically unless the user explicitly chooses Welcome).
+* In the live preview panel, always render the currently active Journey step when activeJourneyIndex is not null.
+
+  * This should override showing Welcome.
+  * This should NOT advance the conversation or require clicking “Start”.
+  * It is just a preview of that step.
+* If there are zero Journey items, or activeJourneyIndex is null, then show the Welcome preview if welcome is enabled; otherwise show a neutral empty-state preview message (“Add a step to preview your conversation”).
+
+Implementation notes:
+
+* Pass a prop into components/conversational-form.tsx like:
+
+  * previewStepIndex (number | null)
+  * previewMode (true)
+* conversational-form.tsx must render ONLY that single step in previewMode (no progression, no answer saving needed for preview).
+
+STEP 2 — Add a subtle step indicator in the preview
+
+* In the preview card (components/conversational-form.tsx), add a small line of text above the main prompt:
+
+  * If showing welcome: “Welcome”
+  * If showing journey step i: “Question {i+1} of {totalJourneyItems}”
+  * If showing end screen: “Done”
+* Keep it subtle (small font, low contrast). No progress bar.
+
+Constraints:
+
+* Do not add new features or settings.
+* Do not reintroduce chat UI.
+* Do not add autoplay/timers.
+* Do not modify the public respondent page behavior; this is preview-only behavior.
+* Keep changes limited to app/dashboard/forms/[id]/page.tsx and components/conversational-form.tsx (and any small types updates required).
+
+Deliverable:
+
+* Clicking/focusing a Journey item instantly updates the preview to show that specific step.
+* Preview shows the small “Welcome” / “Question X of Y” indicator at the top of the card.

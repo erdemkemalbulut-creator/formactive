@@ -104,11 +104,13 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
 
   useEffect(() => {
     if (!isPreview) return;
-    if (previewStepIndex !== undefined && previewStepIndex >= 0 && previewStepIndex < sortedQuestions.length) {
+    if (previewStepIndex !== undefined && previewStepIndex !== null && previewStepIndex >= 0 && previewStepIndex < sortedQuestions.length) {
       setPhase('questions');
       setCurrentStepIndex(previewStepIndex);
-    } else if (previewStepIndex === undefined || previewStepIndex < 0) {
-      setPhase('welcome');
+    } else if (previewStepIndex === undefined || previewStepIndex === null || previewStepIndex < 0) {
+      if (config.welcomeEnabled) {
+        setPhase('welcome');
+      }
       setCurrentStepIndex(-1);
     }
   }, [previewStepIndex, isPreview, sortedQuestions.length]);
@@ -529,20 +531,33 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
       `}</style>
       {config.theme?.customCss && <style>{config.theme.customCss}</style>}
 
-      {phase === 'questions' && sortedQuestions.length > 0 && (
-        <div className="px-8 pt-6">
-          <div className="w-full h-1 rounded-full overflow-hidden" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#f3f4f6' }}>
-            <div
-              className="h-full rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${progress}%`, backgroundColor: primaryColor }}
-            />
-          </div>
-          <p className="text-xs mt-2" style={{ color: subtextColor }}>{currentStepIndex + 1} of {sortedQuestions.length}</p>
+      {isPreview ? (
+        <div className="px-8 pt-5 pb-1">
+          <p className="text-[11px] font-medium tracking-wide uppercase" style={{ color: subtextColor, opacity: 0.7 }}>
+            {phase === 'welcome' && config.welcomeEnabled ? 'Welcome' : phase === 'done' ? 'Done' : phase === 'questions' && sortedQuestions.length > 0 ? `Question ${currentStepIndex + 1} of ${sortedQuestions.length}` : '\u00A0'}
+          </p>
         </div>
+      ) : (
+        phase === 'questions' && sortedQuestions.length > 0 && (
+          <div className="px-8 pt-6">
+            <div className="w-full h-1 rounded-full overflow-hidden" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#f3f4f6' }}>
+              <div
+                className="h-full rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${progress}%`, backgroundColor: primaryColor }}
+              />
+            </div>
+            <p className="text-xs mt-2" style={{ color: subtextColor }}>{currentStepIndex + 1} of {sortedQuestions.length}</p>
+          </div>
+        )
       )}
 
       <div className="flex-1 flex items-center justify-center overflow-y-auto">
         {phase === 'welcome' && config.welcomeEnabled && renderWelcome()}
+        {phase === 'welcome' && !config.welcomeEnabled && isPreview && (
+          <div className="text-center px-8">
+            <p className="text-sm" style={{ color: subtextColor }}>Click a journey step to preview it</p>
+          </div>
+        )}
         {phase === 'questions' && renderCurrentStep()}
         {phase === 'submitting' && renderSubmitting()}
         {phase === 'done' && renderEndScreen()}

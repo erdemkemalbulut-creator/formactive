@@ -95,7 +95,7 @@ export default function FormBuilderPage() {
   const [generatingWording, setGeneratingWording] = useState<string | null>(null);
   const [generatingAllWording, setGeneratingAllWording] = useState(false);
   const [showTonePicker, setShowTonePicker] = useState(false);
-  const [activeItemIndex, setActiveItemIndex] = useState<number>(-1);
+  const [activeItemIndex, setActiveItemIndex] = useState<number | null>(null);
   const [welcomeEndOpen, setWelcomeEndOpen] = useState(false);
   const [trainAIOpen, setTrainAIOpen] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
@@ -1364,7 +1364,7 @@ function LivePreviewPanel({
 }: {
   config: FormConfig;
   formName: string;
-  activeItemIndex: number;
+  activeItemIndex: number | null;
 }) {
   const visuals = config.visuals;
   const hasVisual = visuals?.kind && visuals.kind !== 'none' && visuals?.url?.trim();
@@ -1381,6 +1381,8 @@ function LivePreviewPanel({
 
   const cardBg = isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)';
 
+  const showEmptyState = config.questions.length === 0 && !config.welcomeEnabled;
+
   return (
     <div className="flex flex-col h-full bg-slate-950 relative">
       <div className="flex items-center justify-center gap-4 py-2.5 px-4 border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm z-10 flex-shrink-0">
@@ -1391,11 +1393,6 @@ function LivePreviewPanel({
           </span>
           <span className="text-xs text-slate-400 uppercase tracking-wider font-medium">Live preview</span>
         </div>
-        <span className="text-xs text-slate-500">
-          {activeItemIndex >= 0 && config.questions.length > 0
-            ? `Step ${activeItemIndex + 1} of ${config.questions.length}`
-            : config.welcomeEnabled ? 'Welcome' : 'Select a step'}
-        </span>
       </div>
 
       <div className="flex-1 relative overflow-hidden">
@@ -1424,12 +1421,12 @@ function LivePreviewPanel({
             className="w-full max-w-md h-full max-h-[600px] rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm"
             style={{ backgroundColor: cardBg }}
           >
-            {config.questions.length === 0 && !config.welcomeEnabled ? (
+            {showEmptyState ? (
               <div className="flex items-center justify-center h-full text-slate-400">
                 <div className="text-center px-8">
                   <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
                   <p className="text-sm font-medium">No steps yet</p>
-                  <p className="text-xs mt-1.5 text-slate-400">Describe your conversation and click "Generate with AI" to create the journey</p>
+                  <p className="text-xs mt-1.5 text-slate-400">Add a step to preview your conversation</p>
                 </div>
               </div>
             ) : (
@@ -1437,7 +1434,7 @@ function LivePreviewPanel({
                 config={config}
                 formName={formName || 'Form'}
                 isPreview={true}
-                previewStepIndex={activeItemIndex}
+                previewStepIndex={activeItemIndex !== null && activeItemIndex >= 0 ? activeItemIndex : undefined}
               />
             )}
           </div>
