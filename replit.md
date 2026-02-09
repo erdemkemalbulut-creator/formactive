@@ -7,6 +7,11 @@ FormActive is a Next.js 13 application that provides an AI-powered conversationa
 - 2026-02-09: **Single-step respondent experience** — Replaced chat transcript UI with Formless-style single-step progressive disclosure (one question at a time, progress bar, no message history)
 - 2026-02-09: **Formless-style builder redesign** — Split layout with ordered builder sections (Context, Tone, Welcome/End, Journey, Visuals, About You, Train AI) and live preview with visual backgrounds
 - 2026-02-09: **Journey items as free-text** — Journey steps are now free-text textareas ("guidance for AI"), with drag-and-drop reordering, duplicate, and delete
+- 2026-02-09: **Theme section** — Collapsible theme section in builder with primaryColor (hex picker), fontFamily (Inter/System/Serif), cardStyle (light/dark)
+- 2026-02-09: **Visual upload** — Upload images/videos to Supabase Storage via POST /api/forms/[id]/visual, with fallback URL input
+- 2026-02-09: **FormVisuals redesign** — Updated to `{ kind, source, url, storagePath, updatedAt }` with upload-first UX
+- 2026-02-09: **Gradient fallback** — Pleasant gradient background when no visual is set (preview and public form)
+- 2026-02-09: **Dark card style** — Full dark mode support in conversational form (dark bg, light text, adaptive inputs)
 - 2026-02-09: **New FormConfig fields** — Added `visuals` (image/video background), `aboutYou`, `trainAI`, `endEnabled`, `endCtaText`, `endCtaUrl`
 - 2026-02-09: **Visual background preview** — Preview panel supports background images/videos behind a centered conversation card
 - 2026-02-09: **Two-step AI with validation** — Generate step (temp 0.7) + Validate step (temp 0) ensures clean respondent-facing messages
@@ -72,15 +77,25 @@ Each question has:
 - `trainAI` - Advanced AI instructions
 
 ### Theme System (in current_config.theme)
-- `primaryColor`, `secondaryColor` - Brand colors
-- `botBubbleColor` - Bot message styling
-- `userBubbleColor` - User message styling
+- `primaryColor` - Primary brand color (CTA buttons, accents); default `#111827`
+- `fontFamily` - Font family: `Inter`, `System`, or `Serif`
+- `cardStyle` - Card appearance: `light` (white bg, dark text) or `dark` (dark bg, light text)
+- `secondaryColor` - Secondary brand color
 - `backgroundColor`, `backgroundType` - Solid/gradient/image backgrounds
 - `backgroundGradient`, `backgroundImage` - Background values
-- `fontFamily` - Custom font
 - `bubbleStyle` - rounded or minimal
 - `logoUrl` - Brand logo
 - `customCss` - Additional CSS overrides
+
+### Visual Background (in current_config.visuals)
+- `kind` - `none`, `image`, or `video`
+- `source` - `upload` (Supabase Storage) or `url` (external link)
+- `url` - Public URL of the visual asset
+- `storagePath` - Supabase Storage path for uploaded files (for replace/delete)
+- `updatedAt` - ISO timestamp of last update
+- Upload API: `POST /api/forms/[id]/visual` (multipart form data with `file` and `kind`)
+- Storage bucket: `form-visuals`, path pattern: `${formId}/${uuid}.${ext}`
+- Fallback: pleasant gradient when no visual is set
 
 ### AI System (Two-Step with Validation)
 1. **Structure Generation** (`/api/ai/generate-conversation`):

@@ -34,6 +34,10 @@ import {
   MessageSquare,
   Eye,
   Send,
+  Palette,
+  Upload,
+  X,
+  Link,
 } from 'lucide-react';
 
 function generateKeyFromLabel(label: string): string {
@@ -94,6 +98,9 @@ export default function FormBuilderPage() {
   const [activeItemIndex, setActiveItemIndex] = useState<number>(-1);
   const [welcomeEndOpen, setWelcomeEndOpen] = useState(false);
   const [trainAIOpen, setTrainAIOpen] = useState(false);
+  const [themeOpen, setThemeOpen] = useState(false);
+  const [uploadingVisual, setUploadingVisual] = useState(false);
+  const [showVisualUrlInput, setShowVisualUrlInput] = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -192,8 +199,18 @@ export default function FormBuilderPage() {
   };
 
   const normalizeConfig = (config: FormConfig): FormConfig => {
+    let visuals = config.visuals;
+    if (visuals && !(visuals as any).kind && (visuals as any).type) {
+      visuals = {
+        kind: (visuals as any).type,
+        url: (visuals as any).url,
+        source: 'url',
+      };
+    }
+
     const normalized = {
       ...config,
+      visuals,
       aiContext: config.aiContext || { context: '', tone: 'friendly' as ToneType, audience: '' },
       endEnabled: config.endEnabled ?? true,
       endCtaText: config.endCtaText || '',
@@ -273,6 +290,53 @@ export default function FormBuilderPage() {
   const updateAIContext = (updates: Partial<AIContext>) => {
     const current = currentConfig.aiContext || { context: '', tone: 'friendly' as ToneType, audience: '' };
     updateConfig({ aiContext: { ...current, ...updates } });
+  };
+
+  const updateTheme = (updates: Partial<FormTheme>) => {
+    const current = currentConfig.theme || {};
+    updateConfig({ theme: { ...current, ...updates } });
+  };
+
+  const handleVisualUpload = async (file: File, kind: 'image' | 'video') => {
+    setUploadingVisual(true);
+    try {
+      const headers = await getAuthHeaders();
+      const formDataObj = new FormData();
+      formDataObj.append('file', file);
+      formDataObj.append('kind', kind);
+
+      const res = await fetch(`/api/forms/${formId}/visual`, {
+        method: 'POST',
+        headers: { Authorization: headers.Authorization },
+        body: formDataObj,
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Upload failed');
+      }
+
+      const data = await res.json();
+      updateConfig({
+        visuals: {
+          kind: data.kind,
+          source: 'upload',
+          url: data.url,
+          storagePath: data.storagePath,
+          updatedAt: new Date().toISOString(),
+        },
+      });
+      toast({ title: 'Uploaded', description: 'Visual background updated' });
+    } catch (error: any) {
+      toast({ title: 'Upload failed', description: error.message, variant: 'destructive' });
+    } finally {
+      setUploadingVisual(false);
+    }
+  };
+
+  const clearVisual = () => {
+    updateConfig({ visuals: { kind: 'none' } });
+    setShowVisualUrlInput(false);
   };
 
   const addJourneyItem = () => {
@@ -851,46 +915,119 @@ export default function FormBuilderPage() {
               </div>
             </section>
 
-            {/* 5. Visuals Section */}
-            <section>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 rounded-full bg-pink-100 flex items-center justify-center">
-                  <Image className="w-3.5 h-3.5 text-pink-600" />
+            {/* 5. Theme Section (collapsible) */}
+            <section className="border border-slate-200 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setThemeOpen(!themeOpen)}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Palette className="w-4 h-4 text-slate-500" />
+                  <span className="text-sm font-semibold text-slate-700">Theme</span>
                 </div>
-                <h3 className="text-sm font-semibold text-slate-900">Visuals</h3>
-              </div>
+                <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${themeOpen ? 'rotate-90' : ''}`} />
+              </button>
 
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => updateConfig({ visuals: { type: 'image', url: currentConfig.visuals?.url || '' } })}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-sm transition-colors ${
-                      (!currentConfig.visuals || currentConfig.visuals.type === 'image')
-                        ? 'border-pink-200 bg-pink-50 text-pink-700'
-                        : 'border-slate-200 text-slate-500 hover:border-slate-300'
-                    }`}
-                  >
-                    <Image className="w-3.5 h-3.5" /> Image
-                  </button>
-                  <button
-                    onClick={() => updateConfig({ visuals: { type: 'video', url: currentConfig.visuals?.url || '' } })}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-sm transition-colors ${
-                      currentConfig.visuals?.type === 'video'
-                        ? 'border-pink-200 bg-pink-50 text-pink-700'
-                        : 'border-slate-200 text-slate-500 hover:border-slate-300'
-                    }`}
-                  >
-                    <Video className="w-3.5 h-3.5" /> Video
-                  </button>
+              {themeOpen && (
+                <div className="px-4 pb-4 space-y-4 border-t border-slate-100 pt-3">
+                  <div>
+                    <Label className="text-xs font-medium text-slate-600 mb-1.5 block">Primary color</Label>
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <input
+                          type="color"
+                          value={currentConfig.theme?.primaryColor || '#111827'}
+                          onChange={(e) => updateTheme({ primaryColor: e.target.value })}
+                          className="w-8 h-8 rounded-lg border border-slate-200 cursor-pointer p-0.5"
+                        />
+                      </div>
+                      <Input
+                        value={currentConfig.theme?.primaryColor || '#111827'}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (/^#[0-9a-fA-F]{0,6}$/.test(v) || v === '') {
+                            updateTheme({ primaryColor: v || '#111827' });
+                          }
+                        }}
+                        placeholder="#111827"
+                        className="h-8 text-sm font-mono flex-1"
+                        maxLength={7}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs font-medium text-slate-600 mb-1.5 block">Font</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['Inter', 'System', 'Serif'] as const).map((font) => (
+                        <button
+                          key={font}
+                          onClick={() => updateTheme({ fontFamily: font })}
+                          className={`py-2 px-3 rounded-lg border text-sm transition-all ${
+                            (currentConfig.theme?.fontFamily || 'Inter') === font
+                              ? 'border-blue-300 bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                              : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                          }`}
+                          style={{
+                            fontFamily: font === 'Serif' ? 'Georgia, serif' : font === 'System' ? 'system-ui, sans-serif' : 'Inter, sans-serif'
+                          }}
+                        >
+                          {font}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs font-medium text-slate-600 mb-1.5 block">Card style</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => updateTheme({ cardStyle: 'light' })}
+                        className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border text-sm transition-all ${
+                          (currentConfig.theme?.cardStyle || 'light') === 'light'
+                            ? 'border-blue-300 bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                            : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="w-4 h-4 rounded border border-slate-300 bg-white" />
+                        Light
+                      </button>
+                      <button
+                        onClick={() => updateTheme({ cardStyle: 'dark' })}
+                        className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border text-sm transition-all ${
+                          currentConfig.theme?.cardStyle === 'dark'
+                            ? 'border-blue-300 bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                            : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="w-4 h-4 rounded border border-slate-600 bg-slate-800" />
+                        Dark
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <Input
-                  value={currentConfig.visuals?.url || ''}
-                  onChange={(e) => updateConfig({ visuals: { type: currentConfig.visuals?.type || 'image', url: e.target.value } })}
-                  placeholder={currentConfig.visuals?.type === 'video' ? 'https://example.com/video.mp4' : 'https://example.com/image.jpg'}
-                  className="h-8 text-sm"
-                />
-              </div>
+              )}
             </section>
+
+            {/* 6. Visuals Section */}
+            <VisualsSection
+              visuals={currentConfig.visuals}
+              uploadingVisual={uploadingVisual}
+              showVisualUrlInput={showVisualUrlInput}
+              onSetShowVisualUrlInput={setShowVisualUrlInput}
+              onUpload={handleVisualUpload}
+              onClear={clearVisual}
+              onUrlChange={(url, kind) => {
+                updateConfig({
+                  visuals: {
+                    kind,
+                    source: 'url',
+                    url,
+                    updatedAt: new Date().toISOString(),
+                  },
+                });
+              }}
+            />
 
             {/* 6. About You Section */}
             <section>
@@ -1060,6 +1197,166 @@ function JourneyItemRow({
   );
 }
 
+function VisualsSection({
+  visuals,
+  uploadingVisual,
+  showVisualUrlInput,
+  onSetShowVisualUrlInput,
+  onUpload,
+  onClear,
+  onUrlChange,
+}: {
+  visuals?: FormVisuals;
+  uploadingVisual: boolean;
+  showVisualUrlInput: boolean;
+  onSetShowVisualUrlInput: (v: boolean) => void;
+  onUpload: (file: File, kind: 'image' | 'video') => void;
+  onClear: () => void;
+  onUrlChange: (url: string, kind: 'image' | 'video') => void;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [urlInputValue, setUrlInputValue] = useState('');
+  const currentKind = visuals?.kind && visuals.kind !== 'none' ? visuals.kind : 'image';
+  const hasVisual = visuals?.kind && visuals.kind !== 'none' && visuals?.url?.trim();
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    onUpload(file, currentKind);
+    e.target.value = '';
+  };
+
+  return (
+    <section>
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-6 h-6 rounded-full bg-pink-100 flex items-center justify-center">
+          <Image className="w-3.5 h-3.5 text-pink-600" />
+        </div>
+        <h3 className="text-sm font-semibold text-slate-900">Visuals</h3>
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex gap-2">
+          {(['image', 'video'] as const).map((kind) => (
+            <button
+              key={kind}
+              onClick={() => {
+                if (hasVisual && visuals?.kind !== kind) {
+                  onUrlChange(visuals?.url || '', kind);
+                }
+              }}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-sm transition-colors ${
+                currentKind === kind
+                  ? 'border-pink-200 bg-pink-50 text-pink-700'
+                  : 'border-slate-200 text-slate-500 hover:border-slate-300'
+              }`}
+            >
+              {kind === 'image' ? <Image className="w-3.5 h-3.5" /> : <Video className="w-3.5 h-3.5" />}
+              {kind.charAt(0).toUpperCase() + kind.slice(1)}
+            </button>
+          ))}
+        </div>
+
+        {hasVisual ? (
+          <div className="relative group">
+            {visuals!.kind === 'video' ? (
+              <video
+                src={visuals!.url}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-32 object-cover rounded-lg"
+              />
+            ) : (
+              <div
+                className="w-full h-32 rounded-lg bg-cover bg-center border border-slate-200"
+                style={{ backgroundImage: `url(${visuals!.url})` }}
+              />
+            )}
+            <button
+              onClick={onClear}
+              className="absolute top-2 right-2 p-1 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ) : (
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={currentKind === 'video' ? 'video/mp4,video/webm,video/quicktime' : 'image/jpeg,image/png,image/gif,image/webp'}
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingVisual}
+              className="w-full flex items-center justify-center gap-2 py-6 rounded-lg border-2 border-dashed border-slate-200 text-sm text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-colors disabled:opacity-50"
+            >
+              {uploadingVisual ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4" />
+                  Upload {currentKind}
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {!hasVisual && (
+          <div>
+            {showVisualUrlInput ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <Link className="w-3 h-3" />
+                  Paste a URL instead
+                </div>
+                <Input
+                  value={urlInputValue}
+                  onChange={(e) => setUrlInputValue(e.target.value)}
+                  onBlur={() => {
+                    const url = urlInputValue.trim();
+                    if (url) {
+                      onUrlChange(url, currentKind);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const url = urlInputValue.trim();
+                      if (url) {
+                        onUrlChange(url, currentKind);
+                      }
+                    }
+                  }}
+                  placeholder={currentKind === 'video' ? 'https://example.com/video.mp4' : 'https://example.com/image.jpg'}
+                  className="h-8 text-sm"
+                />
+              </div>
+            ) : (
+              <button
+                onClick={() => onSetShowVisualUrlInput(true)}
+                className="text-xs text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1"
+              >
+                <Link className="w-3 h-3" />
+                Use a link instead (advanced)
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+const PREVIEW_DEFAULT_GRADIENT = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+
 function LivePreviewPanel({
   config,
   formName,
@@ -1069,20 +1366,23 @@ function LivePreviewPanel({
   formName: string;
   activeItemIndex: number;
 }) {
-
-  const hasVisual = config.visuals?.url?.trim();
-  const isVideo = config.visuals?.type === 'video';
+  const visuals = config.visuals;
+  const hasVisual = visuals?.kind && visuals.kind !== 'none' && visuals?.url?.trim();
+  const isVideo = visuals?.kind === 'video';
+  const cardStyle = config.theme?.cardStyle || 'light';
+  const isDark = cardStyle === 'dark';
 
   const bgStyle: React.CSSProperties = {};
   if (hasVisual && !isVideo) {
-    bgStyle.backgroundImage = `url(${config.visuals!.url})`;
+    bgStyle.backgroundImage = `url(${visuals!.url})`;
     bgStyle.backgroundSize = 'cover';
     bgStyle.backgroundPosition = 'center';
   }
 
+  const cardBg = isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)';
+
   return (
     <div className="flex flex-col h-full bg-slate-950 relative">
-      {/* Preview header */}
       <div className="flex items-center justify-center gap-4 py-2.5 px-4 border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm z-10 flex-shrink-0">
         <div className="flex items-center gap-2">
           <span className="relative flex h-2 w-2">
@@ -1098,14 +1398,12 @@ function LivePreviewPanel({
         </span>
       </div>
 
-      {/* Preview body with visual background */}
       <div className="flex-1 relative overflow-hidden">
-        {/* Visual background */}
-        {hasVisual && (
+        {hasVisual ? (
           <div className="absolute inset-0">
             {isVideo ? (
               <video
-                src={config.visuals!.url}
+                src={visuals!.url}
                 autoPlay
                 loop
                 muted
@@ -1117,11 +1415,15 @@ function LivePreviewPanel({
             )}
             <div className="absolute inset-0 bg-black/30" />
           </div>
+        ) : (
+          <div className="absolute inset-0" style={{ background: PREVIEW_DEFAULT_GRADIENT }} />
         )}
 
-        {/* Centered conversation card */}
         <div className="relative z-10 flex items-center justify-center h-full p-4">
-          <div className={`w-full max-w-md h-full max-h-[600px] rounded-2xl overflow-hidden shadow-2xl ${hasVisual ? 'bg-white/95 backdrop-blur-sm' : 'bg-white'}`}>
+          <div
+            className="w-full max-w-md h-full max-h-[600px] rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm"
+            style={{ backgroundColor: cardBg }}
+          >
             {config.questions.length === 0 && !config.welcomeEnabled ? (
               <div className="flex items-center justify-center h-full text-slate-400">
                 <div className="text-center px-8">

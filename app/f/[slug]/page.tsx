@@ -50,9 +50,20 @@ function normalizePublishedConfig(config: any): FormConfig {
     };
   });
 
+  const visuals = config.visuals;
+  let normalizedVisuals = visuals;
+  if (visuals && !visuals.kind && visuals.type) {
+    normalizedVisuals = {
+      kind: visuals.type,
+      url: visuals.url,
+      source: 'url',
+    };
+  }
+
   return {
     ...config,
     questions,
+    visuals: normalizedVisuals,
     endEnabled: config.endEnabled ?? true,
     endCtaText: config.endCtaText || '',
     endCtaUrl: config.endCtaUrl || '',
@@ -60,6 +71,12 @@ function normalizePublishedConfig(config: any): FormConfig {
     trainAI: config.trainAI || '',
   };
 }
+
+const FONT_MAP: Record<string, string> = {
+  'Inter': "'Inter', system-ui, sans-serif",
+  'System': "system-ui, -apple-system, sans-serif",
+  'Serif': "'Georgia', 'Times New Roman', serif",
+};
 
 export default function PublicFormPage() {
   const params = useParams();
@@ -138,19 +155,19 @@ export default function PublicFormPage() {
 
   const theme = form.published_config.theme;
   const visuals = form.published_config.visuals;
-  const hasVisual = visuals?.url?.trim();
-  const isVideo = visuals?.type === 'video';
+  const hasVisual = visuals?.kind && visuals.kind !== 'none' && visuals?.url?.trim();
+  const isVideo = visuals?.kind === 'video';
+  const cardStyle = theme?.cardStyle || 'light';
+  const isDark = cardStyle === 'dark';
+  const fontFamily = FONT_MAP[theme?.fontFamily || 'Inter'] || FONT_MAP['Inter'];
 
-  const bgStyle: React.CSSProperties = {
-    backgroundColor: theme?.backgroundType === 'solid' ? (theme?.backgroundColor || '#ffffff') : '#ffffff',
-    backgroundImage: theme?.backgroundType === 'gradient' ? theme?.backgroundGradient :
-                      theme?.backgroundType === 'image' ? `url(${theme?.backgroundImage})` : undefined,
-    backgroundSize: theme?.backgroundType === 'image' ? 'cover' : undefined,
-  };
+  const cardBg = isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)';
+
+  const DEFAULT_GRADIENT = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
 
   if (hasVisual) {
     return (
-      <div className="min-h-screen relative">
+      <div className="min-h-screen relative" style={{ fontFamily }}>
         {isVideo ? (
           <video
             src={visuals!.url}
@@ -168,7 +185,10 @@ export default function PublicFormPage() {
         )}
         <div className="fixed inset-0 bg-black/30" />
         <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl overflow-hidden" style={{ maxHeight: '90vh' }}>
+          <div
+            className="w-full max-w-lg backdrop-blur-sm rounded-2xl shadow-2xl overflow-hidden"
+            style={{ maxHeight: '90vh', backgroundColor: cardBg }}
+          >
             <ConversationalForm
               config={form.published_config}
               formName={form.name}
@@ -181,12 +201,20 @@ export default function PublicFormPage() {
   }
 
   return (
-    <div className="min-h-screen" style={bgStyle}>
-      <ConversationalForm
-        config={form.published_config}
-        formName={form.name}
-        onSubmit={handleSubmit}
-      />
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ background: DEFAULT_GRADIENT, fontFamily }}
+    >
+      <div
+        className="w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden"
+        style={{ maxHeight: '90vh', backgroundColor: cardBg }}
+      >
+        <ConversationalForm
+          config={form.published_config}
+          formName={form.name}
+          onSubmit={handleSubmit}
+        />
+      </div>
     </div>
   );
 }

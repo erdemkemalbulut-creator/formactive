@@ -1,0 +1,88 @@
+Implement Formless-like Design + Visuals settings in the builder and apply them to BOTH:
+
+* builder live preview
+* public respondent page (/f/[slug])
+
+Do not change the step renderer logic or reintroduce chat.
+
+---
+
+PART A — Theme (minimal, high impact)
+
+1. Add a new builder section: "Theme" (collapsible)
+   Include these fields:
+
+* primaryColor (hex input, default "#111827" or your current button color)
+* fontFamily (select: "Inter", "System", "Serif")
+* cardStyle (select: "light" | "dark")
+
+2. Store theme on the form record (prefer JSON field on form object, e.g. form.theme).
+   If a theme already exists, keep backward compatibility.
+
+3. Apply theme in:
+
+* components/conversational-form.tsx (conversation card + primary button + typography)
+* app/f/[slug]/page.tsx (ensure wrapper or CSS uses the same font and card style)
+
+Rules:
+
+* primaryColor should style the main CTA button background (and hover if you have it)
+* cardStyle affects card background and text contrast (light: white card + dark text; dark: dark card + light text)
+* fontFamily applies to the whole card contents
+
+---
+
+PART B — Visual background (upload-first + optional URL)
+
+Goal: make this easy for normal users:
+
+* Upload is primary
+* Link is optional advanced
+
+1. Replace/extend the Visuals section in the builder:
+
+* Radio/select: Background type = none | image | video
+* Primary control: Upload file (accept image/video based on type)
+* Secondary (collapsed): “Use a link instead (advanced)” with URL input
+
+2. Normalize stored output to a single visual object on the form record, e.g.:
+   visual: { kind: "none" } OR
+   visual: { kind: "image"|"video", source:"upload"|"url", url:string, storagePath?:string, updatedAt:string }
+
+3. Supabase Storage:
+
+* Create/use bucket: "form-visuals"
+* Upload path: `${formId}/${uuid}.${ext}`
+* Use public URLs for now (simplest). Store storagePath for replace/delete.
+
+Implement an API route for uploads (server-side):
+
+* POST /api/forms/[id]/visual
+* Accept multipart file upload
+* Upload to Supabase Storage using service role
+* Return { url, storagePath, kind }
+
+4. Apply visuals in:
+
+* app/f/[slug]/page.tsx (background image/video behind the card)
+* builder preview wrapper (same behavior)
+
+Rules:
+
+* If visual.kind === "none": show a pleasant gradient fallback (no empty background)
+* If image: render cover background
+* If video: autoplay muted loop playsInline cover
+
+---
+
+Constraints:
+
+* Keep changes limited to builder page + types + /api upload route + respondent wrapper + styling hooks
+* Do not change question flow logic
+* Do not add extra features (filters/cropping/library/etc.)
+
+Deliverable:
+
+* I can upload an image/video and see it immediately in preview and on public form
+* I can optionally paste a URL instead
+* Theme settings visibly change the preview card and public form (font, button color, light/dark)

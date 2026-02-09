@@ -48,6 +48,7 @@ export interface FormTheme {
   backgroundGradient?: string;
   backgroundImage?: string;
   fontFamily?: string;
+  cardStyle?: 'light' | 'dark';
   logoUrl?: string;
   bubbleStyle?: 'rounded' | 'minimal';
   botBubbleColor?: string;
@@ -62,8 +63,11 @@ export interface AIContext {
 }
 
 export interface FormVisuals {
-  type: 'image' | 'video';
-  url: string;
+  kind: 'none' | 'image' | 'video';
+  source?: 'upload' | 'url';
+  url?: string;
+  storagePath?: string;
+  updatedAt?: string;
 }
 
 export interface FormConfig {
@@ -195,11 +199,12 @@ export function createDefaultConfig(): FormConfig {
     theme: {
       buttonStyle: 'rounded',
       spacing: 'normal',
-      primaryColor: '#2563eb',
+      primaryColor: '#111827',
       secondaryColor: '#64748b',
       backgroundColor: '#ffffff',
       backgroundType: 'solid',
       fontFamily: 'Inter',
+      cardStyle: 'light',
       bubbleStyle: 'rounded',
       botBubbleColor: '#f1f5f9',
       userBubbleColor: '#2563eb',
@@ -221,11 +226,12 @@ export function generateSlug(name: string): string {
 export const DEFAULT_THEME: FormTheme = {
   buttonStyle: 'rounded',
   spacing: 'normal',
-  primaryColor: '#2563eb',
+  primaryColor: '#111827',
   secondaryColor: '#64748b',
   backgroundColor: '#ffffff',
   backgroundType: 'solid',
   fontFamily: 'Inter',
+  cardStyle: 'light',
   bubbleStyle: 'rounded',
   botBubbleColor: '#f1f5f9',
   userBubbleColor: '#2563eb',

@@ -34,6 +34,12 @@ function resolveTemplate(template: string, answers: Record<string, any>): string
   });
 }
 
+const FONT_MAP: Record<string, string> = {
+  'Inter': "'Inter', system-ui, sans-serif",
+  'System': "system-ui, -apple-system, sans-serif",
+  'Serif': "'Georgia', 'Times New Roman', serif",
+};
+
 export function ConversationalForm({ config, formName, onSubmit, isPreview = false, previewStepIndex }: ConversationalFormProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(-1);
   const [inputValue, setInputValue] = useState<any>('');
@@ -47,7 +53,16 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const sortedQuestions = [...config.questions].sort((a, b) => a.order - b.order);
-  const primaryColor = config.theme?.primaryColor || '#2563eb';
+  const primaryColor = config.theme?.primaryColor || '#111827';
+  const cardStyle = config.theme?.cardStyle || 'light';
+  const isDark = cardStyle === 'dark';
+  const fontFamily = FONT_MAP[config.theme?.fontFamily || 'Inter'] || FONT_MAP['Inter'];
+
+  const textColor = isDark ? '#f1f5f9' : '#111827';
+  const subtextColor = isDark ? '#94a3b8' : '#6b7280';
+  const inputBg = isDark ? 'rgba(255,255,255,0.08)' : '#f9fafb';
+  const inputBorder = isDark ? 'rgba(255,255,255,0.15)' : '#e5e7eb';
+  const inputText = isDark ? '#f1f5f9' : '#111827';
 
   const startForm = useCallback(() => {
     if (sortedQuestions.length === 0) {
@@ -207,6 +222,17 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
     ? Math.round((currentStepIndex / sortedQuestions.length) * 100)
     : 0;
 
+  const optionBtnClass = (selected: boolean) => {
+    if (isDark) {
+      return selected
+        ? 'bg-white/15 border-white/30 text-slate-100'
+        : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 text-slate-200';
+    }
+    return selected
+      ? 'bg-blue-50 border-blue-300 text-blue-700'
+      : 'bg-gray-50 border-gray-200 hover:bg-gray-100 hover:border-gray-300';
+  };
+
   const renderWelcome = () => (
     <div className={`flex flex-col items-center justify-center text-center px-8 py-12 transition-opacity duration-300 ${transitioning ? 'opacity-0' : 'opacity-100'}`}>
       <div
@@ -216,13 +242,13 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
         {formName.charAt(0).toUpperCase()}
       </div>
       {config.welcomeTitle && (
-        <h1 className="text-2xl font-bold text-gray-900 mb-3">{config.welcomeTitle}</h1>
+        <h1 className="text-2xl font-bold mb-3" style={{ color: textColor }}>{config.welcomeTitle}</h1>
       )}
       {config.welcomeMessage && (
-        <p className="text-gray-500 text-sm leading-relaxed mb-8 max-w-sm">{config.welcomeMessage}</p>
+        <p className="text-sm leading-relaxed mb-8 max-w-sm" style={{ color: subtextColor }}>{config.welcomeMessage}</p>
       )}
       {!config.welcomeTitle && !config.welcomeMessage && (
-        <h1 className="text-2xl font-bold text-gray-900 mb-8">Welcome to {formName}</h1>
+        <h1 className="text-2xl font-bold mb-8" style={{ color: textColor }}>Welcome to {formName}</h1>
       )}
       <button
         onClick={!isPreview ? startForm : undefined}
@@ -261,13 +287,13 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
             <div className="flex gap-3">
               <button
                 onClick={() => handleDirectAnswer('Yes')}
-                className="flex-1 py-3 px-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 rounded-xl text-sm font-medium transition-all"
+                className={`flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all border ${optionBtnClass(false)}`}
               >
                 Yes
               </button>
               <button
                 onClick={() => handleDirectAnswer('No')}
-                className="flex-1 py-3 px-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 rounded-xl text-sm font-medium transition-all"
+                className={`flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all border ${optionBtnClass(false)}`}
               >
                 No
               </button>
@@ -284,7 +310,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
                 <button
                   key={opt.id}
                   onClick={() => handleDirectAnswer(opt.value)}
-                  className="w-full text-left py-3 px-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 rounded-xl text-sm font-medium transition-all"
+                  className={`w-full text-left py-3 px-4 rounded-xl text-sm font-medium transition-all border ${optionBtnClass(false)}`}
                 >
                   {opt.label}
                 </button>
@@ -311,18 +337,16 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
                       );
                       setError(null);
                     }}
-                    className={`w-full text-left py-3 px-4 rounded-xl text-sm font-medium transition-all border ${
-                      selected
-                        ? 'bg-blue-50 border-blue-300 text-blue-700'
-                        : 'bg-gray-50 border-gray-200 hover:bg-gray-100 hover:border-gray-300'
-                    }`}
+                    className={`w-full text-left py-3 px-4 rounded-xl text-sm font-medium transition-all border ${optionBtnClass(selected)}`}
                   >
                     <span className="flex items-center gap-3">
                       <span className={`w-5 h-5 rounded flex items-center justify-center border-2 flex-shrink-0 ${
-                        selected ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                        selected
+                          ? (isDark ? 'border-white bg-white/20' : 'border-blue-500 bg-blue-500')
+                          : (isDark ? 'border-white/30' : 'border-gray-300')
                       }`}>
                         {selected && (
-                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                          <svg className={`w-3 h-3 ${isDark ? 'text-white' : 'text-white'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                           </svg>
                         )}
@@ -360,7 +384,8 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
               }}
               placeholder="Type your answer..."
               rows={3}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-gray-50"
+              className="w-full px-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none border"
+              style={{ backgroundColor: inputBg, borderColor: inputBorder, color: inputText }}
             />
             <button
               onClick={handleSubmitAnswer}
@@ -382,7 +407,8 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
               value={inputValue || ''}
               onChange={(e) => { setInputValue(e.target.value); setError(null); }}
               onKeyDown={handleKeyDown}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
+              className="w-full px-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent border"
+              style={{ backgroundColor: inputBg, borderColor: inputBorder, color: inputText }}
             />
             <button
               onClick={handleSubmitAnswer}
@@ -410,7 +436,8 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
               }}
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
+              className="w-full px-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent border"
+              style={{ backgroundColor: inputBg, borderColor: inputBorder, color: inputText }}
             />
             <button
               onClick={handleSubmitAnswer}
@@ -433,7 +460,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
     return (
       <div className={`flex flex-col items-center justify-center px-8 py-12 transition-opacity duration-300 ${transitioning ? 'opacity-0' : 'opacity-100'}`}>
         <div className="w-full max-w-md">
-          <p className="text-lg font-medium text-gray-900 leading-relaxed">{promptText}</p>
+          <p className="text-lg font-medium leading-relaxed" style={{ color: textColor }}>{promptText}</p>
           {renderStepInput(q)}
         </div>
       </div>
@@ -462,7 +489,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
         </div>
         {showEnd ? (
           <>
-            <p className="text-lg font-medium text-gray-900 mb-2">{endMessage}</p>
+            <p className="text-lg font-medium mb-2" style={{ color: textColor }}>{endMessage}</p>
             {config.endCtaText && config.endCtaUrl && (
               <a
                 href={config.endCtaUrl}
@@ -476,7 +503,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
             )}
           </>
         ) : (
-          <p className="text-lg font-medium text-gray-900">All set!</p>
+          <p className="text-lg font-medium" style={{ color: textColor }}>All set!</p>
         )}
       </div>
     );
@@ -485,14 +512,12 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
   const renderSubmitting = () => (
     <div className="flex flex-col items-center justify-center text-center px-8 py-12">
       <div className="w-8 h-8 border-2 border-gray-200 border-t-blue-600 rounded-full animate-spin mb-4" />
-      <p className="text-sm text-gray-500">Submitting your response...</p>
+      <p className="text-sm" style={{ color: subtextColor }}>Submitting your response...</p>
     </div>
   );
 
   return (
-    <div className="flex flex-col h-full" style={{
-      fontFamily: config.theme?.fontFamily || 'Inter, sans-serif',
-    }}>
+    <div className="flex flex-col h-full" style={{ fontFamily }}>
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(8px); }
@@ -506,13 +531,13 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
 
       {phase === 'questions' && sortedQuestions.length > 0 && (
         <div className="px-8 pt-6">
-          <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden">
+          <div className="w-full h-1 rounded-full overflow-hidden" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#f3f4f6' }}>
             <div
               className="h-full rounded-full transition-all duration-500 ease-out"
               style={{ width: `${progress}%`, backgroundColor: primaryColor }}
             />
           </div>
-          <p className="text-xs text-gray-400 mt-2">{currentStepIndex + 1} of {sortedQuestions.length}</p>
+          <p className="text-xs mt-2" style={{ color: subtextColor }}>{currentStepIndex + 1} of {sortedQuestions.length}</p>
         </div>
       )}
 
