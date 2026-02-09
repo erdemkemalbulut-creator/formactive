@@ -42,6 +42,7 @@ export function SettingsDialog({
   const settings = { ...DEFAULT_FORM_SETTINGS, ...config.settings };
   const colors = { ...DEFAULT_FORM_SETTINGS.colors, ...settings.colors };
   const tracking = { ...DEFAULT_FORM_SETTINGS.tracking, ...settings.tracking };
+  const legalDisclaimer = { ...DEFAULT_FORM_SETTINGS.legalDisclaimer, ...settings.legalDisclaimer };
 
   const updateColors = (key: 'background' | 'text' | 'button', value: string) => {
     onSettingsChange({
@@ -179,6 +180,29 @@ export function SettingsDialog({
                 onCheckedChange={(v) => onSettingsChange({ isClosed: v })}
               />
             </div>
+
+            <div className="flex items-center justify-between py-1">
+              <div>
+                <label className="text-[13px] font-medium text-slate-700 block">Show legal disclaimer</label>
+                <p className="text-[11px] text-slate-400 mt-0.5">Display fine print at the bottom of your form</p>
+              </div>
+              <Switch
+                checked={legalDisclaimer.enabled || false}
+                onCheckedChange={(v) => onSettingsChange({ legalDisclaimer: { ...legalDisclaimer, enabled: v } })}
+              />
+            </div>
+            {legalDisclaimer.enabled && (
+              <div>
+                <label className="text-[13px] font-medium text-slate-700 mb-1.5 block">Disclaimer text</label>
+                <textarea
+                  value={legalDisclaimer.text || ''}
+                  onChange={(e) => onSettingsChange({ legalDisclaimer: { ...legalDisclaimer, text: e.target.value } })}
+                  placeholder="By continuing, you agree to our Terms of Service and Privacy Policy."
+                  rows={3}
+                  className="w-full text-sm rounded-md border border-slate-200 px-3 py-2 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1 resize-none"
+                />
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="advanced" className="px-6 pb-6 pt-4 space-y-5 mt-0">

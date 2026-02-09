@@ -99,6 +99,10 @@ export interface FormSettings {
     enabled?: boolean;
     excludeBuilderPreview?: boolean;
   };
+  legalDisclaimer?: {
+    enabled?: boolean;
+    text?: string;
+  };
 }
 
 export const DEFAULT_FORM_SETTINGS: FormSettings = {
@@ -107,6 +111,7 @@ export const DEFAULT_FORM_SETTINGS: FormSettings = {
   hideBranding: false,
   isClosed: false,
   tracking: { enabled: true, excludeBuilderPreview: true },
+  legalDisclaimer: { enabled: false, text: '' },
 };
 
 export interface FormConfig {

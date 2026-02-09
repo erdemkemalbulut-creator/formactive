@@ -710,6 +710,14 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
         {phase === 'submitting' && renderSubmitting()}
         {phase === 'done' && renderEndScreen()}
       </div>
+
+      {config.settings?.legalDisclaimer?.enabled && config.settings.legalDisclaimer.text && (
+        <div className="absolute bottom-3 left-0 right-0 z-20 px-6 text-center pointer-events-none">
+          <p className="text-[10px] leading-snug text-white/30 max-w-md mx-auto">
+            {config.settings.legalDisclaimer.text}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
