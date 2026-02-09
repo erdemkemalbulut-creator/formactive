@@ -1,0 +1,40 @@
+Update the respondent experience to match Formless (single-step, progressive disclosure) instead of chat transcript.
+
+Context:
+
+* app/f/[slug]/page.tsx already provides the page wrapper and background visuals (image/video). Do not redesign it.
+* components/conversational-form.tsx currently renders a chat UI (bubbles, message history, typing indicators). This must be replaced.
+
+Task:
+
+1. In components/conversational-form.tsx, remove the chat transcript rendering (any messages.map/chatHistory rendering, bubbles, scrolling thread UI).
+
+2. Replace it with a "SingleStepRenderer" UI:
+
+   * Full height container (the page wrapper already handles background; keep your component transparent).
+   * Center a conversation card (max width ~480-560px).
+   * Display ONLY ONE prompt at a time:
+
+     * If welcome screen enabled and not started: show welcome title/body + CTA button.
+     * Else show current journey step prompt (AI wording if available; otherwise use the question label).
+     * Render ONE input for that step (text input/textarea for long_text; buttons for single_choice; checkboxes for multiple_choice; yes/no buttons for yes_no; date picker for date; number input for number; email input for email; tel input for phone).
+     * Submit button.
+   * On submit: save answer into answers state and advance to next step.
+   * When last journey item completed: show end screen if enabled; otherwise show a simple "All set" completion state.
+
+3. Keep logic/state:
+
+   * Maintain currentStepIndex and answers in state.
+   * Do not show previous answers on screen (no transcript).
+   * Keep existing submission logic hooks/callbacks intact so app/f/[slug]/page.tsx can still submit to Supabase.
+
+4. Keep styling minimal but Formless-like:
+
+   * No chat bubbles.
+   * Use a centered card with rounded corners and light shadow.
+   * Single prompt + input + submit.
+
+Deliverable:
+
+* The respondent page (/f/[slug]) should feel like a guided single-question flow (Formless style), not a chat.
+* Do not add new features. Do not change unrelated files.

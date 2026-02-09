@@ -1,9 +1,10 @@
 # FormActive - AI-Powered Conversational Form Builder
 
 ## Overview
-FormActive is a Next.js 13 application that provides an AI-powered conversational form builder. Users describe their full situation in natural language (e.g., "I'm organizing my wedding and want to know who will attend, which dates work, and meal preferences"), and AI generates a complete conversational form with proper question types and natural wording. Forms display as a friendly chat experience with customizable themes. Uses Supabase for authentication and database, and Replit AI Integrations for OpenAI access (gpt-4.1).
+FormActive is a Next.js 13 application that provides an AI-powered conversational form builder. Users describe their full situation in natural language (e.g., "I'm organizing my wedding and want to know who will attend, which dates work, and meal preferences"), and AI generates a complete conversational form with proper question types and natural wording. Forms display as a Formless-style single-step progressive disclosure experience with customizable themes. Uses Supabase for authentication and database, and Replit AI Integrations for OpenAI access (gpt-4.1).
 
 ## Recent Changes
+- 2026-02-09: **Single-step respondent experience** — Replaced chat transcript UI with Formless-style single-step progressive disclosure (one question at a time, progress bar, no message history)
 - 2026-02-09: **Formless-style builder redesign** — Split layout with ordered builder sections (Context, Tone, Welcome/End, Journey, Visuals, About You, Train AI) and live preview with visual backgrounds
 - 2026-02-09: **Journey items as free-text** — Journey steps are now free-text textareas ("guidance for AI"), with drag-and-drop reordering, duplicate, and delete
 - 2026-02-09: **New FormConfig fields** — Added `visuals` (image/video background), `aboutYou`, `trainAI`, `endEnabled`, `endCtaText`, `endCtaUrl`
@@ -117,14 +118,16 @@ Each question has:
 - "Republish" when current_config differs from published_config after editing a live form
 - Public URL: /f/:slug serves published_config as conversational chat
 
-### Conversational Form Component
-- `ConversationalForm` component renders questions one at a time in chat bubbles
-- Bot messages (questions) on left with avatar, user answers on right
+### Conversational Form Component (Single-Step)
+- `ConversationalForm` component renders ONE question at a time (Formless-style progressive disclosure)
+- No chat bubbles or message history — centered card with single prompt + input
+- Progress bar shows step X of Y
 - Uses `message` field for conversational wording, falls back to `label`
-- Typing indicator between questions for natural feel
-- Input area adapts to question type (text, pills, date picker, etc.)
-- CTA nodes render as clickable buttons with resolved template variables
-- Theme colors, fonts, and styles applied dynamically
+- Smooth fade transitions between steps
+- Input adapts to question type (text input, textarea, option buttons, checkboxes, date picker, etc.)
+- CTA nodes render as clickable links with auto-advance after 2.5s or on click, plus skip option
+- Welcome screen with title/message/CTA button; end screen with checkmark + optional CTA + redirect
+- Theme colors, fonts, and custom CSS applied dynamically
 - `isPreview` mode auto-plays first 3 questions with sample answers
 - `onSubmit` callback for real submissions, omitted for preview mode
 
