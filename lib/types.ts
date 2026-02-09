@@ -103,6 +103,13 @@ export interface FormTheme {
   customCss?: string;
 }
 
+export interface AIContext {
+  context: string;
+  tone: ToneType;
+  directness: DirectnessType;
+  audience: string;
+}
+
 export interface FormConfig {
   questions: Question[];
   welcomeEnabled: boolean;
@@ -113,6 +120,7 @@ export interface FormConfig {
   endRedirectEnabled: boolean;
   endRedirectUrl: string;
   theme: FormTheme;
+  aiContext?: AIContext;
 }
 
 export interface Form {
@@ -151,6 +159,13 @@ export interface GenerateNodeRequest {
   directness: DirectnessType;
   audience?: string;
   existing_fields: string[];
+}
+
+export interface GenerateConversationRequest {
+  context: string;
+  tone: ToneType;
+  directness: DirectnessType;
+  audience?: string;
 }
 
 export interface GenerateNodeResponse {

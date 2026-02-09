@@ -4,6 +4,10 @@
 FormActive is a Next.js 13 application that provides an AI-powered conversational form builder. Users describe their intent (what they want to learn), and AI generates conversational questions with proper input types, validation, and natural transitions. Forms display as a friendly chat experience with customizable themes. Uses Supabase for authentication and database, and Replit AI Integrations for OpenAI access (gpt-4.1).
 
 ## Recent Changes
+- 2026-02-09: **Context-first AI workflow** — Users describe their full situation (e.g., "I'm organizing my wedding..."), AI generates the entire conversation via `/api/ai/generate-conversation`
+- 2026-02-09: **Form-level AI settings** — Tone, directness, audience moved from per-question to form-level in AI Context panel
+- 2026-02-09: **Per-question regenerate** — Individual questions can still be regenerated with a specific intent
+- 2026-02-09: **AIContext stored in config** — Context, tone, directness, audience persisted in `current_config.aiContext`
 - 2026-02-08: **AI-powered generation** — Users describe intent, AI generates conversation nodes via `/api/ai/generate-node`
 - 2026-02-08: **Theme system** — Colors, fonts, backgrounds (solid/gradient/image), bubble styles, logo, custom CSS
 - 2026-02-08: **CTA nodes** — Call-to-action buttons with {{variable}} template support for dynamic URLs
@@ -37,7 +41,8 @@ FormActive is a Next.js 13 application that provides an AI-powered conversationa
 - `lib/openai.ts` - OpenAI client initialization (uses Replit AI Integrations)
 - `lib/supabase.ts` - Supabase client helpers (createServerClient, getAnonClient)
 - `lib/auth-context.tsx` - Auth context provider
-- `app/api/ai/generate-node/route.ts` - AI endpoint: intent → conversation node
+- `app/api/ai/generate-conversation/route.ts` - AI endpoint: full context → array of conversation nodes
+- `app/api/ai/generate-node/route.ts` - AI endpoint: single intent → conversation node (per-question regenerate)
 - `app/dashboard/forms/[id]/page.tsx` - Main form builder (editor + theme + AI + preview)
 - `app/f/[slug]/page.tsx` - Public conversational form renderer with theme
 
@@ -105,11 +110,13 @@ Each question is a ConversationNode with:
 - `onSubmit` callback for real submissions, omitted for preview mode
 
 ### Builder Features
-- Intent-first workflow: describe what you want to learn
-- Tone selector: friendly, professional, casual, formal
-- Directness slider: 1 (very casual) to 5 (very direct)
+- Context-first workflow: describe your full situation (unlimited scenarios)
+- AI Context panel with context textarea, tone, directness, audience
+- "Generate Full Conversation" button creates all questions from context
+- Per-question "Regenerate with AI" for tweaking individual questions
+- Tone selector: friendly, professional, luxury, playful
+- Directness selector: casual, balanced, precise
 - Audience field: who is this form for
-- "Generate with AI" button per question
 - Manual editing of all generated fields
 - Theme editor panel (colors, fonts, backgrounds, bubble styles)
 - Debug panel toggle showing AI metadata per question

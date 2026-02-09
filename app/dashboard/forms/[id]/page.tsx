@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
-import { FormConfig, Question, QuestionType, QUESTION_TYPES, ToneType, DirectnessType, createDefaultCTA, FormTheme, DEFAULT_THEME } from '@/lib/types';
+import { FormConfig, Question, QuestionType, QUESTION_TYPES, ToneType, DirectnessType, createDefaultCTA, FormTheme, DEFAULT_THEME, AIContext } from '@/lib/types';
 import { ConversationalForm } from '@/components/conversational-form';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -140,6 +140,7 @@ export default function FormBuilderPage() {
   const [overflowOpen, setOverflowOpen] = useState(false);
   const [previewMode, setPreviewMode] = useState<'welcome' | 'form' | 'end'>('form');
   const [generatingAI, setGeneratingAI] = useState<string | null>(null);
+  const [generatingConversation, setGeneratingConversation] = useState(false);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
 
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -197,6 +198,13 @@ export default function FormBuilderPage() {
     };
   };
 
+  const normalizeConfig = (config: FormConfig): FormConfig => {
+    return {
+      ...config,
+      aiContext: config.aiContext || { context: '', tone: 'friendly' as ToneType, directness: 'balanced' as DirectnessType, audience: '' },
+    };
+  };
+
   const loadForm = async () => {
     try {
       const headers = await getAuthHeaders();
@@ -208,7 +216,7 @@ export default function FormBuilderPage() {
       setStatus(form.status || 'draft');
       setSlug(form.slug || '');
       setVersion(form.version || 0);
-      setCurrentConfig(form.current_config || makeDefaultConfig());
+      setCurrentConfig(normalizeConfig(form.current_config || makeDefaultConfig()));
       setPublishedConfig(form.published_config || null);
     } catch (error: any) {
       toast({ title: 'Error', description: 'Failed to load form', variant: 'destructive' });
@@ -325,6 +333,7 @@ export default function FormBuilderPage() {
     const question = currentConfig.questions.find(q => q.id === questionId);
     if (!question || !question.intent) return;
 
+    const aiCtx = currentConfig.aiContext;
     setGeneratingAI(questionId);
     try {
       const existingFields = currentConfig.questions
@@ -336,9 +345,9 @@ export default function FormBuilderPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           intent: question.intent,
-          tone: question.tone || 'friendly',
-          directness: question.directness || 'balanced',
-          audience: question.audience || '',
+          tone: aiCtx?.tone || 'friendly',
+          directness: aiCtx?.directness || 'balanced',
+          audience: aiCtx?.audience || '',
           existing_fields: existingFields,
         }),
       });
@@ -367,6 +376,76 @@ export default function FormBuilderPage() {
     } finally {
       setGeneratingAI(null);
     }
+  };
+
+  const generateFullConversation = async () => {
+    const aiCtx = currentConfig.aiContext;
+    if (!aiCtx?.context?.trim()) {
+      toast({ title: 'Missing context', description: 'Please describe your situation first.', variant: 'destructive' });
+      return;
+    }
+
+    const hasExisting = currentConfig.questions.length > 0;
+    if (hasExisting && !confirm('This will replace your existing questions with a new AI-generated conversation. Continue?')) {
+      return;
+    }
+
+    setGeneratingConversation(true);
+    try {
+      const res = await fetch('/api/ai/generate-conversation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          context: aiCtx.context,
+          tone: aiCtx.tone || 'friendly',
+          directness: aiCtx.directness || 'balanced',
+          audience: aiCtx.audience || '',
+        }),
+      });
+
+      if (!res.ok) throw new Error('AI generation failed');
+      const data = await res.json();
+
+      if (!data.nodes || data.nodes.length === 0) {
+        throw new Error('No questions were generated');
+      }
+
+      const newQuestions: Question[] = data.nodes.map((node: any, i: number) => ({
+        id: `q_${Date.now()}_${Math.random().toString(36).slice(2, 7)}_${i}`,
+        key: node.field_key,
+        type: node.ui_type,
+        label: node.user_prompt,
+        placeholder: '',
+        helpText: '',
+        required: node.required ?? true,
+        validation: node.validation || {},
+        options: node.options || [],
+        order: i,
+        intent: '',
+        field_key: node.field_key,
+        data_type: node.data_type,
+        user_prompt: node.user_prompt,
+        transition_before: node.transition_before || '',
+        extraction: node.extraction || {},
+        followups: node.followups || [],
+      }));
+
+      updateConfig({ questions: newQuestions });
+      setExpandedQuestions(new Set());
+      toast({
+        title: 'Conversation generated!',
+        description: `AI created ${newQuestions.length} questions from your context.`,
+      });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to generate conversation', variant: 'destructive' });
+    } finally {
+      setGeneratingConversation(false);
+    }
+  };
+
+  const updateAIContext = (updates: Partial<AIContext>) => {
+    const current = currentConfig.aiContext || { context: '', tone: 'friendly' as ToneType, directness: 'balanced' as DirectnessType, audience: '' };
+    updateConfig({ aiContext: { ...current, ...updates } });
   };
 
   const handlePublish = async () => {
@@ -537,7 +616,85 @@ export default function FormBuilderPage() {
 
       <div className="flex flex-1 overflow-hidden">
         <div className="w-[45%] border-r border-slate-200 bg-white overflow-y-auto">
-          <Accordion type="multiple" defaultValue={['questions', 'screens', 'settings']} className="px-4">
+          <Accordion type="multiple" defaultValue={['ai-context', 'questions', 'screens', 'settings']} className="px-4">
+            <AccordionItem value="ai-context">
+              <AccordionTrigger className="text-sm font-semibold">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-blue-600" />
+                  <span className="text-blue-700">AI Context</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-blue-700">Describe your situation</Label>
+                    <Textarea
+                      value={currentConfig.aiContext?.context || ''}
+                      onChange={(e) => updateAIContext({ context: e.target.value })}
+                      placeholder={"e.g., I'm organizing my wedding and want to send this form to my guests to know who will attend, which dates work for them, and their meal preferences.\n\nor: I'm a travel agent organizing a trip. Everything is planned, and I want to communicate the details to my clients and see who might be interested."}
+                      className="text-sm min-h-[100px] bg-white"
+                    />
+                    <p className="text-[10px] text-blue-500">The more detail you provide, the better the AI-generated conversation will be.</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-slate-500">Tone</Label>
+                      <Select
+                        value={currentConfig.aiContext?.tone || 'friendly'}
+                        onValueChange={(val: ToneType) => updateAIContext({ tone: val })}
+                      >
+                        <SelectTrigger className="h-7 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="friendly">Friendly</SelectItem>
+                          <SelectItem value="professional">Professional</SelectItem>
+                          <SelectItem value="luxury">Luxury</SelectItem>
+                          <SelectItem value="playful">Playful</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-slate-500">Directness</Label>
+                      <Select
+                        value={currentConfig.aiContext?.directness || 'balanced'}
+                        onValueChange={(val: DirectnessType) => updateAIContext({ directness: val })}
+                      >
+                        <SelectTrigger className="h-7 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="casual">Casual</SelectItem>
+                          <SelectItem value="balanced">Balanced</SelectItem>
+                          <SelectItem value="precise">Precise</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-slate-500">Audience</Label>
+                      <Input
+                        value={currentConfig.aiContext?.audience || ''}
+                        onChange={(e) => updateAIContext({ audience: e.target.value })}
+                        placeholder="e.g., wedding guests"
+                        className="h-7 text-xs"
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    onClick={generateFullConversation}
+                    disabled={!currentConfig.aiContext?.context?.trim() || generatingConversation}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {generatingConversation ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating conversation...</>
+                    ) : (
+                      <><Wand2 className="w-4 h-4 mr-2" /> Generate full conversation</>
+                    )}
+                  </Button>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
             <AccordionItem value="questions">
               <AccordionTrigger className="text-sm font-semibold">
                 <div className="flex items-center gap-2">
@@ -549,9 +706,11 @@ export default function FormBuilderPage() {
                 <div className="space-y-3">
                   {currentConfig.questions.length === 0 && (
                     <div className="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center">
-                      <p className="text-slate-500 text-sm mb-3">Add your first question</p>
+                      <Sparkles className="w-6 h-6 text-blue-400 mx-auto mb-2" />
+                      <p className="text-slate-600 text-sm font-medium mb-1">No questions yet</p>
+                      <p className="text-slate-400 text-xs mb-3">Describe your situation above and let AI generate the conversation, or add questions manually.</p>
                       <Button variant="outline" size="sm" onClick={() => setShowTypePicker(true)}>
-                        <Plus className="w-4 h-4 mr-1" /> Add question
+                        <Plus className="w-4 h-4 mr-1" /> Add manually
                       </Button>
                     </div>
                   )}
@@ -600,70 +759,29 @@ export default function FormBuilderPage() {
                           <div className="border-t border-slate-100 p-3 space-y-3 bg-slate-50/50">
                             {question.type !== 'cta' && (
                               <div className="space-y-2 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                                  <Label className="text-xs font-semibold text-blue-700">Intent (what do you want to learn?)</Label>
-                                </div>
-                                <Textarea
-                                  value={question.intent || ''}
-                                  onChange={(e) => updateQuestion(question.id, { intent: e.target.value })}
-                                  placeholder="e.g., Get the respondent's full name, Ask about their travel budget..."
-                                  className="text-sm min-h-[50px] bg-white"
-                                />
-                                <div className="grid grid-cols-3 gap-2">
-                                  <div className="space-y-1">
-                                    <Label className="text-[10px] text-slate-500">Tone</Label>
-                                    <Select
-                                      value={question.tone || 'friendly'}
-                                      onValueChange={(val: ToneType) => updateQuestion(question.id, { tone: val })}
-                                    >
-                                      <SelectTrigger className="h-7 text-xs">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="friendly">Friendly</SelectItem>
-                                        <SelectItem value="professional">Professional</SelectItem>
-                                        <SelectItem value="luxury">Luxury</SelectItem>
-                                        <SelectItem value="playful">Playful</SelectItem>
-                                      </SelectContent>
-                                    </Select>
+                                <div className="space-y-1.5">
+                                  <div className="flex items-center gap-2">
+                                    <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                                    <Label className="text-xs font-semibold text-blue-700">Regenerate this question</Label>
                                   </div>
-                                  <div className="space-y-1">
-                                    <Label className="text-[10px] text-slate-500">Directness</Label>
-                                    <Select
-                                      value={question.directness || 'balanced'}
-                                      onValueChange={(val: DirectnessType) => updateQuestion(question.id, { directness: val })}
-                                    >
-                                      <SelectTrigger className="h-7 text-xs">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="casual">Casual</SelectItem>
-                                        <SelectItem value="balanced">Balanced</SelectItem>
-                                        <SelectItem value="precise">Precise</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <div className="space-y-1">
-                                    <Label className="text-[10px] text-slate-500">Audience</Label>
-                                    <Input
-                                      value={question.audience || ''}
-                                      onChange={(e) => updateQuestion(question.id, { audience: e.target.value })}
-                                      placeholder="e.g., travelers"
-                                      className="h-7 text-xs"
-                                    />
-                                  </div>
+                                  <Textarea
+                                    value={question.intent || ''}
+                                    onChange={(e) => updateQuestion(question.id, { intent: e.target.value })}
+                                    placeholder="Describe what you want this specific question to ask, e.g., Ask about their dietary restrictions"
+                                    className="text-sm min-h-[40px] bg-white"
+                                  />
                                 </div>
                                 <Button
                                   onClick={() => generateWithAI(question.id)}
                                   disabled={!question.intent || generatingAI === question.id}
                                   size="sm"
-                                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                                  variant="outline"
+                                  className="w-full border-blue-200 text-blue-700 hover:bg-blue-50"
                                 >
                                   {generatingAI === question.id ? (
-                                    <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Generating...</>
+                                    <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Regenerating...</>
                                   ) : (
-                                    <><Wand2 className="w-3 h-3 mr-1" /> Generate with AI</>
+                                    <><Wand2 className="w-3 h-3 mr-1" /> Regenerate with AI</>
                                   )}
                                 </Button>
                               </div>
@@ -1273,9 +1391,9 @@ function FormPreview({
           {config.questions.length === 0 ? (
             <div className="flex items-center justify-center h-full text-slate-400">
               <div className="text-center">
-                <MessageSquare className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
                 <p className="text-sm">No questions yet</p>
-                <p className="text-xs mt-1">Add questions in the editor to see the conversation</p>
+                <p className="text-xs mt-1">Describe your situation in the AI Context panel to generate a conversation</p>
               </div>
             </div>
           ) : (
