@@ -9,6 +9,8 @@ export interface ConversationalFormProps {
   onSubmit?: (answers: Record<string, any>) => Promise<void>;
   isPreview?: boolean;
   previewStepIndex?: number;
+  onPhaseChange?: (phase: 'welcome' | 'questions' | 'submitting' | 'done') => void;
+  heroWelcome?: boolean;
 }
 
 function validateAnswer(value: any, question: Question): string | null {
@@ -40,7 +42,7 @@ const FONT_MAP: Record<string, string> = {
   'Serif': "'Georgia', 'Times New Roman', serif",
 };
 
-export function ConversationalForm({ config, formName, onSubmit, isPreview = false, previewStepIndex }: ConversationalFormProps) {
+export function ConversationalForm({ config, formName, onSubmit, isPreview = false, previewStepIndex, onPhaseChange, heroWelcome = false }: ConversationalFormProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(-1);
   const [inputValue, setInputValue] = useState<any>('');
   const [multiSelectValues, setMultiSelectValues] = useState<string[]>([]);
@@ -51,6 +53,10 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
 
   const inputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    onPhaseChange?.(phase);
+  }, [phase, onPhaseChange]);
 
   const sortedQuestions = [...config.questions].sort((a, b) => a.order - b.order);
   const primaryColor = config.theme?.primaryColor || '#111827';
@@ -235,49 +241,66 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
       : 'bg-gray-50 border-gray-200 hover:bg-gray-100 hover:border-gray-300';
   };
 
-  const renderWelcome = () => (
-    <div className={`flex flex-col items-center justify-center text-center px-8 py-12 transition-opacity duration-300 ${transitioning ? 'opacity-0' : 'opacity-100'}`}>
-      <div
-        className="w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-semibold mb-6"
-        style={{ backgroundColor: primaryColor }}
-      >
-        {formName.charAt(0).toUpperCase()}
+  const renderWelcome = () => {
+    const isHero = heroWelcome && !isPreview;
+    const heroTitleColor = isHero ? '#ffffff' : textColor;
+    const heroSubColor = isHero ? 'rgba(255,255,255,0.8)' : subtextColor;
+
+    return (
+      <div className={`flex flex-col items-center justify-center text-center px-6 sm:px-10 py-16 transition-opacity duration-300 max-w-[720px] mx-auto ${transitioning ? 'opacity-0' : 'opacity-100'}`}>
+        <div
+          className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-semibold mb-8"
+          style={{ backgroundColor: isHero ? 'rgba(255,255,255,0.2)' : primaryColor }}
+        >
+          {formName.charAt(0).toUpperCase()}
+        </div>
+        {config.welcomeTitle ? (
+          <h1 className="font-bold mb-4 leading-tight" style={{ color: heroTitleColor, fontSize: 'clamp(2rem, 5vw, 3.25rem)' }}>{config.welcomeTitle}</h1>
+        ) : (
+          <h1 className="font-bold mb-4 leading-tight" style={{ color: heroTitleColor, fontSize: 'clamp(2rem, 5vw, 3.25rem)' }}>Welcome to {formName}</h1>
+        )}
+        {config.welcomeMessage && (
+          <p className="leading-relaxed mb-10 max-w-md" style={{ color: heroSubColor, fontSize: 'clamp(1rem, 2.5vw, 1.25rem)' }}>{config.welcomeMessage}</p>
+        )}
+        {!config.welcomeMessage && <div className="mb-10" />}
+        <button
+          onClick={!isPreview ? startForm : undefined}
+          className={`px-10 text-white font-semibold rounded-full transition-all hover:shadow-xl ${isPreview ? 'cursor-default' : 'hover:opacity-90 hover:scale-[1.02] active:scale-[0.98]'}`}
+          style={{ backgroundColor: isHero ? 'rgba(255,255,255,0.2)' : primaryColor, height: '52px', fontSize: '1rem', backdropFilter: isHero ? 'blur(8px)' : undefined, border: isHero ? '1px solid rgba(255,255,255,0.3)' : undefined }}
+        >
+          {config.welcomeCta || 'Start'}
+        </button>
       </div>
-      {config.welcomeTitle && (
-        <h1 className="text-2xl font-bold mb-3" style={{ color: textColor }}>{config.welcomeTitle}</h1>
-      )}
-      {config.welcomeMessage && (
-        <p className="text-sm leading-relaxed mb-8 max-w-sm" style={{ color: subtextColor }}>{config.welcomeMessage}</p>
-      )}
-      {!config.welcomeTitle && !config.welcomeMessage && (
-        <h1 className="text-2xl font-bold mb-8" style={{ color: textColor }}>Welcome to {formName}</h1>
-      )}
-      <button
-        onClick={!isPreview ? startForm : undefined}
-        className={`px-8 py-3 text-white text-sm font-medium rounded-full transition-all hover:opacity-90 hover:shadow-lg ${isPreview ? 'cursor-default' : ''}`}
-        style={{ backgroundColor: primaryColor }}
-      >
-        {config.welcomeCta || 'Start'}
-      </button>
-    </div>
-  );
+    );
+  };
 
   const renderStepInput = (q: Question) => {
+    const inert = isPreview;
+
     switch (q.type) {
       case 'cta': {
         const resolvedUrl = resolveTemplate(q.cta?.url || '', answers);
         return (
           <div className="mt-6 space-y-3">
-            <a
-              href={resolvedUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => advanceToStep(currentStepIndex + 1)}
-              className="inline-block px-6 py-3 text-white text-sm font-medium rounded-full transition-all hover:opacity-90 hover:shadow-lg"
-              style={{ backgroundColor: primaryColor }}
-            >
-              {q.cta?.text || 'Continue'} &rarr;
-            </a>
+            {inert ? (
+              <span
+                className="inline-block px-6 py-3 text-white text-sm font-medium rounded-full opacity-80 cursor-default"
+                style={{ backgroundColor: primaryColor }}
+              >
+                {q.cta?.text || 'Continue'} &rarr;
+              </span>
+            ) : (
+              <a
+                href={resolvedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => advanceToStep(currentStepIndex + 1)}
+                className="inline-block px-6 py-3 text-white text-sm font-medium rounded-full transition-all hover:opacity-90 hover:shadow-lg"
+                style={{ backgroundColor: primaryColor }}
+              >
+                {q.cta?.text || 'Continue'} &rarr;
+              </a>
+            )}
           </div>
         );
       }
@@ -285,17 +308,18 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
       case 'yes_no':
         return (
           <div className="mt-6 space-y-3">
-            {error && <p className="text-xs text-red-500">{error}</p>}
             <div className="flex gap-3">
               <button
-                onClick={() => handleDirectAnswer('Yes')}
-                className={`flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all border ${optionBtnClass(false)}`}
+                disabled={inert}
+                onClick={inert ? undefined : () => handleDirectAnswer('Yes')}
+                className={`flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all border ${optionBtnClass(false)} ${inert ? 'cursor-default opacity-70' : ''}`}
               >
                 Yes
               </button>
               <button
-                onClick={() => handleDirectAnswer('No')}
-                className={`flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all border ${optionBtnClass(false)}`}
+                disabled={inert}
+                onClick={inert ? undefined : () => handleDirectAnswer('No')}
+                className={`flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-all border ${optionBtnClass(false)} ${inert ? 'cursor-default opacity-70' : ''}`}
               >
                 No
               </button>
@@ -306,13 +330,13 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
       case 'single_choice':
         return (
           <div className="mt-6 space-y-3">
-            {error && <p className="text-xs text-red-500">{error}</p>}
             <div className="space-y-2">
               {(q.options || []).map(opt => (
                 <button
                   key={opt.id}
-                  onClick={() => handleDirectAnswer(opt.value)}
-                  className={`w-full text-left py-3 px-4 rounded-xl text-sm font-medium transition-all border ${optionBtnClass(false)}`}
+                  disabled={inert}
+                  onClick={inert ? undefined : () => handleDirectAnswer(opt.value)}
+                  className={`w-full text-left py-3 px-4 rounded-xl text-sm font-medium transition-all border ${optionBtnClass(false)} ${inert ? 'cursor-default opacity-70' : ''}`}
                 >
                   {opt.label}
                 </button>
@@ -324,61 +348,44 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
       case 'multiple_choice':
         return (
           <div className="mt-6 space-y-3">
-            {error && <p className="text-xs text-red-500">{error}</p>}
             <div className="space-y-2">
-              {(q.options || []).map(opt => {
-                const selected = multiSelectValues.includes(opt.value);
-                return (
-                  <button
-                    key={opt.id}
-                    onClick={() => {
-                      setMultiSelectValues(prev =>
-                        prev.includes(opt.value)
-                          ? prev.filter(v => v !== opt.value)
-                          : [...prev, opt.value]
-                      );
-                      setError(null);
-                    }}
-                    className={`w-full text-left py-3 px-4 rounded-xl text-sm font-medium transition-all border ${optionBtnClass(selected)}`}
-                  >
-                    <span className="flex items-center gap-3">
-                      <span className={`w-5 h-5 rounded flex items-center justify-center border-2 flex-shrink-0 ${
-                        selected
-                          ? (isDark ? 'border-white bg-white/20' : 'border-blue-500 bg-blue-500')
-                          : (isDark ? 'border-white/30' : 'border-gray-300')
-                      }`}>
-                        {selected && (
-                          <svg className={`w-3 h-3 ${isDark ? 'text-white' : 'text-white'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </span>
-                      {opt.label}
-                    </span>
-                  </button>
-                );
-              })}
+              {(q.options || []).map(opt => (
+                <button
+                  key={opt.id}
+                  disabled={inert}
+                  className={`w-full text-left py-3 px-4 rounded-xl text-sm font-medium transition-all border ${optionBtnClass(false)} ${inert ? 'cursor-default opacity-70' : ''}`}
+                >
+                  <span className="flex items-center gap-3">
+                    <span className={`w-5 h-5 rounded flex items-center justify-center border-2 flex-shrink-0 ${isDark ? 'border-white/30' : 'border-gray-300'}`} />
+                    {opt.label}
+                  </span>
+                </button>
+              ))}
             </div>
-            <button
-              onClick={handleSubmitAnswer}
-              disabled={multiSelectValues.length === 0 && q.required}
-              className="w-full py-3 text-white text-sm font-medium rounded-xl transition-all hover:opacity-90 disabled:opacity-40"
-              style={{ backgroundColor: primaryColor }}
-            >
-              Continue
-            </button>
+            {!inert && (
+              <button
+                onClick={handleSubmitAnswer}
+                disabled={multiSelectValues.length === 0 && q.required}
+                className="w-full py-3 text-white text-sm font-medium rounded-xl transition-all hover:opacity-90 disabled:opacity-40"
+                style={{ backgroundColor: primaryColor }}
+              >
+                Continue
+              </button>
+            )}
           </div>
         );
 
       case 'long_text':
         return (
           <div className="mt-6 space-y-3">
-            {error && <p className="text-xs text-red-500">{error}</p>}
+            {!inert && error && <p className="text-xs text-red-500">{error}</p>}
             <textarea
-              ref={textareaRef}
-              value={inputValue || ''}
-              onChange={(e) => { setInputValue(e.target.value); setError(null); }}
-              onKeyDown={(e) => {
+              ref={inert ? undefined : textareaRef}
+              readOnly={inert}
+              tabIndex={inert ? -1 : undefined}
+              value={inert ? '' : (inputValue || '')}
+              onChange={inert ? undefined : (e) => { setInputValue(e.target.value); setError(null); }}
+              onKeyDown={inert ? undefined : (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
                   handleSubmitAnswer();
@@ -386,39 +393,45 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
               }}
               placeholder="Type your answer..."
               rows={3}
-              className="w-full px-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none border"
+              className={`w-full px-4 py-3 rounded-xl text-sm focus:outline-none resize-none border ${inert ? 'cursor-default opacity-60' : 'focus:ring-2 focus:ring-blue-500 focus:border-transparent'}`}
               style={{ backgroundColor: inputBg, borderColor: inputBorder, color: inputText }}
             />
-            <button
-              onClick={handleSubmitAnswer}
-              className="w-full py-3 text-white text-sm font-medium rounded-xl transition-all hover:opacity-90"
-              style={{ backgroundColor: primaryColor }}
-            >
-              Continue
-            </button>
+            {!inert && (
+              <button
+                onClick={handleSubmitAnswer}
+                className="w-full py-3 text-white text-sm font-medium rounded-xl transition-all hover:opacity-90"
+                style={{ backgroundColor: primaryColor }}
+              >
+                Continue
+              </button>
+            )}
           </div>
         );
 
       case 'date':
         return (
           <div className="mt-6 space-y-3">
-            {error && <p className="text-xs text-red-500">{error}</p>}
+            {!inert && error && <p className="text-xs text-red-500">{error}</p>}
             <input
-              ref={inputRef}
+              ref={inert ? undefined : inputRef}
               type="date"
-              value={inputValue || ''}
-              onChange={(e) => { setInputValue(e.target.value); setError(null); }}
-              onKeyDown={handleKeyDown}
-              className="w-full px-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent border"
+              readOnly={inert}
+              tabIndex={inert ? -1 : undefined}
+              value={inert ? '' : (inputValue || '')}
+              onChange={inert ? undefined : (e) => { setInputValue(e.target.value); setError(null); }}
+              onKeyDown={inert ? undefined : handleKeyDown}
+              className={`w-full px-4 py-3 rounded-xl text-sm focus:outline-none border ${inert ? 'cursor-default opacity-60' : 'focus:ring-2 focus:ring-blue-500 focus:border-transparent'}`}
               style={{ backgroundColor: inputBg, borderColor: inputBorder, color: inputText }}
             />
-            <button
-              onClick={handleSubmitAnswer}
-              className="w-full py-3 text-white text-sm font-medium rounded-xl transition-all hover:opacity-90"
-              style={{ backgroundColor: primaryColor }}
-            >
-              Continue
-            </button>
+            {!inert && (
+              <button
+                onClick={handleSubmitAnswer}
+                className="w-full py-3 text-white text-sm font-medium rounded-xl transition-all hover:opacity-90"
+                style={{ backgroundColor: primaryColor }}
+              >
+                Continue
+              </button>
+            )}
           </div>
         );
 
@@ -427,27 +440,31 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
         const placeholder = q.type === 'email' ? 'name@example.com' : q.type === 'phone' ? '+1 (555) 000-0000' : q.type === 'number' ? '0' : 'Type your answer...';
         return (
           <div className="mt-6 space-y-3">
-            {error && <p className="text-xs text-red-500">{error}</p>}
+            {!inert && error && <p className="text-xs text-red-500">{error}</p>}
             <input
-              ref={inputRef}
+              ref={inert ? undefined : inputRef}
               type={inputType}
-              value={inputValue || ''}
-              onChange={(e) => {
+              readOnly={inert}
+              tabIndex={inert ? -1 : undefined}
+              value={inert ? '' : (inputValue || '')}
+              onChange={inert ? undefined : (e) => {
                 setInputValue(q.type === 'number' && e.target.value !== '' ? Number(e.target.value) : e.target.value);
                 setError(null);
               }}
-              onKeyDown={handleKeyDown}
+              onKeyDown={inert ? undefined : handleKeyDown}
               placeholder={placeholder}
-              className="w-full px-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent border"
+              className={`w-full px-4 py-3 rounded-xl text-sm focus:outline-none border ${inert ? 'cursor-default opacity-60' : 'focus:ring-2 focus:ring-blue-500 focus:border-transparent'}`}
               style={{ backgroundColor: inputBg, borderColor: inputBorder, color: inputText }}
             />
-            <button
-              onClick={handleSubmitAnswer}
-              className="w-full py-3 text-white text-sm font-medium rounded-xl transition-all hover:opacity-90"
-              style={{ backgroundColor: primaryColor }}
-            >
-              Continue
-            </button>
+            {!inert && (
+              <button
+                onClick={handleSubmitAnswer}
+                className="w-full py-3 text-white text-sm font-medium rounded-xl transition-all hover:opacity-90"
+                style={{ backgroundColor: primaryColor }}
+              >
+                Continue
+              </button>
+            )}
           </div>
         );
       }

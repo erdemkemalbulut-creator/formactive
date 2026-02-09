@@ -1,0 +1,100 @@
+Implement Formless-like “Welcome as Hero” + stronger hierarchy + editor-driven preview-only behavior.
+Do NOT change question flow logic for the real respondent page besides the Welcome layout (welcome only). Do NOT reintroduce chat.
+
+GOALS
+A) Welcome screen becomes a hero (no card) with big title/subtitle/CTA directly on the background.
+B) Stronger typography hierarchy:
+
+* Welcome title much larger than question text
+* CTA larger/more prominent than inputs
+  C) Preview is editor-driven only:
+* In builder preview mode, inputs are inert (no submission, no validation, no saving, no progression). It should only mirror the selected step.
+* Public respondent mode remains fully interactive.
+
+SCOPE
+Files mainly:
+
+* components/conversational-form.tsx
+* app/dashboard/forms/[id]/page.tsx (only if needed to pass preview flags already in place)
+* app/f/[slug]/page.tsx (to apply hero welcome on public page too, if welcome is enabled)
+
+---
+
+PART 1 — WELCOME AS HERO (NO CARD)
+
+1. In components/conversational-form.tsx, when rendering the welcome screen:
+
+* Render a hero overlay instead of the card container.
+* The hero content should be centered and constrained (max-width ~720px).
+* Show, in this order:
+
+  * (optional) avatar/initial
+  * BIG title (welcome.title or form title fallback)
+  * subtitle/body text (welcome.body or fallback)
+  * primary CTA button (welcome.ctaLabel fallback "Start")
+  * optional microcopy line (e.g. “Takes about 1 minute”) if you already have a minutes field; otherwise omit.
+
+2. Hero styling requirements:
+
+* Title should be significantly larger than question text (e.g. 48–64px on desktop).
+* Subtitle smaller and muted (e.g. 18–22px).
+* CTA button larger (height ~52px, generous padding, rounded-pill).
+* Add a subtle background vignette overlay behind text to ensure readability (e.g. gradient overlay) but do not add new settings.
+
+3. Questions/steps should remain inside the card as they are today (do not change the question card layout in this part).
+
+---
+
+PART 2 — STRONGER TYPOGRAPHY HIERARCHY (WELCOME + CTA)
+
+1. Ensure question text size remains smaller than welcome title.
+2. Ensure CTA (welcome button) is more prominent than inputs:
+
+* bigger height
+* higher contrast using primaryColor
+* ensure focus/hover states exist (simple)
+
+Do NOT redesign the entire theme system; just apply these sizes/spacing.
+
+---
+
+PART 3 — PREVIEW IS EDITOR-DRIVEN ONLY (INERT INPUTS)
+
+In builder preview mode (the right panel in /dashboard/forms/[id]):
+
+1. Inputs must be inert:
+
+* Text inputs/textarea should be disabled or readOnly and NOT focusable for typing.
+* Choice buttons should not be clickable (disabled).
+* Submit/Next controls must be hidden or disabled.
+* No validation messages should show.
+* No state progression or answer storage should occur in preview mode.
+
+2. Preview should still show the correct UI for the step (so the creator sees the input type), but it should behave like a “mock”.
+
+3. The preview should continue to mirror the currently selected Journey item via previewStepIndex, and show Welcome hero if previewStepIndex is null and welcome enabled.
+
+Public respondent mode:
+
+* Must remain fully interactive.
+* Must still submit and progress as before.
+
+Implementation notes:
+
+* Add/ensure a prop like previewMode boolean (already exists in some form) and use it to:
+
+  * render inert inputs
+  * hide submission handlers
+  * prevent any setState that advances steps
+
+---
+
+ACCEPTANCE CRITERIA
+
+* Welcome screen shows as hero (no card) in both builder preview and public respondent flow when on welcome.
+* Title is big, subtitle smaller, CTA prominent.
+* In builder preview, clicking the input area does nothing and no answers are stored; no progression happens.
+* In public form, everything works normally (answers, validation, progression).
+* No new settings added.
+
+Execute these changes with minimal, clean diffs and test both preview and public flow.

@@ -85,6 +85,7 @@ export default function PublicFormPage() {
   const [form, setForm] = useState<FormData | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [currentPhase, setCurrentPhase] = useState<'welcome' | 'questions' | 'submitting' | 'done'>('welcome');
 
   useEffect(() => {
     loadForm();
@@ -165,26 +166,49 @@ export default function PublicFormPage() {
 
   const DEFAULT_GRADIENT = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
 
-  if (hasVisual) {
-    return (
-      <div className="min-h-screen relative" style={{ fontFamily }}>
-        {isVideo ? (
-          <video
-            src={visuals!.url}
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="fixed inset-0 w-full h-full object-cover"
-          />
+  const isWelcomePhase = currentPhase === 'welcome' && form.published_config.welcomeEnabled;
+
+  const renderBackground = () => {
+    if (hasVisual) {
+      return (
+        <>
+          {isVideo ? (
+            <video
+              src={visuals!.url}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="fixed inset-0 w-full h-full object-cover"
+            />
+          ) : (
+            <div
+              className="fixed inset-0 w-full h-full"
+              style={{ backgroundImage: `url(${visuals!.url})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+            />
+          )}
+          <div className="fixed inset-0 bg-black/40" />
+        </>
+      );
+    }
+    return <div className="fixed inset-0" style={{ background: DEFAULT_GRADIENT }} />;
+  };
+
+  return (
+    <div className="min-h-screen relative" style={{ fontFamily }}>
+      {renderBackground()}
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+        {isWelcomePhase ? (
+          <div className="w-full">
+            <ConversationalForm
+              config={form.published_config}
+              formName={form.name}
+              onSubmit={handleSubmit}
+              onPhaseChange={setCurrentPhase}
+              heroWelcome={true}
+            />
+          </div>
         ) : (
-          <div
-            className="fixed inset-0 w-full h-full"
-            style={{ backgroundImage: `url(${visuals!.url})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
-          />
-        )}
-        <div className="fixed inset-0 bg-black/30" />
-        <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
           <div
             className="w-full max-w-lg backdrop-blur-sm rounded-2xl shadow-2xl overflow-hidden"
             style={{ maxHeight: '90vh', backgroundColor: cardBg }}
@@ -193,27 +217,10 @@ export default function PublicFormPage() {
               config={form.published_config}
               formName={form.name}
               onSubmit={handleSubmit}
+              onPhaseChange={setCurrentPhase}
             />
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{ background: DEFAULT_GRADIENT, fontFamily }}
-    >
-      <div
-        className="w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden"
-        style={{ maxHeight: '90vh', backgroundColor: cardBg }}
-      >
-        <ConversationalForm
-          config={form.published_config}
-          formName={form.name}
-          onSubmit={handleSubmit}
-        />
+        )}
       </div>
     </div>
   );
