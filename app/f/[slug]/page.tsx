@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { FormConfig, Question, QuestionType } from '@/lib/types';
+import { FormConfig, Question, QuestionType, StepVisual } from '@/lib/types';
 import { ConversationalForm } from '@/components/conversational-form';
 
 interface FormData {
@@ -19,7 +19,6 @@ function normalizePublishedConfig(config: any): FormConfig {
     checkbox: 'yes_no',
     consent: 'yes_no',
     rating: 'number',
-    file_upload: 'short_text',
     time: 'short_text',
   };
 
@@ -47,6 +46,9 @@ function normalizePublishedConfig(config: any): FormConfig {
       options,
       order: q.order ?? i,
       cta: q.cta,
+      videoUrl: q.videoUrl,
+      internalName: q.internalName,
+      visual: q.visual,
     };
   });
 
@@ -86,6 +88,7 @@ export default function PublicFormPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [currentPhase, setCurrentPhase] = useState<'welcome' | 'questions' | 'submitting' | 'done'>('welcome');
+  const [currentStepIdx, setCurrentStepIdx] = useState(0);
 
   useEffect(() => {
     loadForm();
@@ -155,9 +158,7 @@ export default function PublicFormPage() {
   }
 
   const theme = form.published_config.theme;
-  const visuals = form.published_config.visuals;
-  const hasVisual = visuals?.kind && visuals.kind !== 'none' && visuals?.url?.trim();
-  const isVideo = visuals?.kind === 'video';
+  const globalVisuals = form.published_config.visuals;
   const cardStyle = theme?.cardStyle || 'light';
   const isDark = cardStyle === 'dark';
   const fontFamily = FONT_MAP[theme?.fontFamily || 'Inter'] || FONT_MAP['Inter'];
@@ -168,23 +169,74 @@ export default function PublicFormPage() {
 
   const isWelcomePhase = currentPhase === 'welcome' && form.published_config.welcomeEnabled;
 
+  const sortedQuestions = [...form.published_config.questions].sort((a, b) => a.order - b.order);
+
+  const resolveActiveVisual = (): StepVisual | null => {
+    if (currentPhase === 'welcome' && form.published_config.welcomeVisual) {
+      const wv = form.published_config.welcomeVisual;
+      if (wv.kind && wv.kind !== 'none' && wv.url?.trim()) return wv;
+    }
+    if (currentPhase === 'done' && form.published_config.endVisual) {
+      const ev = form.published_config.endVisual;
+      if (ev.kind && ev.kind !== 'none' && ev.url?.trim()) return ev;
+    }
+    if (currentPhase === 'questions' && sortedQuestions[currentStepIdx]?.visual) {
+      const sv = sortedQuestions[currentStepIdx].visual!;
+      if (sv.kind && sv.kind !== 'none' && sv.url?.trim()) return sv;
+    }
+    if (globalVisuals?.kind && globalVisuals.kind !== 'none' && globalVisuals?.url?.trim()) {
+      return { kind: globalVisuals.kind as 'image' | 'video', url: globalVisuals.url, source: globalVisuals.source || 'url', layout: 'fill', opacity: 100 };
+    }
+    return null;
+  };
+
+  const activeVisual = resolveActiveVisual();
+  const hasVisual = !!activeVisual;
+  const isVideo = activeVisual?.kind === 'video';
+  const visualOpacity = (activeVisual?.opacity ?? 100) / 100;
+  const visualLayout = activeVisual?.layout || 'fill';
+
+  const getBackgroundSize = () => {
+    switch (visualLayout) {
+      case 'center': return 'contain';
+      case 'left': return 'contain';
+      case 'right': return 'contain';
+      default: return 'cover';
+    }
+  };
+
+  const getBackgroundPosition = () => {
+    switch (visualLayout) {
+      case 'left': return 'left center';
+      case 'right': return 'right center';
+      default: return 'center';
+    }
+  };
+
   const renderBackground = () => {
-    if (hasVisual) {
+    if (hasVisual && activeVisual) {
       return (
         <>
           {isVideo ? (
             <video
-              src={visuals!.url}
+              src={activeVisual.url}
               autoPlay
               loop
               muted
               playsInline
               className="fixed inset-0 w-full h-full object-cover"
+              style={{ opacity: visualOpacity }}
             />
           ) : (
             <div
               className="fixed inset-0 w-full h-full"
-              style={{ backgroundImage: `url(${visuals!.url})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+              style={{
+                backgroundImage: `url(${activeVisual.url})`,
+                backgroundSize: getBackgroundSize(),
+                backgroundPosition: getBackgroundPosition(),
+                backgroundRepeat: 'no-repeat',
+                opacity: visualOpacity,
+              }}
             />
           )}
           <div className="fixed inset-0 bg-black/40" />
@@ -205,6 +257,7 @@ export default function PublicFormPage() {
               formName={form.name}
               onSubmit={handleSubmit}
               onPhaseChange={setCurrentPhase}
+              onStepChange={setCurrentStepIdx}
               heroWelcome={true}
             />
           </div>
@@ -218,6 +271,7 @@ export default function PublicFormPage() {
               formName={form.name}
               onSubmit={handleSubmit}
               onPhaseChange={setCurrentPhase}
+              onStepChange={setCurrentStepIdx}
             />
           </div>
         )}

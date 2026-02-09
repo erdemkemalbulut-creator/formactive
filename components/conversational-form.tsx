@@ -13,6 +13,7 @@ export interface ConversationalFormProps {
   previewStepIndex?: number;
   previewTarget?: PreviewTarget;
   onPhaseChange?: (phase: 'welcome' | 'questions' | 'submitting' | 'done') => void;
+  onStepChange?: (stepIndex: number) => void;
   heroWelcome?: boolean;
 }
 
@@ -45,7 +46,7 @@ const FONT_MAP: Record<string, string> = {
   'Serif': "'Georgia', 'Times New Roman', serif",
 };
 
-export function ConversationalForm({ config, formName, onSubmit, isPreview = false, previewStepIndex, previewTarget, onPhaseChange, heroWelcome = false }: ConversationalFormProps) {
+export function ConversationalForm({ config, formName, onSubmit, isPreview = false, previewStepIndex, previewTarget, onPhaseChange, onStepChange, heroWelcome = false }: ConversationalFormProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(-1);
   const [inputValue, setInputValue] = useState<any>('');
   const [multiSelectValues, setMultiSelectValues] = useState<string[]>([]);
@@ -60,6 +61,12 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
   useEffect(() => {
     onPhaseChange?.(phase);
   }, [phase, onPhaseChange]);
+
+  useEffect(() => {
+    if (!isPreview && currentStepIndex >= 0) {
+      onStepChange?.(currentStepIndex);
+    }
+  }, [currentStepIndex, isPreview, onStepChange]);
 
   const sortedQuestions = [...config.questions].sort((a, b) => a.order - b.order);
   const primaryColor = config.theme?.primaryColor || '#111827';

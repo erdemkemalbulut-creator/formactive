@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
-import { FormConfig, Question, QuestionType, QUESTION_TYPES, ToneType, createDefaultCTA, FormTheme, DEFAULT_THEME, AIContext, FormVisuals } from '@/lib/types';
+import { FormConfig, Question, QuestionType, QUESTION_TYPES, ToneType, createDefaultCTA, FormTheme, DEFAULT_THEME, AIContext, FormVisuals, StepVisual, VisualLayout } from '@/lib/types';
 import { ConversationalForm, PreviewTarget } from '@/components/conversational-form';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -205,6 +205,7 @@ export default function FormBuilderPage() {
       cta: q.cta,
       videoUrl: q.videoUrl,
       internalName: q.internalName,
+      visual: q.visual,
     };
   };
 
@@ -1080,24 +1081,15 @@ export default function FormBuilderPage() {
                     </div>
 
                     <div className="border-t border-slate-100 pt-4">
-                      <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-2 block">Background</label>
-                      <VisualsSection
-                        visuals={currentConfig.visuals}
-                        uploadingVisual={uploadingVisual}
-                        showVisualUrlInput={showVisualUrlInput}
-                        onSetShowVisualUrlInput={setShowVisualUrlInput}
-                        onUpload={handleVisualUpload}
-                        onClear={clearVisual}
-                        onUrlChange={(url, kind) => {
-                          updateConfig({
-                            visuals: {
-                              kind,
-                              source: 'url',
-                              url,
-                              updatedAt: new Date().toISOString(),
-                            },
-                          });
-                        }}
+                      <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-2 block">Step Visuals</label>
+                      <StepVisualManager
+                        config={currentConfig}
+                        formId={formId!}
+                        previewTarget={previewTarget}
+                        onSelectStep={(target) => setPreviewTarget(target)}
+                        onUpdateWelcomeVisual={(v) => updateConfig({ welcomeVisual: v })}
+                        onUpdateEndVisual={(v) => updateConfig({ endVisual: v })}
+                        onUpdateQuestionVisual={(qId, v) => updateQuestion(qId, { visual: v })}
                       />
                     </div>
                   </div>
@@ -1451,146 +1443,219 @@ function JourneyItemRow({
   );
 }
 
-interface VisualsSectionProps {
-  visuals?: FormVisuals;
-  uploadingVisual: boolean;
-  showVisualUrlInput: boolean;
-  onSetShowVisualUrlInput: (v: boolean) => void;
-  onUpload: (file: File, kind: 'image' | 'video') => void;
-  onClear: () => void;
-  onUrlChange: (url: string, kind: 'image' | 'video') => void;
-}
+const LAYOUT_OPTIONS: { value: VisualLayout; label: string }[] = [
+  { value: 'fill', label: 'Fill' },
+  { value: 'center', label: 'Center' },
+  { value: 'left', label: 'Left' },
+  { value: 'right', label: 'Right' },
+];
 
-function VisualsSection(props: VisualsSectionProps) {
-  const { visuals, uploadingVisual, showVisualUrlInput, onSetShowVisualUrlInput, onUpload, onClear, onUrlChange } = props;
+function StepVisualEditor({
+  visual,
+  formId,
+  onUpdate,
+}: {
+  visual: StepVisual | undefined;
+  formId: string;
+  onUpdate: (v: StepVisual) => void;
+}) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlInputValue, setUrlInputValue] = useState('');
-  const currentKind = visuals?.kind && visuals.kind !== 'none' ? visuals.kind : 'image';
-  const hasVisual = visuals?.kind && visuals.kind !== 'none' && visuals?.url?.trim();
+  const { toast } = useToast();
+  const { session } = useAuth();
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    onUpload(file, currentKind);
-    e.target.value = '';
+  const hasVisual = visual?.kind && visual.kind !== 'none' && visual?.url?.trim();
+  const layout = visual?.layout || 'fill';
+  const opacity = visual?.opacity ?? 100;
+
+  const handleUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const token = session?.access_token;
+      if (!token) throw new Error('Not authenticated');
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('kind', 'image');
+      const res = await fetch(`/api/forms/${formId}/visual`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Upload failed');
+      }
+      const data = await res.json();
+      onUpdate({
+        ...(visual || { kind: 'none' }),
+        kind: data.kind,
+        source: 'upload',
+        url: data.url,
+        storagePath: data.storagePath,
+        layout: visual?.layout || 'fill',
+        opacity: visual?.opacity ?? 100,
+      });
+    } catch (error: any) {
+      toast({ title: 'Upload failed', description: error.message, variant: 'destructive' });
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
-    <div className="space-y-3">
-      <div className="flex gap-2">
-        {(['image', 'video'] as const).map((kind) => (
-          <button
-            key={kind}
-            onClick={() => {
-              if (hasVisual && visuals?.kind !== kind) {
-                onUrlChange(visuals?.url || '', kind);
-              }
-            }}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-sm transition-colors ${
-              currentKind === kind
-                ? 'border-pink-200 bg-pink-50 text-pink-700'
-                : 'border-slate-200 text-slate-500 hover:border-slate-300'
-            }`}
-          >
-            {kind === 'image' ? <Image className="w-3.5 h-3.5" /> : <Video className="w-3.5 h-3.5" />}
-            {kind.charAt(0).toUpperCase() + kind.slice(1)}
-          </button>
-        ))}
-      </div>
-
+    <div className="space-y-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
       {hasVisual ? (
         <div className="relative group">
-          {visuals!.kind === 'video' ? (
-            <video
-              src={visuals!.url}
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="w-full h-32 object-cover rounded-lg"
-            />
+          {visual!.kind === 'video' ? (
+            <video src={visual!.url} autoPlay loop muted playsInline className="w-full h-24 object-cover rounded-md" />
           ) : (
-            <div
-              className="w-full h-32 rounded-lg bg-cover bg-center border border-slate-200"
-              style={{ backgroundImage: `url(${visuals!.url})` }}
-            />
+            <div className="w-full h-24 rounded-md bg-cover bg-center border border-slate-200" style={{ backgroundImage: `url(${visual!.url})`, opacity: opacity / 100 }} />
           )}
           <button
-            onClick={onClear}
-            className="absolute top-2 right-2 p-1 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+            onClick={() => onUpdate({ kind: 'none', layout, opacity })}
+            className="absolute top-1.5 right-1.5 p-1 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-3 h-3" />
           </button>
         </div>
       ) : (
         <div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={currentKind === 'video' ? 'video/mp4,video/webm,video/quicktime' : 'image/jpeg,image/png,image/gif,image/webp'}
-            onChange={handleFileSelect}
-            className="hidden"
-          />
+          <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); e.target.value = ''; }} className="hidden" />
           <button
             onClick={() => fileInputRef.current?.click()}
-            disabled={uploadingVisual}
-            className="w-full flex items-center justify-center gap-2 py-6 rounded-lg border-2 border-dashed border-slate-200 text-sm text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-colors disabled:opacity-50"
+            disabled={uploading}
+            className="w-full flex items-center justify-center gap-2 py-4 rounded-md border-2 border-dashed border-slate-300 text-xs text-slate-400 hover:text-slate-600 hover:border-slate-400 transition-colors disabled:opacity-50"
           >
-            {uploadingVisual ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Uploading...
-              </>
-            ) : (
-              <>
-                <Upload className="w-4 h-4" />
-                Upload {currentKind}
-              </>
-            )}
+            {uploading ? (<><Loader2 className="w-3.5 h-3.5 animate-spin" /> Uploading...</>) : (<><Upload className="w-3.5 h-3.5" /> Upload image</>)}
           </button>
-        </div>
-      )}
-
-      {!hasVisual && (
-        <div>
-          {showVisualUrlInput ? (
-            <div className="space-y-2">
-              <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                <Link className="w-3 h-3" />
-                Paste a URL instead
-              </div>
-              <Input
-                value={urlInputValue}
-                onChange={(e) => setUrlInputValue(e.target.value)}
-                onBlur={() => {
-                  const url = urlInputValue.trim();
-                  if (url) {
-                    onUrlChange(url, currentKind);
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    const url = urlInputValue.trim();
-                    if (url) {
-                      onUrlChange(url, currentKind);
-                    }
-                  }
-                }}
-                placeholder={currentKind === 'video' ? 'https://example.com/video.mp4' : 'https://example.com/image.jpg'}
-                className="h-8 text-sm"
-              />
-            </div>
-          ) : (
-            <button
-              onClick={() => onSetShowVisualUrlInput(true)}
-              className="text-xs text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1"
-            >
-              <Link className="w-3 h-3" />
-              Use a link instead (advanced)
+          {!showUrlInput ? (
+            <button onClick={() => setShowUrlInput(true)} className="text-[10px] text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1 mt-1.5">
+              <Link className="w-2.5 h-2.5" /> Use a link instead
             </button>
+          ) : (
+            <div className="mt-1.5 flex gap-1">
+              <Input value={urlInputValue} onChange={(e) => setUrlInputValue(e.target.value)} placeholder="https://..." className="h-7 text-xs flex-1" onKeyDown={(e) => { if (e.key === 'Enter' && urlInputValue.trim()) { onUpdate({ kind: 'image', source: 'url', url: urlInputValue.trim(), layout, opacity }); setUrlInputValue(''); setShowUrlInput(false); } }} />
+              <button onClick={() => { if (urlInputValue.trim()) { onUpdate({ kind: 'image', source: 'url', url: urlInputValue.trim(), layout, opacity }); setUrlInputValue(''); setShowUrlInput(false); } }} className="px-2 h-7 bg-slate-800 text-white text-xs rounded-md hover:bg-slate-700">Go</button>
+            </div>
           )}
         </div>
       )}
+
+      {hasVisual && (
+        <>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">Layout</label>
+            <div className="grid grid-cols-4 gap-1">
+              {LAYOUT_OPTIONS.map((opt) => (
+                <button key={opt.value} onClick={() => onUpdate({ ...visual!, layout: opt.value })} className={`py-1 px-2 rounded text-[10px] font-medium border transition-colors ${layout === opt.value ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-500 hover:border-slate-300'}`}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">Opacity</label>
+              <span className="text-[10px] text-slate-400">{opacity}%</span>
+            </div>
+            <input type="range" min={10} max={100} value={opacity} onChange={(e) => onUpdate({ ...visual!, opacity: Number(e.target.value) })} className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function StepVisualManager({
+  config,
+  formId,
+  previewTarget,
+  onSelectStep,
+  onUpdateWelcomeVisual,
+  onUpdateEndVisual,
+  onUpdateQuestionVisual,
+}: {
+  config: FormConfig;
+  formId: string;
+  previewTarget: PreviewTarget;
+  onSelectStep: (target: PreviewTarget) => void;
+  onUpdateWelcomeVisual: (v: StepVisual) => void;
+  onUpdateEndVisual: (v: StepVisual) => void;
+  onUpdateQuestionVisual: (qId: string, v: StepVisual) => void;
+}) {
+  const [expandedStep, setExpandedStep] = useState<string | null>(null);
+
+  const stepRows: { id: string; label: string; visual: StepVisual | undefined; target: PreviewTarget; onUpdate: (v: StepVisual) => void }[] = [];
+
+  if (config.welcomeEnabled) {
+    stepRows.push({
+      id: '_welcome',
+      label: 'Welcome',
+      visual: config.welcomeVisual,
+      target: 'welcome',
+      onUpdate: onUpdateWelcomeVisual,
+    });
+  }
+
+  config.questions.forEach((q, i) => {
+    stepRows.push({
+      id: q.id,
+      label: q.label || q.message || `Step ${i + 1}`,
+      visual: q.visual,
+      target: { step: i },
+      onUpdate: (v) => onUpdateQuestionVisual(q.id, v),
+    });
+  });
+
+  if (config.endEnabled) {
+    stepRows.push({
+      id: '_end',
+      label: 'End screen',
+      visual: config.endVisual,
+      target: 'end',
+      onUpdate: onUpdateEndVisual,
+    });
+  }
+
+  return (
+    <div className="space-y-1">
+      {stepRows.length === 0 && (
+        <p className="text-xs text-slate-400 italic py-2">Add steps to attach visuals</p>
+      )}
+      {stepRows.map((row) => {
+        const hasVis = row.visual?.kind && row.visual.kind !== 'none' && row.visual?.url?.trim();
+        const isExpanded = expandedStep === row.id;
+        const isSelected = previewTarget === row.target || (typeof previewTarget === 'object' && typeof row.target === 'object' && previewTarget !== null && row.target !== null && 'step' in previewTarget && 'step' in row.target && previewTarget.step === row.target.step);
+
+        return (
+          <div key={row.id}>
+            <button
+              onClick={() => { onSelectStep(row.target); setExpandedStep(isExpanded ? null : row.id); }}
+              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-all ${isSelected ? 'bg-blue-50 border border-blue-200' : 'hover:bg-slate-50 border border-transparent'}`}
+            >
+              {hasVis ? (
+                <div className="w-8 h-8 rounded-md bg-cover bg-center border border-slate-200 flex-shrink-0" style={{ backgroundImage: `url(${row.visual!.url})`, opacity: (row.visual!.opacity ?? 100) / 100 }} />
+              ) : (
+                <div className="w-8 h-8 rounded-md border-2 border-dashed border-slate-200 flex items-center justify-center flex-shrink-0">
+                  <Image className="w-3 h-3 text-slate-300" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-slate-700 truncate">{row.label}</p>
+                <p className="text-[10px] text-slate-400">{hasVis ? 'Visual set' : 'No visual'}</p>
+              </div>
+              <ChevronRight className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+            </button>
+            {isExpanded && (
+              <div className="mt-1 mb-2 ml-2">
+                <StepVisualEditor visual={row.visual} formId={formId} onUpdate={row.onUpdate} />
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -1618,17 +1683,43 @@ function LivePreviewPanel({
   const [previewKey, setPreviewKey] = useState(0);
   const [copied, setCopied] = useState(false);
 
-  const visuals = config.visuals;
-  const hasVisual = visuals?.kind && visuals.kind !== 'none' && visuals?.url?.trim();
-  const isVideo = visuals?.kind === 'video';
+  const resolveActiveVisual = (): StepVisual | undefined => {
+    if (previewTarget === 'welcome') return config.welcomeVisual;
+    if (previewTarget === 'end') return config.endVisual;
+    if (previewTarget && typeof previewTarget === 'object' && 'step' in previewTarget) {
+      const q = config.questions[previewTarget.step];
+      if (q?.visual?.kind && q.visual.kind !== 'none') return q.visual;
+    }
+    if (config.visuals?.kind && config.visuals.kind !== 'none') {
+      return { kind: config.visuals.kind, url: config.visuals.url, source: config.visuals.source, storagePath: config.visuals.storagePath, layout: 'fill', opacity: 100 };
+    }
+    return undefined;
+  };
+
+  const activeVisual = resolveActiveVisual();
+  const hasVisual = activeVisual?.kind && activeVisual.kind !== 'none' && activeVisual?.url?.trim();
+  const isVideo = activeVisual?.kind === 'video';
+  const visualLayout = activeVisual?.layout || 'fill';
+  const visualOpacity = (activeVisual?.opacity ?? 100) / 100;
   const cardStyle = config.theme?.cardStyle || 'light';
   const isDark = cardStyle === 'dark';
 
+  const getBgPosition = () => {
+    switch (visualLayout) {
+      case 'left': return 'left center';
+      case 'right': return 'right center';
+      case 'center': return 'center center';
+      default: return 'center center';
+    }
+  };
+
   const bgStyle: React.CSSProperties = {};
   if (hasVisual && !isVideo) {
-    bgStyle.backgroundImage = `url(${visuals!.url})`;
-    bgStyle.backgroundSize = 'cover';
-    bgStyle.backgroundPosition = 'center';
+    bgStyle.backgroundImage = `url(${activeVisual!.url})`;
+    bgStyle.backgroundSize = visualLayout === 'fill' ? 'cover' : 'contain';
+    bgStyle.backgroundPosition = getBgPosition();
+    bgStyle.backgroundRepeat = 'no-repeat';
+    bgStyle.opacity = visualOpacity;
   }
 
   const cardBg = isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)';
@@ -1705,12 +1796,13 @@ function LivePreviewPanel({
           <div className="absolute inset-0">
             {isVideo ? (
               <video
-                src={visuals!.url}
+                src={activeVisual!.url}
                 autoPlay
                 loop
                 muted
                 playsInline
                 className="w-full h-full object-cover"
+                style={{ opacity: visualOpacity }}
               />
             ) : (
               <div className="w-full h-full" style={bgStyle} />

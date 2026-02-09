@@ -40,6 +40,7 @@ export interface Question {
   cta?: CTAConfig;
   videoUrl?: string;
   internalName?: string;
+  visual?: StepVisual;
 }
 
 export interface FormTheme {
@@ -74,6 +75,17 @@ export interface FormVisuals {
   updatedAt?: string;
 }
 
+export type VisualLayout = 'center' | 'left' | 'right' | 'fill';
+
+export interface StepVisual {
+  kind: 'none' | 'image' | 'video';
+  source?: 'upload' | 'url';
+  url?: string;
+  storagePath?: string;
+  layout?: VisualLayout;
+  opacity?: number;
+}
+
 export interface FormConfig {
   questions: Question[];
   welcomeEnabled: boolean;
@@ -89,6 +101,8 @@ export interface FormConfig {
   theme: FormTheme;
   aiContext?: AIContext;
   visuals?: FormVisuals;
+  welcomeVisual?: StepVisual;
+  endVisual?: StepVisual;
   aboutYou?: string;
   trainAI?: string;
 }
