@@ -1,38 +1,14 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { FormConfig, Question, QuestionType, FormTheme } from '@/lib/types';
+import { FormConfig, Question } from '@/lib/types';
 
 export interface ConversationalFormProps {
   config: FormConfig;
   formName: string;
   onSubmit?: (answers: Record<string, any>) => Promise<void>;
   isPreview?: boolean;
-}
-
-const SAMPLE_ANSWERS: Record<QuestionType, string> = {
-  short_text: 'Sample answer',
-  long_text: 'This is a longer sample answer for preview.',
-  email: 'user@example.com',
-  phone: '+1 (555) 123-4567',
-  number: '42',
-  date: '2026-01-15',
-  single_choice: '',
-  multiple_choice: '',
-  yes_no: 'Yes',
-  cta: '',
-};
-
-function getSampleValue(question: Question): any {
-  if (question.type === 'single_choice' && question.options.length > 0) {
-    return question.options[0].value;
-  }
-  if (question.type === 'multiple_choice' && question.options.length > 0) {
-    return question.options.slice(0, 2).map(o => o.value);
-  }
-  if (question.type === 'yes_no') return 'Yes';
-  if (question.type === 'number') return 42;
-  return SAMPLE_ANSWERS[question.type] || 'Sample';
+  previewStepIndex?: number;
 }
 
 function validateAnswer(value: any, question: Question): string | null {
@@ -58,7 +34,7 @@ function resolveTemplate(template: string, answers: Record<string, any>): string
   });
 }
 
-export function ConversationalForm({ config, formName, onSubmit, isPreview = false }: ConversationalFormProps) {
+export function ConversationalForm({ config, formName, onSubmit, isPreview = false, previewStepIndex }: ConversationalFormProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(-1);
   const [inputValue, setInputValue] = useState<any>('');
   const [multiSelectValues, setMultiSelectValues] = useState<string[]>([]);
@@ -75,14 +51,16 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
 
   const startForm = useCallback(() => {
     if (sortedQuestions.length === 0) {
-      setPhase('submitting');
-      const doSubmit = async () => {
-        if (onSubmit) {
-          try { await onSubmit({}); } catch {}
-        }
-        setPhase('done');
-      };
-      doSubmit();
+      if (!isPreview) {
+        setPhase('submitting');
+        const doSubmit = async () => {
+          if (onSubmit) {
+            try { await onSubmit({}); } catch {}
+          }
+          setPhase('done');
+        };
+        doSubmit();
+      }
       return;
     }
     setTransitioning(true);
@@ -94,9 +72,16 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
       setError(null);
       setTransitioning(false);
     }, 300);
-  }, [sortedQuestions, onSubmit]);
+  }, [sortedQuestions, onSubmit, isPreview]);
 
   useEffect(() => {
+    if (isPreview) {
+      if (previewStepIndex !== undefined && previewStepIndex >= 0 && sortedQuestions.length > 0) {
+        setPhase('questions');
+        setCurrentStepIndex(previewStepIndex);
+      }
+      return;
+    }
     if (!config.welcomeEnabled) {
       startForm();
     }
@@ -104,41 +89,18 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
 
   useEffect(() => {
     if (!isPreview) return;
-    if (phase === 'welcome' && config.welcomeEnabled) {
-      const timer = setTimeout(() => startForm(), 1500);
-      return () => clearTimeout(timer);
+    if (previewStepIndex !== undefined && previewStepIndex >= 0 && previewStepIndex < sortedQuestions.length) {
+      setPhase('questions');
+      setCurrentStepIndex(previewStepIndex);
+    } else if (previewStepIndex === undefined || previewStepIndex < 0) {
+      setPhase('welcome');
+      setCurrentStepIndex(-1);
     }
-  }, [isPreview, phase, config.welcomeEnabled]);
+  }, [previewStepIndex, isPreview, sortedQuestions.length]);
 
   useEffect(() => {
-    if (!isPreview || phase !== 'questions' || transitioning) return;
-    if (currentStepIndex < 0 || currentStepIndex >= sortedQuestions.length) return;
-
-    const maxPreview = Math.min(3, sortedQuestions.length);
-    if (currentStepIndex >= maxPreview) return;
-
-    const q = sortedQuestions[currentStepIndex];
-    const timer = setTimeout(() => {
-      const sampleVal = getSampleValue(q);
-      const newAnswers = { ...answers, [q.key]: sampleVal };
-      setAnswers(newAnswers);
-
-      if (currentStepIndex + 1 >= maxPreview) {
-        setPhase('done');
-      } else {
-        advanceToStep(currentStepIndex + 1);
-      }
-    }, 1800);
-    return () => clearTimeout(timer);
-  }, [isPreview, phase, currentStepIndex, transitioning, sortedQuestions]);
-
-  useEffect(() => {
-    if (phase === 'questions' && !transitioning && currentStepIndex >= 0) {
+    if (phase === 'questions' && !transitioning && currentStepIndex >= 0 && !isPreview) {
       const q = sortedQuestions[currentStepIndex];
-      if (q?.type === 'cta' && isPreview) {
-        const timer = setTimeout(() => advanceToStep(currentStepIndex + 1), 2500);
-        return () => clearTimeout(timer);
-      }
       if (q?.type !== 'cta') {
         setTimeout(() => {
           inputRef.current?.focus();
@@ -262,15 +224,13 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
       {!config.welcomeTitle && !config.welcomeMessage && (
         <h1 className="text-2xl font-bold text-gray-900 mb-8">Welcome to {formName}</h1>
       )}
-      {!isPreview && (
-        <button
-          onClick={startForm}
-          className="px-8 py-3 text-white text-sm font-medium rounded-full transition-all hover:opacity-90 hover:shadow-lg"
-          style={{ backgroundColor: primaryColor }}
-        >
-          {config.welcomeCta || 'Start'}
-        </button>
-      )}
+      <button
+        onClick={!isPreview ? startForm : undefined}
+        className={`px-8 py-3 text-white text-sm font-medium rounded-full transition-all hover:opacity-90 hover:shadow-lg ${isPreview ? 'cursor-default' : ''}`}
+        style={{ backgroundColor: primaryColor }}
+      >
+        {config.welcomeCta || 'Start'}
+      </button>
     </div>
   );
 
@@ -468,13 +428,13 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
   const renderCurrentStep = () => {
     if (!currentQuestion) return null;
     const q = currentQuestion;
-    const promptText = q.message || q.label;
+    const promptText = q.message || q.label || 'Untitled step';
 
     return (
       <div className={`flex flex-col items-center justify-center px-8 py-12 transition-opacity duration-300 ${transitioning ? 'opacity-0' : 'opacity-100'}`}>
         <div className="w-full max-w-md">
           <p className="text-lg font-medium text-gray-900 leading-relaxed">{promptText}</p>
-          {!isPreview && renderStepInput(q)}
+          {renderStepInput(q)}
         </div>
       </div>
     );

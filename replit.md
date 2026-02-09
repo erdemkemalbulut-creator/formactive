@@ -125,10 +125,10 @@ Each question has:
 - Uses `message` field for conversational wording, falls back to `label`
 - Smooth fade transitions between steps
 - Input adapts to question type (text input, textarea, option buttons, checkboxes, date picker, etc.)
-- CTA nodes render as clickable links with auto-advance after 2.5s or on click, plus skip option
+- CTA nodes render as clickable links that advance on click (no auto-advance in live mode)
 - Welcome screen with title/message/CTA button; end screen with checkmark + optional CTA + redirect
 - Theme colors, fonts, and custom CSS applied dynamically
-- `isPreview` mode auto-plays first 3 questions with sample answers
+- `isPreview` mode: no autoplay; renders specific step via `previewStepIndex` prop; shows welcome when no step selected
 - `onSubmit` callback for real submissions, omitted for preview mode
 
 ### Builder Features (Formless-style)
@@ -138,11 +138,11 @@ Each question has:
   1. **Context** - "What is this conversation about?" textarea with character counter (2000 max)
   2. **Tone** - Tone picker (friendly/professional/luxury/playful) + audience input
   3. **Welcome & End** - Collapsible, toggles for welcome/end screens with fields
-  4. **Journey** - Free-text textareas per step, drag-and-drop reorder, duplicate/delete, "Generate with AI" button
+  4. **Journey** - Free-text textareas per step, drag-and-drop reorder, duplicate/delete, "Generate with AI" button; focused item highlights and drives preview
   5. **Visuals** - Image/video URL for background behind conversation card
   6. **About You** - Brand/company description textarea
   7. **Train AI** - Collapsible advanced section for extra AI instructions
-- **Live preview**: Dark background, visual background support (image/video with overlay), centered white conversation card, restart button
+- **Live preview**: Dark background, visual background support (image/video with overlay), centered white conversation card, follows focused journey item
 
 ## User Preferences
 - No pricing/monetisation features

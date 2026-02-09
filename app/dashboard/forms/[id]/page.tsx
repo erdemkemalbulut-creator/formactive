@@ -26,7 +26,6 @@ import {
   BarChart3,
   Sparkles,
   Loader2,
-  RefreshCw,
   Share2,
   Image,
   Video,
@@ -92,6 +91,7 @@ export default function FormBuilderPage() {
   const [generatingWording, setGeneratingWording] = useState<string | null>(null);
   const [generatingAllWording, setGeneratingAllWording] = useState(false);
   const [showTonePicker, setShowTonePicker] = useState(false);
+  const [activeItemIndex, setActiveItemIndex] = useState<number>(-1);
   const [welcomeEndOpen, setWelcomeEndOpen] = useState(false);
   const [trainAIOpen, setTrainAIOpen] = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
@@ -826,10 +826,12 @@ export default function FormBuilderPage() {
                     key={q.id}
                     question={q}
                     index={i}
+                    isActive={activeItemIndex === i}
                     isDragging={dragIndex === i}
                     isDragOver={dragOverIndex === i}
                     isGenerating={generatingWording === q.id}
                     onUpdate={(updates) => updateQuestion(q.id, updates)}
+                    onFocus={() => setActiveItemIndex(i)}
                     onDuplicate={() => duplicateJourneyItem(q.id)}
                     onDelete={() => deleteJourneyItem(q.id)}
                     onGenerateWording={() => generateWordingForQuestion(q.id)}
@@ -943,6 +945,7 @@ export default function FormBuilderPage() {
           <LivePreviewPanel
             config={currentConfig}
             formName={formName}
+            activeItemIndex={activeItemIndex}
           />
         </div>
       </div>
@@ -953,10 +956,12 @@ export default function FormBuilderPage() {
 function JourneyItemRow({
   question,
   index,
+  isActive,
   isDragging,
   isDragOver,
   isGenerating,
   onUpdate,
+  onFocus,
   onDuplicate,
   onDelete,
   onGenerateWording,
@@ -966,10 +971,12 @@ function JourneyItemRow({
 }: {
   question: Question;
   index: number;
+  isActive: boolean;
   isDragging: boolean;
   isDragOver: boolean;
   isGenerating: boolean;
   onUpdate: (updates: Partial<Question>) => void;
+  onFocus: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
   onGenerateWording: () => void;
@@ -992,6 +999,8 @@ function JourneyItemRow({
           ? 'opacity-40 border-blue-300 bg-blue-50'
           : isDragOver
           ? 'border-blue-300 bg-blue-50/50 border-dashed'
+          : isActive
+          ? 'border-blue-400 bg-blue-50/30 ring-1 ring-blue-200'
           : 'border-slate-200 hover:border-slate-300'
       }`}
     >
@@ -1004,6 +1013,7 @@ function JourneyItemRow({
         <div className="flex-1 min-w-0">
           <textarea
             value={question.label}
+            onFocus={onFocus}
             onChange={(e) => {
               const updates: Partial<Question> = { label: e.target.value };
               if (!question.key || question.key === generateKeyFromLabel(question.label)) {
@@ -1053,12 +1063,12 @@ function JourneyItemRow({
 function LivePreviewPanel({
   config,
   formName,
+  activeItemIndex,
 }: {
   config: FormConfig;
   formName: string;
+  activeItemIndex: number;
 }) {
-  const [previewKey, setPreviewKey] = useState(0);
-  const restartPreview = () => setPreviewKey(k => k + 1);
 
   const hasVisual = config.visuals?.url?.trim();
   const isVideo = config.visuals?.type === 'video';
@@ -1081,13 +1091,11 @@ function LivePreviewPanel({
           </span>
           <span className="text-xs text-slate-400 uppercase tracking-wider font-medium">Live preview</span>
         </div>
-        <button
-          onClick={restartPreview}
-          className="flex items-center gap-1.5 px-3 py-1 text-xs rounded-full bg-slate-800 text-slate-400 hover:text-white transition-colors"
-        >
-          <RefreshCw className="w-3 h-3" />
-          Restart
-        </button>
+        <span className="text-xs text-slate-500">
+          {activeItemIndex >= 0 && config.questions.length > 0
+            ? `Step ${activeItemIndex + 1} of ${config.questions.length}`
+            : config.welcomeEnabled ? 'Welcome' : 'Select a step'}
+        </span>
       </div>
 
       {/* Preview body with visual background */}
@@ -1114,7 +1122,7 @@ function LivePreviewPanel({
         {/* Centered conversation card */}
         <div className="relative z-10 flex items-center justify-center h-full p-4">
           <div className={`w-full max-w-md h-full max-h-[600px] rounded-2xl overflow-hidden shadow-2xl ${hasVisual ? 'bg-white/95 backdrop-blur-sm' : 'bg-white'}`}>
-            {config.questions.length === 0 ? (
+            {config.questions.length === 0 && !config.welcomeEnabled ? (
               <div className="flex items-center justify-center h-full text-slate-400">
                 <div className="text-center px-8">
                   <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
@@ -1124,10 +1132,10 @@ function LivePreviewPanel({
               </div>
             ) : (
               <ConversationalForm
-                key={previewKey}
                 config={config}
                 formName={formName || 'Form'}
                 isPreview={true}
+                previewStepIndex={activeItemIndex}
               />
             )}
           </div>
