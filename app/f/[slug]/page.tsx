@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { FormConfig, Question, QuestionType, StepVisual } from '@/lib/types';
 import { ConversationalForm } from '@/components/conversational-form';
+import { CrossDissolveBackground, VisualLayer } from '@/components/cross-dissolve-background';
 
 interface FormData {
   id: string;
@@ -165,84 +166,40 @@ export default function PublicFormPage() {
 
   const sortedQuestions = [...form.published_config.questions].sort((a, b) => a.order - b.order);
 
-  const resolveActiveVisual = (): StepVisual | null => {
-    if (currentPhase === 'welcome' && form.published_config.welcomeVisual) {
-      const wv = form.published_config.welcomeVisual;
-      if (wv.kind && wv.kind !== 'none' && wv.url?.trim()) return wv;
-    }
-    if (currentPhase === 'done' && form.published_config.endVisual) {
-      const ev = form.published_config.endVisual;
-      if (ev.kind && ev.kind !== 'none' && ev.url?.trim()) return ev;
-    }
-    if (currentPhase === 'questions' && sortedQuestions[currentStepIdx]?.visual) {
-      const sv = sortedQuestions[currentStepIdx].visual!;
-      if (sv.kind && sv.kind !== 'none' && sv.url?.trim()) return sv;
-    }
-    if (globalVisuals?.kind && globalVisuals.kind !== 'none' && globalVisuals?.url?.trim()) {
-      return { kind: globalVisuals.kind as 'image' | 'video', url: globalVisuals.url, source: globalVisuals.source || 'url', layout: 'fill', opacity: 100 };
-    }
-    return null;
-  };
-
-  const activeVisual = resolveActiveVisual();
-  const hasVisual = !!activeVisual;
-  const isVideo = activeVisual?.kind === 'video';
-  const visualOpacity = (activeVisual?.opacity ?? 100) / 100;
-  const visualLayout = activeVisual?.layout || 'fill';
-
-  const getBackgroundSize = () => {
-    switch (visualLayout) {
-      case 'center': return 'contain';
-      case 'left': return 'contain';
-      case 'right': return 'contain';
-      default: return 'cover';
-    }
-  };
-
-  const getBackgroundPosition = () => {
-    switch (visualLayout) {
-      case 'left': return 'left center';
-      case 'right': return 'right center';
-      default: return 'center';
-    }
-  };
-
-  const renderBackground = () => {
-    if (hasVisual && activeVisual) {
-      return (
-        <>
-          {isVideo ? (
-            <video
-              src={activeVisual.url}
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="fixed inset-0 w-full h-full object-cover"
-              style={{ opacity: visualOpacity }}
-            />
-          ) : (
-            <div
-              className="fixed inset-0 w-full h-full"
-              style={{
-                backgroundImage: `url(${activeVisual.url})`,
-                backgroundSize: getBackgroundSize(),
-                backgroundPosition: getBackgroundPosition(),
-                backgroundRepeat: 'no-repeat',
-                opacity: visualOpacity,
-              }}
-            />
-          )}
-          <div className="fixed inset-0 bg-black/40" />
-        </>
-      );
-    }
-    return <div className="fixed inset-0" style={{ background: DEFAULT_GRADIENT }} />;
-  };
+  const activeVisualLayer: VisualLayer | null = useMemo(() => {
+    const resolve = (): StepVisual | null => {
+      if (currentPhase === 'welcome' && form.published_config.welcomeVisual) {
+        const wv = form.published_config.welcomeVisual;
+        if (wv.kind && wv.kind !== 'none' && wv.url?.trim()) return wv;
+      }
+      if (currentPhase === 'done' && form.published_config.endVisual) {
+        const ev = form.published_config.endVisual;
+        if (ev.kind && ev.kind !== 'none' && ev.url?.trim()) return ev;
+      }
+      if (currentPhase === 'questions' && sortedQuestions[currentStepIdx]?.visual) {
+        const sv = sortedQuestions[currentStepIdx].visual!;
+        if (sv.kind && sv.kind !== 'none' && sv.url?.trim()) return sv;
+      }
+      if (globalVisuals?.kind && globalVisuals.kind !== 'none' && globalVisuals?.url?.trim()) {
+        return { kind: globalVisuals.kind as 'image' | 'video', url: globalVisuals.url, source: globalVisuals.source || 'url', layout: 'fill', opacity: 100 };
+      }
+      return null;
+    };
+    const sv = resolve();
+    if (!sv) return null;
+    return { kind: sv.kind as 'image' | 'video', url: sv.url, opacity: sv.opacity, layout: sv.layout };
+  }, [currentPhase, currentStepIdx, form.published_config, globalVisuals, sortedQuestions]);
 
   return (
     <div className="min-h-screen relative" style={{ fontFamily }}>
-      {renderBackground()}
+      <div className="fixed inset-0">
+        <CrossDissolveBackground
+          visual={activeVisualLayer}
+          defaultGradient={DEFAULT_GRADIENT}
+          duration={500}
+          overlayClass="bg-black/40"
+        />
+      </div>
       <div className="relative z-10 min-h-screen flex items-center justify-center">
         <ConversationalForm
           config={form.published_config}

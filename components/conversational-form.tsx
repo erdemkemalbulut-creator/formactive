@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { FormConfig, Question } from '@/lib/types';
+import { useReducedMotion } from '@/components/cross-dissolve-background';
 
 export type PreviewTarget = 'welcome' | 'end' | { step: number } | null;
 
@@ -50,17 +51,27 @@ function useTypewriter(text: string, speed: number = 25, enabled: boolean = true
   const [displayed, setDisplayed] = useState('');
   const [done, setDone] = useState(false);
   const prevTextRef = useRef('');
+  const prevEnabledRef = useRef(enabled);
 
   useEffect(() => {
     if (!enabled) {
       setDisplayed(text);
       setDone(true);
+      prevEnabledRef.current = false;
       return;
     }
-    if (text === prevTextRef.current) return;
+
+    const becameEnabled = !prevEnabledRef.current && enabled;
+    prevEnabledRef.current = true;
+
+    if (text === prevTextRef.current && !becameEnabled) return;
     prevTextRef.current = text;
     setDisplayed('');
     setDone(false);
+    if (!text) {
+      setDone(true);
+      return;
+    }
     let i = 0;
     const interval = setInterval(() => {
       i++;
@@ -84,6 +95,11 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
   const [phase, setPhase] = useState<'welcome' | 'questions' | 'submitting' | 'done'>('welcome');
   const [error, setError] = useState<string | null>(null);
   const [transitioning, setTransitioning] = useState(false);
+  const [contentVisible, setContentVisible] = useState(true);
+  const [typewriterReady, setTypewriterReady] = useState(true);
+  const reducedMotion = useReducedMotion();
+
+  const FADE_DURATION = reducedMotion ? 0 : 300;
 
   const inputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -107,6 +123,22 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
   const textColor = isDark ? '#f1f5f9' : '#ffffff';
   const subtextColor = isDark ? '#94a3b8' : 'rgba(255,255,255,0.7)';
 
+  const fadeTransition = useCallback((updateFn: () => void) => {
+    if (reducedMotion) {
+      updateFn();
+      return;
+    }
+    setContentVisible(false);
+    setTypewriterReady(false);
+    setTimeout(() => {
+      updateFn();
+      setContentVisible(true);
+      setTimeout(() => {
+        setTypewriterReady(true);
+      }, FADE_DURATION);
+    }, FADE_DURATION);
+  }, [FADE_DURATION, reducedMotion]);
+
   const startForm = useCallback(() => {
     if (sortedQuestions.length === 0) {
       if (!isPreview) {
@@ -121,16 +153,15 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
       }
       return;
     }
-    setTransitioning(true);
-    setTimeout(() => {
+    fadeTransition(() => {
       setPhase('questions');
       setCurrentStepIndex(0);
       setInputValue('');
       setMultiSelectValues([]);
       setError(null);
       setTransitioning(false);
-    }, 300);
-  }, [sortedQuestions, onSubmit, isPreview]);
+    });
+  }, [sortedQuestions, onSubmit, isPreview, fadeTransition]);
 
   useEffect(() => {
     if (isPreview) return;
@@ -139,29 +170,41 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
     }
   }, []);
 
+  const prevPreviewTargetRef = useRef<PreviewTarget>(null);
   useEffect(() => {
     if (!isPreview) return;
 
-    if (previewTarget === 'welcome') {
-      setPhase('welcome');
-      setCurrentStepIndex(-1);
-    } else if (previewTarget === 'end') {
-      setPhase('done');
-      setCurrentStepIndex(-1);
-    } else if (previewTarget && typeof previewTarget === 'object' && 'step' in previewTarget) {
-      const idx = previewTarget.step;
-      if (idx >= 0 && idx < sortedQuestions.length) {
-        setPhase('questions');
-        setCurrentStepIndex(idx);
-      }
-    } else if (previewStepIndex !== undefined && previewStepIndex !== null && previewStepIndex >= 0 && previewStepIndex < sortedQuestions.length) {
-      setPhase('questions');
-      setCurrentStepIndex(previewStepIndex);
-    } else {
-      if (config.welcomeEnabled) {
+    const applyPreview = () => {
+      if (previewTarget === 'welcome') {
         setPhase('welcome');
+        setCurrentStepIndex(-1);
+      } else if (previewTarget === 'end') {
+        setPhase('done');
+        setCurrentStepIndex(-1);
+      } else if (previewTarget && typeof previewTarget === 'object' && 'step' in previewTarget) {
+        const idx = previewTarget.step;
+        if (idx >= 0 && idx < sortedQuestions.length) {
+          setPhase('questions');
+          setCurrentStepIndex(idx);
+        }
+      } else if (previewStepIndex !== undefined && previewStepIndex !== null && previewStepIndex >= 0 && previewStepIndex < sortedQuestions.length) {
+        setPhase('questions');
+        setCurrentStepIndex(previewStepIndex);
+      } else {
+        if (config.welcomeEnabled) {
+          setPhase('welcome');
+        }
+        setCurrentStepIndex(-1);
       }
-      setCurrentStepIndex(-1);
+    };
+
+    const changed = JSON.stringify(previewTarget) !== JSON.stringify(prevPreviewTargetRef.current);
+    prevPreviewTargetRef.current = previewTarget;
+
+    if (changed && !reducedMotion) {
+      fadeTransition(applyPreview);
+    } else {
+      applyPreview();
     }
   }, [previewStepIndex, previewTarget, isPreview, sortedQuestions.length]);
 
@@ -170,7 +213,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
     : null;
 
   const questionText = currentQuestion ? (currentQuestion.message || currentQuestion.label || 'Untitled step') : '';
-  const { displayed: typedText, done: typingDone } = useTypewriter(questionText, 25, !isPreview);
+  const { displayed: typedText, done: typingDone } = useTypewriter(questionText, 25, !isPreview && typewriterReady);
 
   useEffect(() => {
     if (phase === 'questions' && !transitioning && currentStepIndex >= 0 && !isPreview && typingDone) {
@@ -185,8 +228,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
   }, [currentStepIndex, phase, transitioning, isPreview, typingDone]);
 
   const advanceToStep = (nextIndex: number) => {
-    setTransitioning(true);
-    setTimeout(() => {
+    fadeTransition(() => {
       if (nextIndex >= sortedQuestions.length) {
         setPhase('submitting');
         setTransitioning(false);
@@ -197,7 +239,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
         setError(null);
         setTransitioning(false);
       }
-    }, 300);
+    });
   };
 
   const handleSubmitAnswer = useCallback(() => {
@@ -223,18 +265,20 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
     const nextIndex = currentStepIndex + 1;
 
     if (nextIndex >= sortedQuestions.length) {
-      setPhase('submitting');
-      const doSubmit = async () => {
-        if (onSubmit) {
-          try { await onSubmit(newAnswers); } catch {}
-        }
-        setPhase('done');
-      };
-      doSubmit();
+      fadeTransition(() => {
+        setPhase('submitting');
+        const doSubmit = async () => {
+          if (onSubmit) {
+            try { await onSubmit(newAnswers); } catch {}
+          }
+          setPhase('done');
+        };
+        doSubmit();
+      });
     } else {
       advanceToStep(nextIndex);
     }
-  }, [currentStepIndex, sortedQuestions, inputValue, multiSelectValues, answers, isPreview, onSubmit]);
+  }, [currentStepIndex, sortedQuestions, inputValue, multiSelectValues, answers, isPreview, onSubmit, fadeTransition]);
 
   const handleDirectAnswer = useCallback((value: any) => {
     if (isPreview) return;
@@ -253,18 +297,20 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
     const nextIndex = currentStepIndex + 1;
 
     if (nextIndex >= sortedQuestions.length) {
-      setPhase('submitting');
-      const doSubmit = async () => {
-        if (onSubmit) {
-          try { await onSubmit(newAnswers); } catch {}
-        }
-        setPhase('done');
-      };
-      doSubmit();
+      fadeTransition(() => {
+        setPhase('submitting');
+        const doSubmit = async () => {
+          if (onSubmit) {
+            try { await onSubmit(newAnswers); } catch {}
+          }
+          setPhase('done');
+        };
+        doSubmit();
+      });
     } else {
       advanceToStep(nextIndex);
     }
-  }, [currentStepIndex, sortedQuestions, answers, isPreview, onSubmit]);
+  }, [currentStepIndex, sortedQuestions, answers, isPreview, onSubmit, fadeTransition]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -285,7 +331,11 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
 
   const renderWelcome = () => {
     return (
-      <div className={`flex flex-col items-center justify-center text-center px-6 sm:px-10 transition-opacity duration-300 ${transitioning ? 'opacity-0' : 'opacity-100'}`}>
+      <div className="flex flex-col items-center justify-center text-center px-6 sm:px-10" style={{
+        opacity: contentVisible ? 1 : 0,
+        transform: contentVisible ? 'translateY(0)' : 'translateY(8px)',
+        transition: reducedMotion ? 'none' : `opacity ${FADE_DURATION}ms ease-out, transform ${FADE_DURATION}ms ease-out`,
+      }}>
         <div
           className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-semibold mb-8"
           style={{ backgroundColor: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)' }}
@@ -544,7 +594,11 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
     const promptText = questionText;
 
     return (
-      <div className={`w-full max-w-2xl mx-auto px-8 sm:px-12 transition-opacity duration-300 ${transitioning ? 'opacity-0' : 'opacity-100'}`}>
+      <div className="w-full max-w-2xl mx-auto px-8 sm:px-12" style={{
+        opacity: contentVisible ? 1 : 0,
+        transform: contentVisible ? 'translateY(0)' : 'translateY(8px)',
+        transition: reducedMotion ? 'none' : `opacity ${FADE_DURATION}ms ease-out, transform ${FADE_DURATION}ms ease-out`,
+      }}>
         <p className="font-semibold leading-relaxed text-white" style={{ fontSize: 'clamp(1.5rem, 4vw, 2.25rem)' }}>
           {isPreview ? promptText : typedText}
           {!isPreview && !typingDone && <span className="inline-block w-[2px] h-[1em] bg-white/70 ml-0.5 animate-blink align-baseline" />}
@@ -568,7 +622,11 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
     const endMessage = config.endMessage || 'Thank you for your response!';
 
     return (
-      <div className="flex flex-col items-center justify-center text-center px-8">
+      <div className="flex flex-col items-center justify-center text-center px-8" style={{
+        opacity: contentVisible ? 1 : 0,
+        transform: contentVisible ? 'translateY(0)' : 'translateY(8px)',
+        transition: reducedMotion ? 'none' : `opacity ${FADE_DURATION}ms ease-out, transform ${FADE_DURATION}ms ease-out`,
+      }}>
         <div className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center mb-8">
           <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -619,6 +677,10 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
         }
         .animate-cinematic-fade {
           animation: cinematicFade 0.5s ease-out forwards;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .animate-blink { animation: none; }
+          .animate-cinematic-fade { animation: none; opacity: 1; transform: none; }
         }
       `}</style>
       {config.theme?.customCss && <style>{config.theme.customCss}</style>}

@@ -1,0 +1,60 @@
+Add Formless-like per-step visual transitions (fade / cross-dissolve) when moving between steps in the respondent experience.
+
+Goal:
+
+* When the active step changes (welcome -> step 1 -> step 2 ... -> end), the background visual should cross-dissolve smoothly.
+* The text/question + input should also fade/slide subtly, but the key is the background transition.
+
+Scope:
+
+* Public respondent page (/f/[slug]) and the preview renderer should both show the transition.
+* Do NOT reintroduce cards or chat UI.
+* Keep preview inputs inert.
+
+Implementation requirements:
+
+1. Cross-dissolve background media:
+
+* Render two background layers (previous and next).
+* On step change, set the next layer to the new background, fade it in while fading the previous out.
+* After transition completes, unmount the old layer.
+* Duration: ~350–600ms.
+* Use CSS transitions (opacity) or a small animation helper.
+* Support:
+
+  * image -> image
+  * image -> none (gradient)
+  * none -> image
+  * video -> video
+  * video -> image
+  * image -> video
+* For video:
+
+  * Ensure autoplay muted loop playsInline continues.
+  * Avoid flashing black frames; pre-load next video element before fading in.
+
+2. Transition the foreground content:
+
+* On step change, fade out the current question container and fade in the next.
+* Keep it subtle (opacity + small translateY like 6–10px).
+* Ensure the typewriter animation restarts after the content fade-in completes.
+
+3. Respect reduced motion:
+
+* If prefers-reduced-motion is enabled, disable animations (instant switch).
+
+4. Preview behavior:
+
+* Still editor-driven (no progression), but when previewStepIndex changes because I click a different step, the same cross-dissolve should run.
+
+Files likely to modify:
+
+* app/f/[slug]/page.tsx (background wrapper/canvas)
+* components/conversational-form.tsx (foreground transition + typewriter timing)
+* any background media component you created
+
+Deliverable:
+
+* Smooth cross-fade background transitions between steps.
+* No flicker, no layout jump.
+* Foreground question fades nicely and typewriter restarts cleanly.

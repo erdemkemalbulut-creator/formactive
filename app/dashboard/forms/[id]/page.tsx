@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import { FormConfig, Question, QuestionType, QUESTION_TYPES, ToneType, createDefaultCTA, FormTheme, DEFAULT_THEME, AIContext, FormVisuals, StepVisual, VisualLayout } from '@/lib/types';
 import { ConversationalForm, PreviewTarget } from '@/components/conversational-form';
+import { CrossDissolveBackground, VisualLayer } from '@/components/cross-dissolve-background';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1691,42 +1692,23 @@ function LivePreviewPanel({
   const [previewKey, setPreviewKey] = useState(0);
   const [copied, setCopied] = useState(false);
 
-  const resolveActiveVisual = (): StepVisual | undefined => {
-    if (previewTarget === 'welcome') return config.welcomeVisual;
-    if (previewTarget === 'end') return config.endVisual;
-    if (previewTarget && typeof previewTarget === 'object' && 'step' in previewTarget) {
-      const q = config.questions[previewTarget.step];
-      if (q?.visual?.kind && q.visual.kind !== 'none') return q.visual;
-    }
-    if (config.visuals?.kind && config.visuals.kind !== 'none') {
-      return { kind: config.visuals.kind, url: config.visuals.url, source: config.visuals.source, storagePath: config.visuals.storagePath, layout: 'fill', opacity: 100 };
-    }
-    return undefined;
-  };
-
-  const activeVisual = resolveActiveVisual();
-  const hasVisual = activeVisual?.kind && activeVisual.kind !== 'none' && activeVisual?.url?.trim();
-  const isVideo = activeVisual?.kind === 'video';
-  const visualLayout = activeVisual?.layout || 'fill';
-  const visualOpacity = (activeVisual?.opacity ?? 100) / 100;
-
-  const getBgPosition = () => {
-    switch (visualLayout) {
-      case 'left': return 'left center';
-      case 'right': return 'right center';
-      case 'center': return 'center center';
-      default: return 'center center';
-    }
-  };
-
-  const bgStyle: React.CSSProperties = {};
-  if (hasVisual && !isVideo) {
-    bgStyle.backgroundImage = `url(${activeVisual!.url})`;
-    bgStyle.backgroundSize = visualLayout === 'fill' ? 'cover' : 'contain';
-    bgStyle.backgroundPosition = getBgPosition();
-    bgStyle.backgroundRepeat = 'no-repeat';
-    bgStyle.opacity = visualOpacity;
-  }
+  const previewVisualLayer: VisualLayer | null = (() => {
+    const resolveActiveVisual = (): StepVisual | undefined => {
+      if (previewTarget === 'welcome') return config.welcomeVisual;
+      if (previewTarget === 'end') return config.endVisual;
+      if (previewTarget && typeof previewTarget === 'object' && 'step' in previewTarget) {
+        const q = config.questions[previewTarget.step];
+        if (q?.visual?.kind && q.visual.kind !== 'none') return q.visual;
+      }
+      if (config.visuals?.kind && config.visuals.kind !== 'none') {
+        return { kind: config.visuals.kind, url: config.visuals.url, source: config.visuals.source, storagePath: config.visuals.storagePath, layout: 'fill', opacity: 100 };
+      }
+      return undefined;
+    };
+    const sv = resolveActiveVisual();
+    if (!sv || !sv.kind || sv.kind === 'none' || !sv.url?.trim()) return null;
+    return { kind: sv.kind as 'image' | 'video', url: sv.url, opacity: sv.opacity, layout: sv.layout };
+  })();
 
   const showEmptyState = config.questions.length === 0 && !config.welcomeEnabled;
 
@@ -1797,26 +1779,12 @@ function LivePreviewPanel({
 
       {/* Preview canvas */}
       <div className="flex-1 relative overflow-hidden">
-        {hasVisual ? (
-          <div className="absolute inset-0">
-            {isVideo ? (
-              <video
-                src={activeVisual!.url}
-                autoPlay
-                loop
-                muted
-                playsInline
-                className="w-full h-full object-cover"
-                style={{ opacity: visualOpacity }}
-              />
-            ) : (
-              <div className="w-full h-full" style={bgStyle} />
-            )}
-            <div className="absolute inset-0 bg-black/30" />
-          </div>
-        ) : (
-          <div className="absolute inset-0" style={{ background: PREVIEW_DEFAULT_GRADIENT }} />
-        )}
+        <CrossDissolveBackground
+          visual={previewVisualLayer}
+          defaultGradient={PREVIEW_DEFAULT_GRADIENT}
+          duration={400}
+          overlayClass="bg-black/30"
+        />
 
         <div className="relative z-10 flex items-center justify-center h-full" key={previewKey}>
           {showEmptyState ? (
