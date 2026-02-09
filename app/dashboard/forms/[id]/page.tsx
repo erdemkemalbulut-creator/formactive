@@ -1001,88 +1001,7 @@ export default function FormBuilderPage() {
                 </button>
                 {openSections.has(5) && (
                   <div className="px-5 pb-5 pt-1 pl-14 space-y-5">
-                    <div>
-                      <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1.5 block">Theme</label>
-                      <div className="space-y-4">
-                        <div>
-                          <label className="text-[11px] text-slate-500 mb-1 block">Primary color</label>
-                          <div className="flex items-center gap-2">
-                            <div className="relative">
-                              <input
-                                type="color"
-                                value={currentConfig.theme?.primaryColor || '#111827'}
-                                onChange={(e) => updateTheme({ primaryColor: e.target.value })}
-                                className="w-8 h-8 rounded-lg border border-slate-200 cursor-pointer p-0.5"
-                              />
-                            </div>
-                            <Input
-                              value={currentConfig.theme?.primaryColor || '#111827'}
-                              onChange={(e) => {
-                                const v = e.target.value;
-                                if (/^#[0-9a-fA-F]{0,6}$/.test(v) || v === '') {
-                                  updateTheme({ primaryColor: v || '#111827' });
-                                }
-                              }}
-                              placeholder="#111827"
-                              className="h-8 text-sm font-mono flex-1"
-                              maxLength={7}
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-[11px] text-slate-500 mb-1 block">Font</label>
-                          <div className="grid grid-cols-3 gap-2">
-                            {(['Inter', 'System', 'Serif'] as const).map((font) => (
-                              <button
-                                key={font}
-                                onClick={() => updateTheme({ fontFamily: font })}
-                                className={`py-2 px-3 rounded-lg border text-sm transition-all ${
-                                  (currentConfig.theme?.fontFamily || 'Inter') === font
-                                    ? 'border-blue-300 bg-blue-50 text-blue-700 ring-1 ring-blue-200'
-                                    : 'border-slate-200 text-slate-600 hover:border-slate-300'
-                                }`}
-                                style={{
-                                  fontFamily: font === 'Serif' ? 'Georgia, serif' : font === 'System' ? 'system-ui, sans-serif' : 'Inter, sans-serif'
-                                }}
-                              >
-                                {font}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-[11px] text-slate-500 mb-1 block">Card style</label>
-                          <div className="grid grid-cols-2 gap-2">
-                            <button
-                              onClick={() => updateTheme({ cardStyle: 'light' })}
-                              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border text-sm transition-all ${
-                                (currentConfig.theme?.cardStyle || 'light') === 'light'
-                                  ? 'border-blue-300 bg-blue-50 text-blue-700 ring-1 ring-blue-200'
-                                  : 'border-slate-200 text-slate-600 hover:border-slate-300'
-                              }`}
-                            >
-                              <div className="w-4 h-4 rounded border border-slate-300 bg-white" />
-                              Light
-                            </button>
-                            <button
-                              onClick={() => updateTheme({ cardStyle: 'dark' })}
-                              className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border text-sm transition-all ${
-                                currentConfig.theme?.cardStyle === 'dark'
-                                  ? 'border-blue-300 bg-blue-50 text-blue-700 ring-1 ring-blue-200'
-                                  : 'border-slate-200 text-slate-600 hover:border-slate-300'
-                              }`}
-                            >
-                              <div className="w-4 h-4 rounded border border-slate-600 bg-slate-800" />
-                              Dark
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="border-t border-slate-100 pt-4">
-                      <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-2 block">Step Visuals</label>
-                      <StepVisualManager
+                    <StepVisualManager
                         config={currentConfig}
                         formId={formId!}
                         previewTarget={previewTarget}
@@ -1091,7 +1010,6 @@ export default function FormBuilderPage() {
                         onUpdateEndVisual={(v) => updateConfig({ endVisual: v })}
                         onUpdateQuestionVisual={(qId, v) => updateQuestion(qId, { visual: v })}
                       />
-                    </div>
                   </div>
                 )}
               </div>
@@ -1141,6 +1059,96 @@ export default function FormBuilderPage() {
                       placeholder={"e.g., Always ask for first name before last name.\nDon't mention competitors.\nKeep questions under 20 words."}
                       className="text-sm min-h-[80px] resize-none font-mono text-xs"
                     />
+                  </div>
+                )}
+              </div>
+
+              {/* 8. Settings */}
+              <div>
+                <button
+                  onClick={() => toggleSection(8)}
+                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/80 transition-colors"
+                >
+                  <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">8</span>
+                  <span className="text-[13px] font-semibold text-slate-800 flex-1 text-left">Settings</span>
+                  <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${openSections.has(8) ? 'rotate-90' : ''}`} />
+                </button>
+                {openSections.has(8) && (
+                  <div className="px-5 pb-5 pt-1 pl-14 space-y-4">
+                    <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1.5 block">Form appearance</label>
+                    <div>
+                      <label className="text-[11px] text-slate-500 mb-1 block">Primary color</label>
+                      <div className="flex items-center gap-2">
+                        <div className="relative">
+                          <input
+                            type="color"
+                            value={currentConfig.theme?.primaryColor || '#111827'}
+                            onChange={(e) => updateTheme({ primaryColor: e.target.value })}
+                            className="w-8 h-8 rounded-lg border border-slate-200 cursor-pointer p-0.5"
+                          />
+                        </div>
+                        <Input
+                          value={currentConfig.theme?.primaryColor || '#111827'}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            if (/^#[0-9a-fA-F]{0,6}$/.test(v) || v === '') {
+                              updateTheme({ primaryColor: v || '#111827' });
+                            }
+                          }}
+                          placeholder="#111827"
+                          className="h-8 text-sm font-mono flex-1"
+                          maxLength={7}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-slate-500 mb-1 block">Font</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {(['Inter', 'System', 'Serif'] as const).map((font) => (
+                          <button
+                            key={font}
+                            onClick={() => updateTheme({ fontFamily: font })}
+                            className={`py-2 px-3 rounded-lg border text-sm transition-all ${
+                              (currentConfig.theme?.fontFamily || 'Inter') === font
+                                ? 'border-blue-300 bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                                : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                            }`}
+                            style={{
+                              fontFamily: font === 'Serif' ? 'Georgia, serif' : font === 'System' ? 'system-ui, sans-serif' : 'Inter, sans-serif'
+                            }}
+                          >
+                            {font}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-slate-500 mb-1 block">Card style</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => updateTheme({ cardStyle: 'light' })}
+                          className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border text-sm transition-all ${
+                            (currentConfig.theme?.cardStyle || 'light') === 'light'
+                              ? 'border-blue-300 bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                              : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="w-4 h-4 rounded border border-slate-300 bg-white" />
+                          Light
+                        </button>
+                        <button
+                          onClick={() => updateTheme({ cardStyle: 'dark' })}
+                          className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border text-sm transition-all ${
+                            currentConfig.theme?.cardStyle === 'dark'
+                              ? 'border-blue-300 bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                              : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="w-4 h-4 rounded border border-slate-600 bg-slate-800" />
+                          Dark
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

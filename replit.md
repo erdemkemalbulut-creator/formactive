@@ -4,6 +4,7 @@
 FormActive is a Next.js 13 application that provides an AI-powered conversational form builder. Users describe their full situation in natural language (e.g., "I'm organizing my wedding and want to know who will attend, which dates work, and meal preferences"), and AI generates a complete conversational form with proper question types and natural wording. Forms display as a Formless-style single-step progressive disclosure experience with customizable themes. Uses Supabase for authentication and database, and Replit AI Integrations for OpenAI access (gpt-4.1).
 
 ## Recent Changes
+- 2026-02-09: **Theme moved to Settings section** — Theme controls (primary color, font family, card style) moved from Visuals into a dedicated "Settings" accordion section (#8) as global form appearance; Visuals section now only contains step visuals
 - 2026-02-09: **Per-step visuals on public form** — Public form dynamically resolves active visual per phase/step (welcome → welcomeVisual, questions → question.visual, end → endVisual, fallback → global visuals → gradient); supports layout (fill/center/left/right) and opacity; `onStepChange` callback added to ConversationalForm
 - 2026-02-09: **Per-step settings drawer** — Gear icon on journey rows opens a right-side Sheet with Required toggle, grouped Question type selector (Open ended/Multiple choice/Statement/File upload), YouTube video URL, Internal name (slug), and options display for choice types
 - 2026-02-09: **Statement & file_upload types** — Added `statement` (continue button, no input) and `file_upload` (dashed upload zone) question types with rendering in ConversationalForm
@@ -160,14 +161,15 @@ Each question has:
 - **Split layout**: Builder panel (left, 440px) + Live preview (right, flex)
 - **Top bar**: Editable title, status badge, Share, Publish, overflow menu
 - **Tab bar**: Editor | Analytics tabs (Analytics placeholder for now)
-- **Editor accordion** — 7 numbered collapsible sections with circular step badges, `divide-y` separators, consistent `pl-14` content indent:
+- **Editor accordion** — 8 numbered collapsible sections with circular step badges, `divide-y` separators, consistent `pl-14` content indent:
   1. **Overview** - "What is this conversation about?" textarea with character counter (2000 max)
   2. **Tone of voice** - Tone picker (friendly/professional/luxury/playful) + audience input
   3. **Welcome & End screens** - Toggles for welcome/end screens with fields
   4. **Journey** - Free-text textareas per step, drag-and-drop reorder, duplicate/delete, "Generate with AI" button; focused item highlights and drives preview
-  5. **Visuals** - Theme controls (primary color, font, card style) + background image/video upload/URL
+  5. **Visuals** - Per-step background image/video upload/URL
   6. **About you** - Brand/company description textarea
   7. **Train AI** - Optional/advanced, extra AI instructions
+  8. **Settings** - Form appearance: primary color, font family, card style (light/dark)
 - **Accordion state**: `openSections` Set controls which sections are expanded; section 1 open by default
 - **Live preview**: Dark background, visual background support (image/video with overlay), centered white conversation card, follows focused journey item
 
