@@ -4,6 +4,9 @@
 FormActive is a Next.js 13 application that provides an AI-powered conversational form builder. Users describe their full situation in natural language (e.g., "I'm organizing my wedding and want to know who will attend, which dates work, and meal preferences"), and AI generates a complete conversational form with proper question types and natural wording. Forms display as a Formless-style single-step progressive disclosure experience with customizable themes. Uses Supabase for authentication and database, and Replit AI Integrations for OpenAI access (gpt-4.1).
 
 ## Recent Changes
+- 2026-02-09: **Welcome hero on public form** — Welcome screen renders as full-bleed hero (no card) on public page with white glass-morphism styling; transitions to card-wrapped questions after CTA click
+- 2026-02-09: **Inert preview inputs** — All preview inputs are disabled/readOnly with tabIndex=-1, no Continue buttons, no validation, choice buttons disabled with reduced opacity
+- 2026-02-09: **onPhaseChange callback** — ConversationalForm notifies parent of phase transitions (welcome/questions/submitting/done) for conditional rendering
 - 2026-02-09: **Single-step respondent experience** — Replaced chat transcript UI with Formless-style single-step progressive disclosure (one question at a time, progress bar, no message history)
 - 2026-02-09: **Formless-style builder redesign** — Split layout with ordered builder sections (Context, Tone, Welcome/End, Journey, Visuals, About You, Train AI) and live preview with visual backgrounds
 - 2026-02-09: **Journey items as free-text** — Journey steps are now free-text textareas ("guidance for AI"), with drag-and-drop reordering, duplicate, and delete
