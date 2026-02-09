@@ -135,16 +135,18 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
   useEffect(() => {
     if (phase === 'questions' && !transitioning && currentStepIndex >= 0) {
       const q = sortedQuestions[currentStepIndex];
-      if (q?.type === 'cta') {
+      if (q?.type === 'cta' && isPreview) {
         const timer = setTimeout(() => advanceToStep(currentStepIndex + 1), 2500);
         return () => clearTimeout(timer);
       }
-      setTimeout(() => {
-        inputRef.current?.focus();
-        textareaRef.current?.focus();
-      }, 100);
+      if (q?.type !== 'cta') {
+        setTimeout(() => {
+          inputRef.current?.focus();
+          textareaRef.current?.focus();
+        }, 100);
+      }
     }
-  }, [currentStepIndex, phase, transitioning]);
+  }, [currentStepIndex, phase, transitioning, isPreview]);
 
   const advanceToStep = (nextIndex: number) => {
     setTransitioning(true);
@@ -288,12 +290,6 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
             >
               {q.cta?.text || 'Continue'} &rarr;
             </a>
-            <button
-              onClick={() => advanceToStep(currentStepIndex + 1)}
-              className="block text-sm text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              Skip
-            </button>
           </div>
         );
       }
