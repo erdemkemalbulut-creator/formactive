@@ -159,15 +159,9 @@ export default function PublicFormPage() {
 
   const theme = form.published_config.theme;
   const globalVisuals = form.published_config.visuals;
-  const cardStyle = theme?.cardStyle || 'light';
-  const isDark = cardStyle === 'dark';
   const fontFamily = FONT_MAP[theme?.fontFamily || 'Inter'] || FONT_MAP['Inter'];
 
-  const cardBg = isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)';
-
   const DEFAULT_GRADIENT = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-
-  const isWelcomePhase = currentPhase === 'welcome' && form.published_config.welcomeEnabled;
 
   const sortedQuestions = [...form.published_config.questions].sort((a, b) => a.order - b.order);
 
@@ -249,32 +243,14 @@ export default function PublicFormPage() {
   return (
     <div className="min-h-screen relative" style={{ fontFamily }}>
       {renderBackground()}
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-        {isWelcomePhase ? (
-          <div className="w-full">
-            <ConversationalForm
-              config={form.published_config}
-              formName={form.name}
-              onSubmit={handleSubmit}
-              onPhaseChange={setCurrentPhase}
-              onStepChange={setCurrentStepIdx}
-              heroWelcome={true}
-            />
-          </div>
-        ) : (
-          <div
-            className="w-full max-w-lg backdrop-blur-sm rounded-2xl shadow-2xl overflow-hidden"
-            style={{ maxHeight: '90vh', backgroundColor: cardBg }}
-          >
-            <ConversationalForm
-              config={form.published_config}
-              formName={form.name}
-              onSubmit={handleSubmit}
-              onPhaseChange={setCurrentPhase}
-              onStepChange={setCurrentStepIdx}
-            />
-          </div>
-        )}
+      <div className="relative z-10 min-h-screen flex items-center justify-center">
+        <ConversationalForm
+          config={form.published_config}
+          formName={form.name}
+          onSubmit={handleSubmit}
+          onPhaseChange={setCurrentPhase}
+          onStepChange={setCurrentStepIdx}
+        />
       </div>
     </div>
   );

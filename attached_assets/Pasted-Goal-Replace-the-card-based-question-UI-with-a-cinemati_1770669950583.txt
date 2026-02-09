@@ -1,0 +1,90 @@
+Goal: Replace the card-based question UI with a cinematic, full-screen, Formless-style question renderer.
+
+Context:
+
+* The current renderer shows questions inside a centered card.
+* This must be removed entirely.
+* The experience should feel cinematic, minimal, and focused on one question at a time.
+
+Do this:
+
+1. REMOVE THE CARD CONTAINER
+
+* In components/conversational-form.tsx (or equivalent renderer):
+
+  * Remove the card/wrapper component that contains the question + input.
+  * Questions should render directly on top of the background (image/video/gradient).
+  * Use a subtle background overlay (gradient or scrim) for readability, but no card UI.
+
+2. SINGLE QUESTION, FULL SCREEN
+
+* Render ONLY the active step’s question.
+* Do NOT show previous or future steps.
+* No chat bubbles.
+* No stacked messages.
+* No transcript.
+
+3. CINEMATIC TYPING EFFECT FOR QUESTIONS
+
+* Implement a typewriter-style effect for the question text:
+
+  * Characters appear one by one (keyboard-like typing).
+  * Slight delay per character (e.g. 20–35ms).
+  * Question must fully finish typing before the input becomes active.
+* The effect should re-run when:
+
+  * The active step changes (editor preview or live respondent).
+
+4. RESPONSE AREA
+
+* Below the question, show a single input area:
+
+  * Placeholder text: “Type here…”
+  * Large, minimal input (no borders or very subtle underline).
+  * Input is visually secondary to the question text.
+* Input types adapt per question type (text, multiple choice, etc.), but:
+
+  * All inputs appear in the same visual position.
+  * No cards, no containers.
+
+5. PREVIEW MODE BEHAVIOR
+
+* In preview/editor mode:
+
+  * Inputs are inert (no submission, no validation).
+  * Typing does not advance steps.
+  * The preview shows only the currently selected step.
+* In live/respondent mode:
+
+  * Step advances ONLY after explicit submit/selection.
+
+6. TYPOGRAPHY HIERARCHY
+
+* Question text:
+
+  * Very large (hero-level)
+  * Strong contrast
+* Input text:
+
+  * Smaller
+  * Subtle
+* Ensure:
+
+  * Welcome title ≫ Question text ≫ Input
+
+Files to modify:
+
+* components/conversational-form.tsx
+* Any shared renderer styles or hooks used for step rendering
+
+Constraints:
+
+* Do NOT reintroduce chat UI.
+* Do NOT add cards, bubbles, or timelines.
+* Do NOT show multiple questions at once.
+
+Done when:
+
+* Questions feel cinematic and immersive.
+* The UI matches Formless’s full-screen, minimal style.
+* The card is completely gone.

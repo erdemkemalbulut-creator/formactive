@@ -1709,8 +1709,6 @@ function LivePreviewPanel({
   const isVideo = activeVisual?.kind === 'video';
   const visualLayout = activeVisual?.layout || 'fill';
   const visualOpacity = (activeVisual?.opacity ?? 100) / 100;
-  const cardStyle = config.theme?.cardStyle || 'light';
-  const isDark = cardStyle === 'dark';
 
   const getBgPosition = () => {
     switch (visualLayout) {
@@ -1730,7 +1728,6 @@ function LivePreviewPanel({
     bgStyle.opacity = visualOpacity;
   }
 
-  const cardBg = isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)';
   const showEmptyState = config.questions.length === 0 && !config.welcomeEnabled;
 
   const shareUrl = slug ? `${typeof window !== 'undefined' ? window.location.origin : ''}/f/${slug}` : '';
@@ -1821,29 +1818,23 @@ function LivePreviewPanel({
           <div className="absolute inset-0" style={{ background: PREVIEW_DEFAULT_GRADIENT }} />
         )}
 
-        <div className="relative z-10 flex items-center justify-center h-full p-6">
-          <div
-            key={previewKey}
-            className="w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm"
-            style={{ backgroundColor: cardBg, maxHeight: 'calc(100% - 2rem)' }}
-          >
-            {showEmptyState ? (
-              <div className="flex items-center justify-center h-64 text-slate-400">
-                <div className="text-center px-8">
-                  <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm font-medium">No steps yet</p>
-                  <p className="text-xs mt-1.5 text-slate-400">Add a step to preview your conversation</p>
-                </div>
+        <div className="relative z-10 flex items-center justify-center h-full" key={previewKey}>
+          {showEmptyState ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center px-8">
+                <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-30 text-white" />
+                <p className="text-sm font-medium text-white/60">No steps yet</p>
+                <p className="text-xs mt-1.5 text-white/30">Add a step to preview your conversation</p>
               </div>
-            ) : (
-              <ConversationalForm
-                config={config}
-                formName={formName || 'Form'}
-                isPreview={true}
-                previewTarget={previewTarget}
-              />
-            )}
-          </div>
+            </div>
+          ) : (
+            <ConversationalForm
+              config={config}
+              formName={formName || 'Form'}
+              isPreview={true}
+              previewTarget={previewTarget}
+            />
+          )}
         </div>
       </div>
     </div>
