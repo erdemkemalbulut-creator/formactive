@@ -1,0 +1,167 @@
+You are a senior frontend engineer building a Formless-style conversational form editor in React (Next.js + TypeScript).
+
+Your task is to implement the **conversation editor page** with a split layout:
+
+* A **builder panel on the left**
+* A **live conversational preview on the right**
+
+You are NOT designing product strategy or asking clarifying questions.
+You are implementing the UI and state architecture as described.
+
+---
+
+## Goal
+
+Recreate a **Formless-like UX**:
+
+* Users configure a conversation in a builder
+* They immediately see a live, respondent-facing preview
+* The preview shows **one conversational step at a time**
+* Background visuals are shown behind the conversation card
+
+Focus on **structure, components, state flow, and interactions**.
+Visual polish can be minimal but layout and behavior must be correct.
+
+---
+
+## Required layout
+
+### Top-level page
+
+* Top bar with:
+
+  * Conversation title
+  * Buttons: Publish, Share, Refresh
+* Below it, a split layout:
+
+  * Left: scrollable builder panel
+  * Right: sticky live preview panel
+
+---
+
+## Builder panel (left)
+
+Implement the following sections in this order:
+
+1. **ContextSection**
+
+   * Textarea: “Explain what this conversation is about”
+   * Character counter
+   * Value stored globally
+
+2. **ToneSection**
+
+   * Read-only input showing selected tone
+   * Button to open a tone picker
+   * Selected tone stored globally
+
+3. **WelcomeEndSection** (collapsible)
+
+   * Toggle to enable/disable welcome screen
+   * Welcome fields: title, description, CTA
+   * Toggle to enable/disable end screen
+   * End fields: message, optional CTA + URL
+
+4. **JourneySection** (core)
+
+   * List of journey items (textareas)
+   * Each item is free-text “guidance for AI”
+   * Support:
+
+     * Add item
+     * Delete item
+     * Duplicate item
+     * Drag & drop reordering
+   * No question types, no validation here
+
+5. **VisualsSection**
+
+   * Upload image or video
+   * Store visual as background for preview
+
+6. **AboutYouSection**
+
+   * Small textarea for brand/company description
+
+7. **TrainAISection**
+
+   * Collapsible
+   * Advanced textarea for extra AI instructions
+   * Hidden by default
+
+All builder changes should update a single `conversationDraft` state object.
+
+---
+
+## Live preview panel (right)
+
+* Always visible
+* Uses the same renderer as the real respondent experience
+
+Preview must include:
+
+* Full-height visual background (image/video)
+* Centered conversation card
+* Shows ONE step at a time
+
+Preview steps:
+
+1. Welcome step (if enabled)
+2. Journey steps (one per item)
+3. End step (if enabled)
+
+Each journey step shows:
+
+* A generated assistant message (placeholder text is fine)
+* A single input (“Type here…”)
+* A submit button
+* On submit → advance to next step
+
+Preview state (current step index, answers) must be isolated from builder state.
+
+---
+
+## Component expectations
+
+Implement a clean component tree similar to:
+
+* ConversationEditorPage
+
+  * TopBar
+  * SplitLayout
+
+    * BuilderPanel
+    * LivePreviewPanel
+
+Use reusable components:
+
+* Section
+* Accordion
+* Toggle
+* TextareaWithCounter
+* JourneyItemRow
+* ConversationCard
+* StepRenderer
+
+---
+
+## Technical constraints
+
+* Use React + TypeScript
+* No backend required yet (mock AI responses)
+* Keep logic readable and modular
+* Do NOT invent new features
+* Do NOT ask follow-up questions
+* Do NOT refactor unrelated files
+
+---
+
+## Deliverable
+
+Produce working React components with:
+
+* Correct layout
+* Correct state flow
+* Correct interactions
+
+The result should *feel* like a Formless editor, even if visually minimal.

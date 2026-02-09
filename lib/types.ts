@@ -61,17 +61,28 @@ export interface AIContext {
   audience: string;
 }
 
+export interface FormVisuals {
+  type: 'image' | 'video';
+  url: string;
+}
+
 export interface FormConfig {
   questions: Question[];
   welcomeEnabled: boolean;
   welcomeTitle: string;
   welcomeMessage: string;
   welcomeCta: string;
+  endEnabled: boolean;
   endMessage: string;
+  endCtaText: string;
+  endCtaUrl: string;
   endRedirectEnabled: boolean;
   endRedirectUrl: string;
   theme: FormTheme;
   aiContext?: AIContext;
+  visuals?: FormVisuals;
+  aboutYou?: string;
+  trainAI?: string;
 }
 
 export interface Form {
@@ -175,7 +186,10 @@ export function createDefaultConfig(): FormConfig {
     welcomeTitle: '',
     welcomeMessage: '',
     welcomeCta: 'Start',
+    endEnabled: true,
     endMessage: 'Thank you for your submission!',
+    endCtaText: '',
+    endCtaUrl: '',
     endRedirectEnabled: false,
     endRedirectUrl: '',
     theme: {
@@ -190,6 +204,8 @@ export function createDefaultConfig(): FormConfig {
       botBubbleColor: '#f1f5f9',
       userBubbleColor: '#2563eb',
     },
+    aboutYou: '',
+    trainAI: '',
   };
 }
 
