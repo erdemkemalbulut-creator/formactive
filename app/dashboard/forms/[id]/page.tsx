@@ -32,6 +32,8 @@ import {
   Upload,
   X,
   Link,
+  RefreshCw,
+  Check,
 } from 'lucide-react';
 
 function generateKeyFromLabel(label: string): string {
@@ -1148,6 +1150,7 @@ export default function FormBuilderPage() {
             config={currentConfig}
             formName={formName}
             activeItemIndex={activeItemIndex}
+            slug={slug}
           />
         </div>
       </div>
@@ -1408,15 +1411,27 @@ function VisualsSection(props: VisualsSectionProps) {
 
 const PREVIEW_DEFAULT_GRADIENT = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
 
+const SPEED_OPTIONS = [
+  { label: '0.5x', value: 0.5 },
+  { label: '1x', value: 1 },
+  { label: '2x', value: 2 },
+] as const;
+
 function LivePreviewPanel({
   config,
   formName,
   activeItemIndex,
+  slug,
 }: {
   config: FormConfig;
   formName: string;
   activeItemIndex: number | null;
+  slug: string;
 }) {
+  const [previewSpeed, setPreviewSpeed] = useState(1);
+  const [previewKey, setPreviewKey] = useState(0);
+  const [copied, setCopied] = useState(false);
+
   const visuals = config.visuals;
   const hasVisual = visuals?.kind && visuals.kind !== 'none' && visuals?.url?.trim();
   const isVideo = visuals?.kind === 'video';
@@ -1431,21 +1446,74 @@ function LivePreviewPanel({
   }
 
   const cardBg = isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)';
-
   const showEmptyState = config.questions.length === 0 && !config.welcomeEnabled;
+
+  const shareUrl = slug ? `${typeof window !== 'undefined' ? window.location.origin : ''}/f/${slug}` : '';
+
+  const handleCopyUrl = useCallback(() => {
+    if (!shareUrl) return;
+    try {
+      navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  }, [shareUrl]);
+
+  const handleRefresh = useCallback(() => {
+    setPreviewKey((k) => k + 1);
+  }, []);
 
   return (
     <div className="flex flex-col h-full bg-slate-950 relative">
-      <div className="flex items-center justify-center gap-4 py-2.5 px-4 border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm z-10 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-          </span>
-          <span className="text-xs text-slate-400 uppercase tracking-wider font-medium">Live preview</span>
+      {/* Preview top bar */}
+      <div className="flex items-center gap-2 py-2 px-3 border-b border-slate-800 bg-slate-900/80 backdrop-blur-sm z-10 flex-shrink-0">
+        {/* Left: shareable URL */}
+        <div className="flex-1 min-w-0 flex items-center gap-1.5">
+          <div className="flex items-center flex-1 min-w-0 bg-slate-800/60 rounded-md border border-slate-700/50 px-2.5 py-1.5">
+            <Link className="w-3.5 h-3.5 text-slate-500 flex-shrink-0 mr-2" />
+            <span className="text-xs text-slate-400 truncate select-all font-mono">
+              {shareUrl || 'Publish to get a shareable link'}
+            </span>
+          </div>
+          {shareUrl && (
+            <button
+              onClick={handleCopyUrl}
+              className="flex-shrink-0 p-1.5 rounded-md hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+              title="Copy link"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+            </button>
+          )}
+        </div>
+
+        {/* Right: speed selector + refresh */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center bg-slate-800/60 rounded-md border border-slate-700/50 p-0.5">
+            {SPEED_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setPreviewSpeed(opt.value)}
+                className={`px-2 py-1 text-[11px] font-medium rounded transition-colors ${
+                  previewSpeed === opt.value
+                    ? 'bg-slate-700 text-white'
+                    : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={handleRefresh}
+            className="p-1.5 rounded-md hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+            title="Refresh preview"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 
+      {/* Preview canvas */}
       <div className="flex-1 relative overflow-hidden">
         {hasVisual ? (
           <div className="absolute inset-0">
@@ -1467,13 +1535,14 @@ function LivePreviewPanel({
           <div className="absolute inset-0" style={{ background: PREVIEW_DEFAULT_GRADIENT }} />
         )}
 
-        <div className="relative z-10 flex items-center justify-center h-full p-4">
+        <div className="relative z-10 flex items-center justify-center h-full p-6">
           <div
-            className="w-full max-w-md h-full max-h-[600px] rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm"
-            style={{ backgroundColor: cardBg }}
+            key={previewKey}
+            className="w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm"
+            style={{ backgroundColor: cardBg, maxHeight: 'calc(100% - 2rem)' }}
           >
             {showEmptyState ? (
-              <div className="flex items-center justify-center h-full text-slate-400">
+              <div className="flex items-center justify-center h-64 text-slate-400">
                 <div className="text-center px-8">
                   <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
                   <p className="text-sm font-medium">No steps yet</p>
