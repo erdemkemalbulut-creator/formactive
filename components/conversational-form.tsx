@@ -289,6 +289,39 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
     const inert = isPreview;
 
     switch (q.type) {
+      case 'statement':
+        return (
+          <div className="mt-6">
+            {inert ? (
+              <span
+                className="inline-block px-6 py-3 text-white text-sm font-medium rounded-full opacity-80 cursor-default"
+                style={{ backgroundColor: primaryColor }}
+              >
+                Continue &rarr;
+              </span>
+            ) : (
+              <button
+                onClick={() => advanceToStep(currentStepIndex + 1)}
+                className="inline-block px-6 py-3 text-white text-sm font-medium rounded-full transition-all hover:opacity-90 hover:shadow-lg"
+                style={{ backgroundColor: primaryColor }}
+              >
+                Continue &rarr;
+              </button>
+            )}
+          </div>
+        );
+
+      case 'file_upload':
+        return (
+          <div className="mt-6">
+            <div className={`border-2 border-dashed rounded-lg p-8 text-center ${isDark ? 'border-slate-600 text-slate-400' : 'border-slate-300 text-slate-500'}`}>
+              <svg className="w-8 h-8 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+              <p className="text-sm font-medium">Drop files here or click to upload</p>
+              <p className="text-xs mt-1 opacity-70">PDF, images, documents up to 10MB</p>
+            </div>
+          </div>
+        );
+
       case 'cta': {
         const resolvedUrl = resolveTemplate(q.cta?.url || '', answers);
         return (

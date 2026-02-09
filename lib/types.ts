@@ -8,7 +8,9 @@ export type QuestionType =
   | 'number'
   | 'email'
   | 'phone'
-  | 'cta';
+  | 'cta'
+  | 'statement'
+  | 'file_upload';
 
 export type ToneType = 'friendly' | 'professional' | 'luxury' | 'playful';
 
@@ -36,6 +38,8 @@ export interface Question {
   options: QuestionOption[];
   order: number;
   cta?: CTAConfig;
+  videoUrl?: string;
+  internalName?: string;
 }
 
 export interface FormTheme {
@@ -150,6 +154,8 @@ export const QUESTION_TYPES: { value: QuestionType; label: string; icon: string 
   { value: 'multiple_choice', label: 'Multiple choice', icon: 'CheckSquare' },
   { value: 'yes_no', label: 'Yes / No', icon: 'ToggleLeft' },
   { value: 'cta', label: 'Call to Action', icon: 'ExternalLink' },
+  { value: 'statement', label: 'Statement', icon: 'MessageSquare' },
+  { value: 'file_upload', label: 'File upload', icon: 'Upload' },
 ];
 
 export function createDefaultQuestion(order: number): Question {

@@ -13,6 +13,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   ArrowLeft,
   Plus,
@@ -34,6 +36,8 @@ import {
   Link,
   RefreshCw,
   Check,
+  Settings,
+  Youtube,
 } from 'lucide-react';
 
 function generateKeyFromLabel(label: string): string {
@@ -92,6 +96,7 @@ export default function FormBuilderPage() {
   const [generatingAllWording, setGeneratingAllWording] = useState(false);
   const [showTonePicker, setShowTonePicker] = useState(false);
   const [previewTarget, setPreviewTarget] = useState<PreviewTarget>(null);
+  const [settingsStepId, setSettingsStepId] = useState<string | null>(null);
   const [uploadingVisual, setUploadingVisual] = useState(false);
   const [showVisualUrlInput, setShowVisualUrlInput] = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
@@ -171,7 +176,6 @@ export default function FormBuilderPage() {
       checkbox: 'yes_no',
       consent: 'yes_no',
       rating: 'number',
-      file_upload: 'short_text',
       time: 'short_text',
     };
     const rawType = q.type || q.ui_type || 'short_text';
@@ -199,6 +203,8 @@ export default function FormBuilderPage() {
       options,
       order: q.order ?? 0,
       cta: q.cta,
+      videoUrl: q.videoUrl,
+      internalName: q.internalName,
     };
   };
 
@@ -401,6 +407,7 @@ export default function FormBuilderPage() {
   };
 
   const deleteJourneyItem = (questionId: string) => {
+    if (settingsStepId === questionId) setSettingsStepId(null);
     const newQuestions = currentConfig.questions
       .filter((q) => q.id !== questionId)
       .map((q, i) => ({ ...q, order: i }));
@@ -962,6 +969,7 @@ export default function FormBuilderPage() {
                           onDuplicate={() => duplicateJourneyItem(q.id)}
                           onDelete={() => deleteJourneyItem(q.id)}
                           onGenerateWording={() => generateWordingForQuestion(q.id)}
+                          onOpenSettings={() => setSettingsStepId(q.id)}
                           onDragStart={() => handleDragStart(i)}
                           onDragOver={(e) => handleDragOver(e, i)}
                           onDragEnd={handleDragEnd}
@@ -1160,7 +1168,150 @@ export default function FormBuilderPage() {
           />
         </div>
       </div>
+
+      {settingsStepId && (() => {
+        const q = currentConfig.questions.find(q => q.id === settingsStepId);
+        const idx = currentConfig.questions.findIndex(q => q.id === settingsStepId);
+        if (!q) return null;
+        return (
+          <StepSettingsDrawer
+            question={q}
+            stepNumber={idx + 1}
+            open={true}
+            onOpenChange={(open) => { if (!open) setSettingsStepId(null); }}
+            onUpdate={(updates) => updateQuestion(settingsStepId, updates)}
+          />
+        );
+      })()}
     </div>
+  );
+}
+
+const SETTINGS_TYPE_GROUPS = [
+  { label: 'Open ended', types: [
+    { value: 'short_text' as const, label: 'Short text' },
+    { value: 'long_text' as const, label: 'Long text' },
+    { value: 'email' as const, label: 'Email' },
+    { value: 'phone' as const, label: 'Phone' },
+    { value: 'number' as const, label: 'Number' },
+    { value: 'date' as const, label: 'Date' },
+  ]},
+  { label: 'Multiple choice', types: [
+    { value: 'single_choice' as const, label: 'Single choice' },
+    { value: 'multiple_choice' as const, label: 'Multiple choice' },
+    { value: 'yes_no' as const, label: 'Yes / No' },
+  ]},
+  { label: 'Statement', types: [
+    { value: 'statement' as const, label: 'Statement' },
+    { value: 'cta' as const, label: 'Call to Action' },
+  ]},
+  { label: 'File upload', types: [
+    { value: 'file_upload' as const, label: 'File upload' },
+  ]},
+];
+
+function StepSettingsDrawer({
+  question,
+  stepNumber,
+  open,
+  onOpenChange,
+  onUpdate,
+}: {
+  question: Question;
+  stepNumber: number;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onUpdate: (updates: Partial<Question>) => void;
+}) {
+  const promptText = question.message || question.label || 'Untitled step';
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-[380px] sm:max-w-[380px] overflow-y-auto">
+        <SheetHeader className="pb-4 border-b border-slate-100">
+          <SheetTitle className="text-base">Step {stepNumber} Settings</SheetTitle>
+          <SheetDescription className="text-sm text-slate-500 line-clamp-2">{promptText}</SheetDescription>
+        </SheetHeader>
+
+        <div className="space-y-6 pt-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label className="text-sm font-medium text-slate-800">Required</Label>
+              <p className="text-xs text-slate-500">Respondent must answer this step to continue</p>
+            </div>
+            <Switch
+              checked={question.required}
+              onCheckedChange={(checked) => onUpdate({ required: checked })}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-slate-800">Question type</Label>
+            <Select
+              value={question.type}
+              onValueChange={(value) => onUpdate({ type: value as QuestionType })}
+            >
+              <SelectTrigger className="w-full h-9 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SETTINGS_TYPE_GROUPS.map((group) => (
+                  <div key={group.label}>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">{group.label}</div>
+                    {group.types.map((t) => (
+                      <SelectItem key={t.value} value={t.value} className="text-sm">{t.label}</SelectItem>
+                    ))}
+                  </div>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-slate-800 flex items-center gap-1.5">
+              <Youtube className="w-3.5 h-3.5 text-red-500" />
+              Attach a YouTube video
+            </Label>
+            <p className="text-xs text-slate-500">Optionally show a video alongside this step</p>
+            <Input
+              value={question.videoUrl || ''}
+              onChange={(e) => onUpdate({ videoUrl: e.target.value || undefined })}
+              placeholder="https://youtube.com/watch?v=..."
+              className="h-9 text-sm"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-slate-800">Internal name</Label>
+            <p className="text-xs text-slate-500">Machine-readable key used in data exports</p>
+            <Input
+              value={question.internalName ?? question.key ?? ''}
+              onChange={(e) => {
+                const val = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_').replace(/(^_|_$)/g, '');
+                onUpdate({ internalName: val || undefined });
+              }}
+              placeholder="e.g. attendee_name"
+              className="h-9 text-sm font-mono"
+            />
+          </div>
+
+          {(question.type === 'single_choice' || question.type === 'multiple_choice') && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-slate-800">Options</Label>
+              <p className="text-xs text-slate-500">Set in the journey editor or via AI generation</p>
+              <div className="space-y-1">
+                {question.options.map((opt, i) => (
+                  <div key={opt.id} className="text-sm text-slate-600 bg-slate-50 rounded px-2.5 py-1.5">{opt.label}</div>
+                ))}
+                {question.options.length === 0 && (
+                  <p className="text-xs text-slate-400 italic">No options yet — use AI wording to generate them</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -1176,6 +1327,7 @@ function JourneyItemRow({
   onDuplicate,
   onDelete,
   onGenerateWording,
+  onOpenSettings,
   onDragStart,
   onDragOver,
   onDragEnd,
@@ -1191,6 +1343,7 @@ function JourneyItemRow({
   onDuplicate: () => void;
   onDelete: () => void;
   onGenerateWording: () => void;
+  onOpenSettings: () => void;
   onDragStart: () => void;
   onDragOver: (e: React.DragEvent) => void;
   onDragEnd: () => void;
@@ -1278,11 +1431,11 @@ function JourneyItemRow({
               )}
             </button>
             <button
-              onClick={(e) => { e.stopPropagation(); onFocus(); setEditing(true); }}
+              onClick={(e) => { e.stopPropagation(); onFocus(); onOpenSettings(); }}
               className="p-1 rounded hover:bg-slate-100 transition-colors"
-              title="Edit step"
+              title="Step settings"
             >
-              <MoreVertical className="w-3.5 h-3.5 text-slate-400" />
+              <Settings className="w-3.5 h-3.5 text-slate-400" />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(); }}
