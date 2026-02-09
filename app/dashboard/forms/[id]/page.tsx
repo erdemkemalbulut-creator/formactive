@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import { FormConfig, Question, QuestionType, QUESTION_TYPES, ToneType, createDefaultCTA, FormTheme, DEFAULT_THEME, AIContext, FormVisuals, StepVisual, VisualLayout, FormSettings } from '@/lib/types';
 import { SettingsDialog } from '@/components/settings-dialog';
+import { AnalyticsDashboard } from '@/components/analytics-dashboard';
 import { ConversationalForm, PreviewTarget } from '@/components/conversational-form';
 import { CrossDissolveBackground, VisualLayer } from '@/components/cross-dissolve-background';
 import { useToast } from '@/hooks/use-toast';
@@ -742,13 +743,7 @@ export default function FormBuilderPage() {
           </div>
 
           {activeTab === 'analytics' ? (
-            <div className="flex-1 flex items-center justify-center p-8">
-              <div className="text-center">
-                <BarChart3 className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-                <p className="text-sm font-medium text-slate-500">Analytics coming soon</p>
-                <p className="text-xs text-slate-400 mt-1">Publish your form to start collecting data</p>
-              </div>
-            </div>
+            <AnalyticsDashboard formId={formId} />
           ) : (
           <div className="flex-1 overflow-y-auto">
             <div className="divide-y divide-slate-100">
@@ -1162,7 +1157,6 @@ function StepSettingsDrawer({
   onUpdate: (updates: Partial<Question>) => void;
 }) {
   const promptText = question.message || question.label || 'Untitled step';
-  const stepNumber = question.order + 1;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

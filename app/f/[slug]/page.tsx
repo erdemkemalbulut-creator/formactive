@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { FormConfig, Question, QuestionType, StepVisual } from '@/lib/types';
 import { ConversationalForm } from '@/components/conversational-form';
 import { CrossDissolveBackground, VisualLayer } from '@/components/cross-dissolve-background';
+import { trackEvent, markStart, getElapsedMs } from '@/lib/analytics';
 
 interface FormData {
   id: string;
@@ -90,10 +91,50 @@ export default function PublicFormPage() {
   const [notFound, setNotFound] = useState(false);
   const [currentPhase, setCurrentPhase] = useState<'welcome' | 'questions' | 'submitting' | 'done'>('welcome');
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
+  const viewTracked = useRef(false);
 
   useEffect(() => {
     loadForm();
   }, [slug]);
+
+  useEffect(() => {
+    if (form && !viewTracked.current) {
+      viewTracked.current = true;
+      markStart();
+      trackEvent(form.id, { event_type: 'form_view' });
+    }
+  }, [form]);
+
+  const handlePhaseChange = useCallback((phase: 'welcome' | 'questions' | 'submitting' | 'done') => {
+    setCurrentPhase(phase);
+    if (!form) return;
+
+    if (phase === 'questions') {
+      markStart();
+      trackEvent(form.id, { event_type: 'form_start' });
+    }
+    if (phase === 'done') {
+      trackEvent(form.id, {
+        event_type: 'form_complete',
+        duration_ms: getElapsedMs(),
+      });
+    }
+  }, [form]);
+
+  const handleStepChange = useCallback((stepIndex: number) => {
+    setCurrentStepIdx(stepIndex);
+    if (!form) return;
+    const sorted = [...form.published_config.questions].sort((a, b) => a.order - b.order);
+    const q = sorted[stepIndex];
+    if (q) {
+      trackEvent(form.id, {
+        event_type: 'step_reached',
+        step_id: q.id,
+        step_type: q.type,
+        step_index: stepIndex,
+      });
+    }
+  }, [form]);
 
   const loadForm = async () => {
     try {
@@ -130,6 +171,11 @@ export default function PublicFormPage() {
     });
 
     if (!res.ok) throw new Error('Submission failed');
+
+    trackEvent(form.id, {
+      event_type: 'form_submit',
+      duration_ms: getElapsedMs(),
+    });
   };
 
   if (loading) {
@@ -205,8 +251,8 @@ export default function PublicFormPage() {
           config={form.published_config}
           formName={form.name}
           onSubmit={handleSubmit}
-          onPhaseChange={setCurrentPhase}
-          onStepChange={setCurrentStepIdx}
+          onPhaseChange={handlePhaseChange}
+          onStepChange={handleStepChange}
         />
       </div>
     </div>

@@ -34,6 +34,15 @@ FormActive is built on **Next.js 13.5.1 (App Router)** using **React 18** for th
     - `forms` table: Stores form metadata, `current_config` (editing state), and `published_config` (live state).
     - `submissions` table: Records form answers and metadata.
     - `form_versions` table: Snapshots of form configurations for versioning.
+    - `form_events` table: Analytics events (views, starts, step_reached, completions, submissions). Schema: `id`, `form_id`, `event_type`, `session_id`, `step_id`, `step_type`, `step_index`, `device_type`, `duration_ms`, `created_at`. RLS: anon insert, owner-only select.
+
+**Analytics v1:**
+- **Event types tracked:** `form_view`, `form_start`, `step_reached`, `form_complete`, `form_submit`.
+- **Client-side tracker:** `lib/analytics.ts` — deduplicates events per session, detects device type, tracks elapsed time. Uses `sessionStorage` for session IDs.
+- **Preview filtering:** Analytics events are only fired from the public form page (`app/f/[slug]/page.tsx`). The builder preview (`isPreview=true`) never calls `trackEvent`.
+- **API routes:** `POST /api/forms/[id]/events` (public, anon insert), `GET /api/forms/[id]/analytics` (auth required, returns aggregated metrics).
+- **Dashboard:** `components/analytics-dashboard.tsx` — shows Views, Starts, Completion rate, Avg time to complete, Drop-off by step bar chart, Device breakdown. Gracefully handles empty state and missing table.
+- **Migration SQL:** `supabase/migrations/20260209_create_form_events.sql` — must be run manually in Supabase SQL Editor.
 
 **AI System (Two-Step with Validation):**
 1.  **Structure Generation:** An AI endpoint (`/api/ai/generate-conversation`) takes a context description and generates a JSON array of question structures (`label`, `type`, `required`, `options`).
