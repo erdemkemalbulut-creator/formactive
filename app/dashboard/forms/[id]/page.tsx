@@ -562,15 +562,15 @@ export default function FormBuilderPage() {
         method: 'POST',
         headers,
       });
-      if (!res.ok) throw new Error('Publish failed');
       const updated = await res.json();
-      setStatus(updated.status);
+      if (!res.ok) throw new Error(updated.error || 'Publish failed');
+      setStatus(updated.status || 'live');
       setSlug(updated.slug || slug);
-      setVersion(updated.version);
+      setVersion(updated.version || 1);
       setPublishedConfig(updated.published_config);
       toast({ title: 'Published!', description: 'Your form is now live.' });
-    } catch {
-      toast({ title: 'Error', description: 'Failed to publish', variant: 'destructive' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err?.message || 'Failed to publish', variant: 'destructive' });
     } finally {
       setPublishing(false);
     }

@@ -34,8 +34,9 @@ export async function POST(
       .single();
 
     if (fetchError || !form) {
+      console.error('[Publish API] Fetch error:', fetchError);
       return NextResponse.json(
-        { error: 'Form not found' },
+        { error: fetchError?.message || 'Form not found' },
         { status: 404 }
       );
     }
@@ -45,12 +46,19 @@ export async function POST(
 
     const updates: Record<string, any> = {
       published_config: form.current_config,
-      status: 'live',
       is_published: true,
-      version: newVersion,
-      published_at: now,
       updated_at: now,
     };
+
+    if ('status' in form) {
+      updates.status = 'live';
+    }
+    if ('version' in form) {
+      updates.version = newVersion;
+    }
+    if ('published_at' in form) {
+      updates.published_at = now;
+    }
 
     if (!form.slug) {
       updates.slug = generateSlug(form.name || 'form');
@@ -67,28 +75,32 @@ export async function POST(
     if (updateError) {
       console.error('[Publish API] Update error:', updateError);
       return NextResponse.json(
-        { error: 'Failed to publish form' },
+        { error: updateError.message || 'Failed to publish form' },
         { status: 500 }
       );
     }
 
-    const { error: versionError } = await supabase
-      .from('form_versions')
-      .insert({
-        form_id: params.id,
-        version_number: newVersion,
-        config_snapshot: form.current_config,
-      });
+    try {
+      const { error: versionError } = await supabase
+        .from('form_versions')
+        .insert({
+          form_id: params.id,
+          version_number: newVersion,
+          config_snapshot: form.current_config,
+        });
 
-    if (versionError) {
-      console.error('[Publish API] Version insert error:', versionError);
+      if (versionError) {
+        console.error('[Publish API] Version insert error (non-fatal):', versionError.message);
+      }
+    } catch (versionErr) {
+      console.error('[Publish API] Version insert exception (non-fatal):', versionErr);
     }
 
     return NextResponse.json(updatedForm);
   } catch (error: any) {
     console.error('[Publish API] Unexpected error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: error?.message || 'Internal server error' },
       { status: 500 }
     );
   }
