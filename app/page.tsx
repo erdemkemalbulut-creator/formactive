@@ -34,7 +34,7 @@ export default function Home() {
             AI conversational forms that ask and adapt.
           </h1>
           <p className="mt-5 text-lg text-slate-500 leading-relaxed">
-            Create Formless-style chat forms to collect structured answers.
+            Create AI-powered chat forms to collect structured answers.
           </p>
           <button
             onClick={() => router.push('/signin')}

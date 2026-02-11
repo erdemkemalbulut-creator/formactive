@@ -254,7 +254,7 @@ export default function DashboardPage() {
               </div>
               <Button onClick={createNewForm} disabled={isCreating} className="bg-slate-900 hover:bg-slate-800 rounded-xl">
                 <Plus className="w-4 h-4 mr-2" />
-                {isCreating ? 'Creating...' : '+ New form'}
+                {isCreating ? 'Creating...' : 'New form'}
               </Button>
             </div>
 
