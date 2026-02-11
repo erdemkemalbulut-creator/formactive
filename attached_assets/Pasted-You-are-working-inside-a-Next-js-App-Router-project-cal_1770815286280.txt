@@ -1,0 +1,62 @@
+You are working inside a Next.js (App Router) project called **formactive**.
+
+Goal: make this an **internal-only** product with an extremely clean UX. Remove all commercial/billing/profile surfaces.
+
+Implement this exact flow:
+**Landing (/) → Sign in (/signin) → Dashboard (/dashboard) → Sign out → back to Landing (/)**
+
+Brand:
+
+* Text logo only: **formactive** (lowercase)
+* Bold, modern, rounded feel (clean typography, rounded corners)
+* Minimal UI, lots of whitespace
+
+Landing page (app/page.tsx):
+
+* Very minimal, Formless-inspired
+* Show logo + one headline + one short subline + a single primary button: **Sign in**
+* Messaging must clearly say: **AI-powered conversational forms (Formless-style)**
+* No pricing, no billing, no “upgrade”, no marketing sections, no footer clutter
+
+Copy suggestion:
+Headline: “AI conversational forms that ask and adapt.”
+Subline: “Create Formless-style chat forms to collect structured answers.”
+Button: “Sign in”
+
+Auth:
+
+* Create /signin page if it doesn’t exist
+* After sign-in success, redirect to **/dashboard**
+* If user is not signed in and visits /dashboard, redirect to **/**
+
+Dashboard (app/dashboard/page.tsx):
+
+* No “My Profile” page
+* No billing/plan UI
+* Top bar:
+
+  * Left: logo “formactive” (links to /dashboard)
+  * Right: show user email address + **Sign out** button
+* Main content: **Forms list only**
+
+  * Title: “Forms”
+  * Button: “+ New form”
+  * List or grid of forms (simple cards is fine)
+* Nothing else in the nav
+
+Sign out:
+
+* Clear session
+* Redirect to “/”
+* Landing page is shown
+
+Cleanup:
+
+* Remove/disable any routes/components referencing billing, subscriptions, upgrades, plans, usage limits, account settings, or profile pages.
+* Remove any “Upgrade” buttons/links/logic.
+* Keep only auth + forms list + dashboard + sign out.
+
+Deliverable:
+
+* Make the necessary code edits in the relevant files (app/page.tsx, app/signin/page.tsx if needed, app/dashboard/page.tsx, shared layout/components).
+* Ensure the flow works end-to-end.

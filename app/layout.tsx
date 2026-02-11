@@ -7,12 +7,8 @@ import { Toaster } from '@/components/ui/toaster';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'FormActive - Build Forms, Preview Live, Publish Instantly',
-  description: 'The all-in-one form builder with live preview. Create questions, see your form in real-time, and publish — all from a single page.',
-  openGraph: {
-    title: 'FormActive - Build Forms, Preview Live, Publish Instantly',
-    description: 'The all-in-one form builder with live preview.',
-  },
+  title: 'formactive',
+  description: 'AI conversational forms that ask and adapt.',
 };
 
 export default function RootLayout({

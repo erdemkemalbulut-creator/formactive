@@ -3,8 +3,9 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { LoginForm } from '@/components/auth/login-form';
 
-export default function Home() {
+export default function SignInPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
@@ -25,23 +26,17 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white flex flex-col">
       <header className="px-8 py-6">
-        <span className="text-xl font-bold text-slate-900 tracking-tight">formactive</span>
+        <button
+          onClick={() => router.push('/')}
+          className="text-xl font-bold text-slate-900 tracking-tight hover:opacity-70 transition-opacity"
+        >
+          formactive
+        </button>
       </header>
 
       <main className="flex-1 flex items-center justify-center px-6">
-        <div className="max-w-xl text-center -mt-20">
-          <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 leading-tight tracking-tight">
-            AI conversational forms that ask and adapt.
-          </h1>
-          <p className="mt-5 text-lg text-slate-500 leading-relaxed">
-            Create Formless-style chat forms to collect structured answers.
-          </p>
-          <button
-            onClick={() => router.push('/signin')}
-            className="mt-10 inline-flex items-center justify-center h-12 px-8 text-base font-medium text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition-colors"
-          >
-            Sign in
-          </button>
+        <div className="w-full max-w-sm -mt-20">
+          <LoginForm />
         </div>
       </main>
     </div>

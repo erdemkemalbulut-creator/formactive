@@ -14,7 +14,6 @@ import {
   ArrowRight,
   FileText,
   BarChart3,
-  Globe,
   MoreVertical,
   Trash2,
 } from 'lucide-react';
@@ -179,10 +178,12 @@ export default function DashboardPage() {
       <header className="bg-white border-b border-slate-200">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Globe className="w-5 h-5 text-slate-700" />
-              <span className="text-lg font-semibold text-slate-900">FormActive</span>
-            </div>
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="text-lg font-bold text-slate-900 tracking-tight hover:opacity-70 transition-opacity"
+            >
+              formactive
+            </button>
             <AuthActions />
           </div>
         </div>
@@ -244,16 +245,16 @@ export default function DashboardPage() {
           <>
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h1 className="text-2xl font-bold text-slate-900">Your forms</h1>
+                <h1 className="text-2xl font-bold text-slate-900">Forms</h1>
                 <p className="text-sm text-slate-500 mt-1">
                   {forms.length} form{forms.length !== 1 ? 's' : ''}
                   {liveCount > 0 && ` · ${liveCount} live`}
                   {totalSubmissions > 0 && ` · ${totalSubmissions} submission${totalSubmissions !== 1 ? 's' : ''}`}
                 </p>
               </div>
-              <Button onClick={createNewForm} disabled={isCreating} className="bg-slate-900 hover:bg-slate-800">
+              <Button onClick={createNewForm} disabled={isCreating} className="bg-slate-900 hover:bg-slate-800 rounded-xl">
                 <Plus className="w-4 h-4 mr-2" />
-                {isCreating ? 'Creating...' : 'New form'}
+                {isCreating ? 'Creating...' : '+ New form'}
               </Button>
             </div>
 

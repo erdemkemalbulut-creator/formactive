@@ -4,13 +4,15 @@
 FormActive is a Next.js 13 application that provides an AI-powered conversational form builder. Users describe their situation in natural language, and AI generates a complete conversational form with appropriate question types and natural wording. Forms are displayed as a Formless-style single-step progressive disclosure experience with customizable themes. The project aims to offer a streamlined, AI-driven form creation process, focusing on user-friendly conversational interfaces.
 
 ## User Preferences
-- No pricing/monetisation features
+- Internal-only product — no pricing, billing, upgrades, profile pages, or commercial surfaces
 - Conversational chat-style forms (not classic all-at-once forms)
-- App name: FormActive
+- App name: formactive (lowercase text logo, no icon)
+- Brand: bold, modern, rounded feel, clean typography, lots of whitespace
 - Single-page builder approach (no multi-step wizards)
 - AI-powered context-first workflow
 - Two-step AI: structure first, then wording
 - Formless-style UX: builder on left, live preview on right
+- Auth flow: Landing (/) → Sign in (/signin) → Dashboard (/dashboard) → Sign out → Landing (/)
 
 ## System Architecture
 FormActive is built on **Next.js 13.5.1 (App Router)** using **React 18** for the UI, styled with **Tailwind CSS** and **Radix UI components (shadcn/ui pattern)**. The backend leverages **Supabase** for authentication, database management, and RLS policies. AI capabilities are powered by **OpenAI gpt-4.1** via Replit AI Integrations. The entire application is developed in **TypeScript**.
