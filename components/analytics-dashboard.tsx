@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
+import { supabase } from '@/lib/supabase';
 import { BarChart3, Eye, Play, CheckCircle, Clock, Monitor, Smartphone, Tablet, RefreshCw, AlertCircle } from 'lucide-react';
 
 interface AnalyticsData {
@@ -53,20 +54,24 @@ function MetricCard({ icon: Icon, label, value, sublabel }: {
 }
 
 export function AnalyticsDashboard({ formId }: { formId: string }) {
-  const { session } = useAuth();
+  const { user } = useAuth();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchAnalytics = useCallback(async () => {
-    if (!session?.access_token) return;
+    if (!user) return;
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) return;
 
     setLoading(true);
     setError(null);
 
     try {
       const res = await fetch(`/api/forms/${formId}/analytics`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!res.ok) {
@@ -80,7 +85,7 @@ export function AnalyticsDashboard({ formId }: { formId: string }) {
     } finally {
       setLoading(false);
     }
-  }, [formId, session?.access_token]);
+  }, [formId, user]);
 
   useEffect(() => {
     fetchAnalytics();

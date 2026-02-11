@@ -84,13 +84,13 @@ export async function GET(
     const completionRate = starts > 0 ? Math.round((completions / starts) * 100) : 0;
 
     const completionTimes: number[] = [];
-    for (const [sid, sevents] of sessions) {
-      if (!completeSessions.has(sid)) continue;
+    sessions.forEach((sevents, sid) => {
+      if (!completeSessions.has(sid)) return;
       const completeEvent = sevents.find(e => e.event_type === 'form_complete');
       if (completeEvent?.duration_ms && completeEvent.duration_ms > 0) {
         completionTimes.push(completeEvent.duration_ms);
       }
-    }
+    });
     const avgTimeToComplete = completionTimes.length > 0
       ? Math.round(completionTimes.reduce((a, b) => a + b, 0) / completionTimes.length)
       : null;

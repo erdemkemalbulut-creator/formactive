@@ -170,7 +170,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
     }
   }, []);
 
-  const prevPreviewTargetRef = useRef<PreviewTarget>(null);
+  const prevPreviewTargetRef = useRef<PreviewTarget | undefined>(undefined);
   useEffect(() => {
     if (!isPreview) return;
 

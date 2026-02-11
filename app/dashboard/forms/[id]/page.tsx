@@ -1405,7 +1405,6 @@ function StepVisualEditor({
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlInputValue, setUrlInputValue] = useState('');
   const { toast } = useToast();
-  const { session } = useAuth();
 
   const hasVisual = visual?.kind && visual.kind !== 'none' && visual?.url?.trim();
   const layout = visual?.layout || 'fill';
@@ -1414,7 +1413,8 @@ function StepVisualEditor({
   const handleUpload = async (file: File) => {
     setUploading(true);
     try {
-      const token = session?.access_token;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
       if (!token) throw new Error('Not authenticated');
       const fd = new FormData();
       fd.append('file', file);
