@@ -177,10 +177,18 @@ export function getChattinessPercentage(contract: ToneContract): number {
 
 /**
  * Get visual indicator for chattiness level (number of bars, 1-4)
+ * Based on Formless-like bar mapping:
+ * 0.00-0.34 => 1 bar
+ * 0.35-0.54 => 2 bars
+ * 0.55-0.74 => 3 bars
+ * 0.75-1.00 => 4 bars
  */
 export function getChattinessBars(chattiness: number): number {
   const clamped = clamp(chattiness, 0, 1);
-  return Math.ceil(clamped * 4);
+  if (clamped <= 0.34) return 1;
+  if (clamped <= 0.54) return 2;
+  if (clamped <= 0.74) return 3;
+  return 4;
 }
 
 /**

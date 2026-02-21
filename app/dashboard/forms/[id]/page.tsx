@@ -823,37 +823,43 @@ export default function FormBuilderPage() {
                         </button>
                       </div>
                       {showTonePresets && (
-                        <div className="grid grid-cols-2 gap-2">
-                          {(Object.entries(TONE_PRESETS) as [TonePreset, typeof TONE_PRESETS[TonePreset]][]).map(([key, preset]) => {
-                            const isSelected = currentConfig.tone?.preset === key;
-                            const bars = getChattinessBars(preset.defaultChattiness);
-                            return (
-                              <button
-                                key={key}
-                                onClick={() => updateTone({ preset: key, chattiness: null })}
-                                className={`px-3 py-2.5 rounded-lg border text-left transition-all ${
-                                  isSelected
-                                    ? 'border-blue-300 bg-blue-50 ring-1 ring-blue-200'
-                                    : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                                }`}
-                              >
-                                <div className="flex items-center justify-between mb-1">
-                                  <span className="text-sm font-medium text-slate-800">{preset.label}</span>
-                                  <div className="flex gap-0.5">
-                                    {Array.from({ length: 4 }).map((_, i) => (
-                                      <div
-                                        key={i}
-                                        className={`w-1 h-3 rounded-sm ${
-                                          i < bars ? 'bg-blue-500' : 'bg-slate-200'
-                                        }`}
-                                      />
-                                    ))}
+                        <div className="space-y-2">
+                          <p className="text-[10px] text-slate-500 leading-relaxed">
+                            Different tones produce longer responses. Choose carefully according to your requirements.
+                          </p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {(Object.entries(TONE_PRESETS) as [TonePreset, typeof TONE_PRESETS[TonePreset]][]).map(([key, preset]) => {
+                              const isSelected = currentConfig.tone?.preset === key;
+                              const bars = getChattinessBars(preset.defaultChattiness);
+                              return (
+                                <button
+                                  key={key}
+                                  onClick={() => updateTone({ preset: key, chattiness: null })}
+                                  className={`px-3 py-2.5 rounded-lg border text-left transition-all ${
+                                    isSelected
+                                      ? 'border-blue-300 bg-blue-50 ring-1 ring-blue-200'
+                                      : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-sm font-medium text-slate-800">{preset.label}</span>
+                                    <div className="flex gap-0.5 items-end">
+                                      {Array.from({ length: 4 }).map((_, i) => (
+                                        <div
+                                          key={i}
+                                          className={`w-1.5 rounded-sm transition-colors ${
+                                            i < bars ? 'bg-green-500' : 'bg-slate-200'
+                                          }`}
+                                          style={{ height: `${(i + 1) * 3}px` }}
+                                        />
+                                      ))}
+                                    </div>
                                   </div>
-                                </div>
-                                <span className="block text-[11px] text-slate-500">{preset.description}</span>
-                              </button>
-                            );
-                          })}
+                                  <span className="block text-[11px] text-slate-500">{preset.description}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
                       )}
                       <div className="text-[10px] text-slate-400 mt-1.5 flex items-center gap-1">
