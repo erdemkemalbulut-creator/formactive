@@ -48,6 +48,9 @@ export interface Question {
   internalName?: string;
   visual?: StepVisual;
   journeyInstruction?: string;
+  intent?: string;
+  examples?: string[];
+  vagueAnswers?: string[];
 }
 
 export interface FormTheme {

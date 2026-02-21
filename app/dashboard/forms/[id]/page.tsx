@@ -1698,6 +1698,7 @@ function LivePreviewPanel({
   const [previewSpeed, setPreviewSpeed] = useState(1);
   const [previewKey, setPreviewKey] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
 
   const previewVisualLayer: VisualLayer | null = (() => {
     const resolveActiveVisual = (): StepVisual | undefined => {
@@ -1781,6 +1782,17 @@ function LivePreviewPanel({
           >
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
+          <button
+            onClick={() => setDebugMode(!debugMode)}
+            className={`px-2 py-1 text-[11px] font-medium rounded-md transition-colors ${
+              debugMode
+                ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                : 'text-slate-500 hover:text-slate-300 border border-transparent'
+            }`}
+            title="Toggle debug mode"
+          >
+            Debug
+          </button>
         </div>
       </div>
 
@@ -1808,6 +1820,7 @@ function LivePreviewPanel({
               formName={formName || 'Form'}
               isPreview={true}
               previewTarget={previewTarget}
+              debugMode={debugMode}
             />
           )}
         </div>
