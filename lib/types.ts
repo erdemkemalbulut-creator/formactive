@@ -93,6 +93,15 @@ export interface StepVisual {
   opacity?: number;
 }
 
+export interface ConversationMeta {
+  currentFieldKey?: string;
+  currentFieldIndex?: number;
+  attempts?: Record<string, number>;
+  abandoned?: boolean;
+  abandonedReason?: 'max_attempts' | 'user_quit' | 'timeout';
+  lastActivity?: string;
+}
+
 export interface FormSettings {
   colors?: {
     background?: string;

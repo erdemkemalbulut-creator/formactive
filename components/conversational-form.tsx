@@ -5,6 +5,13 @@ import { FormConfig, Question } from '@/lib/types';
 import { useReducedMotion } from '@/components/cross-dissolve-background';
 import { compileToneContract, DEFAULT_TONE_CONFIG } from '@/lib/tone';
 import { applyTonePhrasing, getPlaceholderText, getValidationMessage, applyToneToEnd } from '@/lib/phrasing';
+import {
+  validateAnswer as validateFieldAnswer,
+  generateRepromptMessage,
+  isSkipRequest,
+  isEndRequest,
+  getAttemptLimit,
+} from '@/lib/field-validation';
 
 export type PreviewTarget = 'welcome' | 'end' | { step: number } | null;
 
@@ -18,6 +25,21 @@ export interface ConversationalFormProps {
   onPhaseChange?: (phase: 'welcome' | 'questions' | 'submitting' | 'done') => void;
   onStepChange?: (stepIndex: number) => void;
   heroWelcome?: boolean;
+}
+
+function mapQuestionTypeToFieldType(questionType: string): string {
+  const mapping: Record<string, string> = {
+    short_text: 'text',
+    long_text: 'textarea',
+    single_choice: 'select',
+    multiple_choice: 'select',
+    yes_no: 'select',
+    date: 'date',
+    number: 'number',
+    email: 'email',
+    phone: 'phone',
+  };
+  return mapping[questionType] || 'text';
 }
 
 function validateAnswerBase(value: any, question: Question): { isValid: boolean; errorType?: string } {
@@ -107,6 +129,8 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
   const [transitioning, setTransitioning] = useState(false);
   const [contentVisible, setContentVisible] = useState(true);
   const [typewriterReady, setTypewriterReady] = useState(true);
+  const [fieldAttempts, setFieldAttempts] = useState<Record<string, number>>({});
+  const [isAbandoned, setIsAbandoned] = useState(false);
   const reducedMotion = useReducedMotion();
 
   const toneContract = useMemo(() => {
@@ -261,6 +285,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
   const handleSubmitAnswer = useCallback(() => {
     if (isPreview) return;
     if (currentStepIndex < 0 || currentStepIndex >= sortedQuestions.length) return;
+    if (isAbandoned) return;
 
     const q = sortedQuestions[currentStepIndex];
     let value: any = inputValue;
@@ -269,18 +294,89 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
       value = multiSelectValues;
     }
 
-    const validationErrorType = validateAnswer(value, q);
-    if (validationErrorType) {
-      const errorMessage = getValidationMessage(
-        validationErrorType as 'required' | 'email_invalid' | 'phone_invalid' | 'select_required',
-        toneContract
-      );
-      setError(errorMessage);
+    const valueStr = Array.isArray(value) ? value.join(', ') : String(value || '');
+
+    // Check for skip request
+    if (isSkipRequest(valueStr) && !q.required) {
+      const nextIndex = currentStepIndex + 1;
+      setFieldAttempts(prev => ({ ...prev, [q.key]: 0 }));
+      if (nextIndex >= sortedQuestions.length) {
+        fadeTransition(() => {
+          setPhase('submitting');
+          const doSubmit = async () => {
+            if (onSubmit) {
+              try { await onSubmit(answers); } catch {}
+            }
+            setPhase('done');
+          };
+          doSubmit();
+        });
+      } else {
+        advanceToStep(nextIndex);
+      }
       return;
     }
 
-    const newAnswers = { ...answers, [q.key]: value };
+    // Check for end request
+    if (isEndRequest(valueStr)) {
+      setIsAbandoned(true);
+      fadeTransition(() => {
+        setPhase('done');
+      });
+      return;
+    }
+
+    // Use new validation system
+    const fieldType = mapQuestionTypeToFieldType(q.type);
+    const validation = validateFieldAnswer(
+      fieldType,
+      valueStr,
+      {
+        required: q.required,
+        selectOptions: q.options?.map(opt => opt.value),
+      }
+    );
+
+    const currentAttempts = fieldAttempts[q.key] || 0;
+
+    if (!validation.ok) {
+      const newAttemptCount = currentAttempts + 1;
+      const attemptLimit = getAttemptLimit(q.required);
+
+      if (newAttemptCount >= attemptLimit && q.required) {
+        // Max attempts reached on required field - end conversation
+        setIsAbandoned(true);
+        const endMessage = `I'm unable to continue without your ${q.label.toLowerCase()}. Thank you for your time.`;
+        setError(endMessage);
+        setTimeout(() => {
+          fadeTransition(() => {
+            setPhase('done');
+          });
+        }, 3000);
+        return;
+      }
+
+      // Generate reprompt message
+      const reprompt = generateRepromptMessage(
+        q.label,
+        fieldType,
+        newAttemptCount,
+        validation.reason,
+        q.required,
+        toneContract.preset
+      );
+
+      setError(reprompt);
+      setFieldAttempts(prev => ({ ...prev, [q.key]: newAttemptCount }));
+      return;
+    }
+
+    // Valid answer - advance
+    const normalizedValue = validation.normalizedValue !== undefined ? validation.normalizedValue : value;
+    const newAnswers = { ...answers, [q.key]: normalizedValue };
     setAnswers(newAnswers);
+    setFieldAttempts(prev => ({ ...prev, [q.key]: 0 }));
+    setError(null);
 
     const nextIndex = currentStepIndex + 1;
 
@@ -298,25 +394,67 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
     } else {
       advanceToStep(nextIndex);
     }
-  }, [currentStepIndex, sortedQuestions, inputValue, multiSelectValues, answers, isPreview, onSubmit, fadeTransition]);
+  }, [currentStepIndex, sortedQuestions, inputValue, multiSelectValues, answers, isPreview, onSubmit, fadeTransition, toneContract, fieldAttempts, isAbandoned]);
 
   const handleDirectAnswer = useCallback((value: any) => {
     if (isPreview) return;
     if (currentStepIndex < 0 || currentStepIndex >= sortedQuestions.length) return;
+    if (isAbandoned) return;
 
     const q = sortedQuestions[currentStepIndex];
-    const validationErrorType = validateAnswer(value, q);
-    if (validationErrorType) {
-      const errorMessage = getValidationMessage(
-        validationErrorType as 'required' | 'email_invalid' | 'phone_invalid' | 'select_required',
-        toneContract
+    const valueStr = Array.isArray(value) ? value.join(', ') : String(value || '');
+
+    // Use new validation system
+    const fieldType = mapQuestionTypeToFieldType(q.type);
+    const validation = validateFieldAnswer(
+      fieldType,
+      valueStr,
+      {
+        required: q.required,
+        selectOptions: q.options?.map(opt => opt.value),
+      }
+    );
+
+    const currentAttempts = fieldAttempts[q.key] || 0;
+
+    if (!validation.ok) {
+      const newAttemptCount = currentAttempts + 1;
+      const attemptLimit = getAttemptLimit(q.required);
+
+      if (newAttemptCount >= attemptLimit && q.required) {
+        // Max attempts reached on required field - end conversation
+        setIsAbandoned(true);
+        const endMessage = `I'm unable to continue without your ${q.label.toLowerCase()}. Thank you for your time.`;
+        setError(endMessage);
+        setTimeout(() => {
+          fadeTransition(() => {
+            setPhase('done');
+          });
+        }, 3000);
+        return;
+      }
+
+      // Generate reprompt message
+      const reprompt = generateRepromptMessage(
+        q.label,
+        fieldType,
+        newAttemptCount,
+        validation.reason,
+        q.required,
+        toneContract.preset
       );
-      setError(errorMessage);
+
+      setError(reprompt);
+      setFieldAttempts(prev => ({ ...prev, [q.key]: newAttemptCount }));
       return;
     }
 
-    const newAnswers = { ...answers, [q.key]: value };
+    // Valid answer - advance
+    const normalizedValue = validation.normalizedValue !== undefined ? validation.normalizedValue : value;
+    const newAnswers = { ...answers, [q.key]: normalizedValue };
     setAnswers(newAnswers);
+    setFieldAttempts(prev => ({ ...prev, [q.key]: 0 }));
+    setError(null);
 
     const nextIndex = currentStepIndex + 1;
 
@@ -334,7 +472,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
     } else {
       advanceToStep(nextIndex);
     }
-  }, [currentStepIndex, sortedQuestions, answers, isPreview, onSubmit, fadeTransition]);
+  }, [currentStepIndex, sortedQuestions, answers, isPreview, onSubmit, fadeTransition, toneContract, fieldAttempts, isAbandoned]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
