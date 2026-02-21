@@ -12,6 +12,10 @@ import {
   isEndRequest,
   getAttemptLimit,
 } from '@/lib/field-validation';
+import {
+  prepareQuestionForDisplay,
+  extractSchemaRequirements,
+} from '@/lib/journey-mapping';
 
 export type PreviewTarget = 'welcome' | 'end' | { step: number } | null;
 
@@ -152,7 +156,12 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
     }
   }, [currentStepIndex, isPreview, onStepChange]);
 
-  const sortedQuestions = [...config.questions].sort((a, b) => a.order - b.order);
+  const strictMode = config.settings?.strictDataCollection !== false;
+  const sortedQuestions = useMemo(() => {
+    const sorted = [...config.questions].sort((a, b) => a.order - b.order);
+    return sorted.map(q => prepareQuestionForDisplay(q, strictMode));
+  }, [config.questions, strictMode]);
+
   const primaryColor = config.theme?.primaryColor || '#111827';
   const cardStyle = config.theme?.cardStyle || 'light';
   const isDark = cardStyle === 'dark';

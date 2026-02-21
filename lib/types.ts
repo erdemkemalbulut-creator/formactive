@@ -47,6 +47,7 @@ export interface Question {
   videoUrl?: string;
   internalName?: string;
   visual?: StepVisual;
+  journeyInstruction?: string;
 }
 
 export interface FormTheme {
@@ -126,6 +127,7 @@ export interface FormSettings {
   };
   skipWelcome?: boolean;
   restoreChat?: boolean;
+  strictDataCollection?: boolean;
 }
 
 export const DEFAULT_FORM_SETTINGS: FormSettings = {
@@ -138,6 +140,7 @@ export const DEFAULT_FORM_SETTINGS: FormSettings = {
   notifications: { enabled: false, email: '' },
   skipWelcome: false,
   restoreChat: false,
+  strictDataCollection: true,
 };
 
 export interface FormConfig {

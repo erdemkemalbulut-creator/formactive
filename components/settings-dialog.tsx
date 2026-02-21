@@ -179,6 +179,13 @@ export function SettingsDialog({
               onChange={(v) => onSettingsChange({ restoreChat: v })}
             />
 
+            <ToggleRow
+              label="Strict data collection"
+              helper="Keep the chat natural, but don't move on until required fields are collected"
+              checked={settings.strictDataCollection !== false}
+              onChange={(v) => onSettingsChange({ strictDataCollection: v })}
+            />
+
             <div className="border-t border-slate-100 pt-4">
               <ToggleRow
                 label="Email notifications"
