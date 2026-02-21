@@ -16,6 +16,12 @@ export type ToneType = 'friendly' | 'professional' | 'luxury' | 'playful';
 
 export type DirectnessType = 'casual' | 'balanced' | 'precise';
 
+export interface ToneConfig {
+  preset: 'energetic' | 'sassy' | 'witty' | 'professional' | 'casual' | 'concise';
+  custom: string;
+  chattiness: number | null;
+}
+
 export interface QuestionOption {
   id: string;
   label: string;
@@ -65,6 +71,7 @@ export interface AIContext {
   context: string;
   tone: ToneType;
   audience: string;
+  toneConfig?: ToneConfig;
 }
 
 export interface FormVisuals {
@@ -144,6 +151,7 @@ export interface FormConfig {
   aboutYou?: string;
   trainAI?: string;
   settings?: FormSettings;
+  tone?: ToneConfig;
 }
 
 export interface Form {

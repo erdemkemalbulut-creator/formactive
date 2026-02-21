@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { FormConfig, Question } from '@/lib/types';
 import { useReducedMotion } from '@/components/cross-dissolve-background';
+import { compileToneContract, DEFAULT_TONE_CONFIG } from '@/lib/tone';
+import { applyTonePhrasing, getPlaceholderText, getValidationMessage, applyToneToEnd } from '@/lib/phrasing';
 
 export type PreviewTarget = 'welcome' | 'end' | { step: number } | null;
 
@@ -18,18 +20,26 @@ export interface ConversationalFormProps {
   heroWelcome?: boolean;
 }
 
-function validateAnswer(value: any, question: Question): string | null {
+function validateAnswerBase(value: any, question: Question): { isValid: boolean; errorType?: string } {
   if (question.required) {
-    if (value === undefined || value === null || value === '') return 'This field is required';
-    if (Array.isArray(value) && value.length === 0) return 'Please select at least one option';
+    if (value === undefined || value === null || value === '') return { isValid: false, errorType: 'required' };
+    if (Array.isArray(value) && value.length === 0) return { isValid: false, errorType: 'select_required' };
   }
   if (value && question.type === 'email') {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(String(value))) return 'Please enter a valid email address';
+    if (!emailRegex.test(String(value))) return { isValid: false, errorType: 'email_invalid' };
   }
   if (value && question.type === 'phone') {
     const phoneRegex = /^[+]?[\d\s\-().]{7,}$/;
-    if (!phoneRegex.test(String(value))) return 'Please enter a valid phone number';
+    if (!phoneRegex.test(String(value))) return { isValid: false, errorType: 'phone_invalid' };
+  }
+  return { isValid: true };
+}
+
+function validateAnswer(value: any, question: Question): string | null {
+  const result = validateAnswerBase(value, question);
+  if (!result.isValid && result.errorType) {
+    return result.errorType;
   }
   return null;
 }
@@ -98,6 +108,10 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
   const [contentVisible, setContentVisible] = useState(true);
   const [typewriterReady, setTypewriterReady] = useState(true);
   const reducedMotion = useReducedMotion();
+
+  const toneContract = useMemo(() => {
+    return compileToneContract(config.tone || DEFAULT_TONE_CONFIG);
+  }, [config.tone]);
 
   const FADE_DURATION = reducedMotion ? 0 : 300;
 
@@ -212,7 +226,9 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
     ? sortedQuestions[currentStepIndex]
     : null;
 
-  const questionText = currentQuestion ? (currentQuestion.message || currentQuestion.label || 'Untitled step') : '';
+  const questionText = currentQuestion
+    ? applyTonePhrasing(currentQuestion.message, currentQuestion.label, currentQuestion.type, toneContract)
+    : '';
   const { displayed: typedText, done: typingDone } = useTypewriter(questionText, 25, !isPreview && typewriterReady);
 
   useEffect(() => {
@@ -253,9 +269,13 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
       value = multiSelectValues;
     }
 
-    const validationError = validateAnswer(value, q);
-    if (validationError) {
-      setError(validationError);
+    const validationErrorType = validateAnswer(value, q);
+    if (validationErrorType) {
+      const errorMessage = getValidationMessage(
+        validationErrorType as 'required' | 'email_invalid' | 'phone_invalid' | 'select_required',
+        toneContract
+      );
+      setError(errorMessage);
       return;
     }
 
@@ -285,9 +305,13 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
     if (currentStepIndex < 0 || currentStepIndex >= sortedQuestions.length) return;
 
     const q = sortedQuestions[currentStepIndex];
-    const validationError = validateAnswer(value, q);
-    if (validationError) {
-      setError(validationError);
+    const validationErrorType = validateAnswer(value, q);
+    if (validationErrorType) {
+      const errorMessage = getValidationMessage(
+        validationErrorType as 'required' | 'email_invalid' | 'phone_invalid' | 'select_required',
+        toneContract
+      );
+      setError(errorMessage);
       return;
     }
 
@@ -550,7 +574,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
 
       default: {
         const inputType = q.type === 'email' ? 'email' : q.type === 'phone' ? 'tel' : q.type === 'number' ? 'number' : 'text';
-        const placeholder = q.type === 'email' ? 'name@example.com' : q.type === 'phone' ? '+1 (555) 000-0000' : q.type === 'number' ? '0' : 'Type here...';
+        const placeholder = getPlaceholderText(q.type, toneContract);
         return (
           <div className="mt-8 space-y-4 animate-cinematic-fade">
             {!inert && error && <p className="text-xs text-red-300">{error}</p>}
@@ -613,7 +637,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
 
   const renderEndScreen = () => {
     const showEnd = config.endEnabled !== false;
-    const endMessage = config.endMessage || 'Thank you for your response!';
+    const endMessage = applyToneToEnd(config.endMessage, toneContract) || 'Thank you for your response!';
 
     return (
       <div className="flex flex-col items-center justify-center text-center px-8" style={{

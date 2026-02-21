@@ -4,7 +4,8 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
-import { FormConfig, Question, QuestionType, QUESTION_TYPES, ToneType, createDefaultCTA, FormTheme, DEFAULT_THEME, AIContext, FormVisuals, StepVisual, VisualLayout, FormSettings } from '@/lib/types';
+import { FormConfig, Question, QuestionType, QUESTION_TYPES, ToneType, createDefaultCTA, FormTheme, DEFAULT_THEME, AIContext, FormVisuals, StepVisual, VisualLayout, FormSettings, ToneConfig } from '@/lib/types';
+import { TONE_PRESETS, TonePreset, compileToneContract, DEFAULT_TONE_CONFIG, getChattinessBars } from '@/lib/tone';
 import { SettingsDialog } from '@/components/settings-dialog';
 import { AnalyticsDashboard } from '@/components/analytics-dashboard';
 import { ConversationalForm, PreviewTarget } from '@/components/conversational-form';
@@ -98,6 +99,7 @@ export default function FormBuilderPage() {
   const [generatingWording, setGeneratingWording] = useState<string | null>(null);
   const [generatingAllWording, setGeneratingAllWording] = useState(false);
   const [showTonePicker, setShowTonePicker] = useState(false);
+  const [showTonePresets, setShowTonePresets] = useState(false);
   const [previewTarget, setPreviewTarget] = useState<PreviewTarget>(null);
   const [settingsStepId, setSettingsStepId] = useState<string | null>(null);
   const [uploadingVisual, setUploadingVisual] = useState(false);
@@ -315,6 +317,11 @@ export default function FormBuilderPage() {
   const updateSettings = (updates: Partial<FormSettings>) => {
     const current = currentConfig.settings || {};
     updateConfig({ settings: { ...current, ...updates } });
+  };
+
+  const updateTone = (updates: Partial<ToneConfig>) => {
+    const current = currentConfig.tone || DEFAULT_TONE_CONFIG;
+    updateConfig({ tone: { ...current, ...updates } });
   };
 
   const handleVisualUpload = async (file: File, kind: 'image' | 'video') => {
@@ -794,41 +801,103 @@ export default function FormBuilderPage() {
                   <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${openSections.has(2) ? 'rotate-90' : ''}`} />
                 </button>
                 {openSections.has(2) && (
-                  <div className="px-5 pb-5 pt-1 pl-14 space-y-3">
+                  <div className="px-5 pb-5 pt-1 pl-14 space-y-4">
                     <div>
-                      <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1.5 block">Tone</label>
-                      {showTonePicker ? (
-                        <div className="grid grid-cols-2 gap-2">
-                          {TONE_OPTIONS.map((t) => (
-                            <button
-                              key={t.value}
-                              onClick={() => {
-                                updateAIContext({ tone: t.value });
-                                setShowTonePicker(false);
-                              }}
-                              className={`px-3 py-2.5 rounded-lg border text-left transition-all ${
-                                currentConfig.aiContext?.tone === t.value
-                                  ? 'border-purple-300 bg-purple-50 ring-1 ring-purple-200'
-                                  : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                              }`}
-                            >
-                              <span className="text-sm font-medium text-slate-800">{t.label}</span>
-                              <span className="block text-[11px] text-slate-500 mt-0.5">{t.description}</span>
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setShowTonePicker(true)}
-                          className="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors"
-                        >
-                          <span className="text-sm text-slate-700">
-                            {TONE_OPTIONS.find(t => t.value === (currentConfig.aiContext?.tone || 'friendly'))?.label || 'Friendly'}
-                          </span>
-                          <ChevronDown className="w-4 h-4 text-slate-400" />
-                        </button>
-                      )}
+                      <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1.5 block">Custom tone</label>
+                      <Input
+                        value={currentConfig.tone?.custom || ''}
+                        onChange={(e) => updateTone({ custom: e.target.value })}
+                        placeholder="e.g., Friendly+Professional"
+                        className="h-9 text-sm"
+                      />
                     </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Tone presets</label>
+                        <button
+                          onClick={() => setShowTonePresets(!showTonePresets)}
+                          className="text-[11px] text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                          {showTonePresets ? 'Hide' : 'Show presets'}
+                        </button>
+                      </div>
+                      {showTonePresets && (
+                        <div className="grid grid-cols-2 gap-2">
+                          {(Object.entries(TONE_PRESETS) as [TonePreset, typeof TONE_PRESETS[TonePreset]][]).map(([key, preset]) => {
+                            const isSelected = currentConfig.tone?.preset === key;
+                            const bars = getChattinessBars(preset.defaultChattiness);
+                            return (
+                              <button
+                                key={key}
+                                onClick={() => updateTone({ preset: key, chattiness: null })}
+                                className={`px-3 py-2.5 rounded-lg border text-left transition-all ${
+                                  isSelected
+                                    ? 'border-blue-300 bg-blue-50 ring-1 ring-blue-200'
+                                    : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-sm font-medium text-slate-800">{preset.label}</span>
+                                  <div className="flex gap-0.5">
+                                    {Array.from({ length: 4 }).map((_, i) => (
+                                      <div
+                                        key={i}
+                                        className={`w-1 h-3 rounded-sm ${
+                                          i < bars ? 'bg-blue-500' : 'bg-slate-200'
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                                <span className="block text-[11px] text-slate-500">{preset.description}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      <div className="text-[10px] text-slate-400 mt-1.5 flex items-center gap-1">
+                        <span>💡</span>
+                        <span>Tone affects phrasing, not what data is collected</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Chattiness level</label>
+                        {currentConfig.tone?.chattiness !== null && currentConfig.tone?.chattiness !== undefined && (
+                          <button
+                            onClick={() => updateTone({ chattiness: null })}
+                            className="text-[10px] text-blue-600 hover:text-blue-700 font-medium"
+                          >
+                            Reset to preset
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={(() => {
+                          const tone = currentConfig.tone || DEFAULT_TONE_CONFIG;
+                          if (tone.chattiness !== null && tone.chattiness !== undefined) {
+                            return tone.chattiness * 100;
+                          }
+                          const preset = tone.preset || 'professional';
+                          return (TONE_PRESETS[preset]?.defaultChattiness || 0.45) * 100;
+                        })()}
+                        onChange={(e) => updateTone({ chattiness: Number(e.target.value) / 100 })}
+                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                      />
+                      <div className="flex items-center justify-between mt-1.5">
+                        <span className="text-[10px] text-slate-400">Brief</span>
+                        <span className="text-[10px] text-slate-400">Chatty</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-2">
+                        Controls how short or chatty the assistant sounds. This changes phrasing length, not what data is collected.
+                      </p>
+                    </div>
+
                     <div>
                       <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1.5 block">Audience</label>
                       <Input
