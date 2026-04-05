@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { openai } from '@/lib/openai';
+import { chatCompletion } from '@/lib/openai';
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,21 +41,16 @@ ${trainAI || 'No additional data provided.'}
 
 Their question: "${question}"`;
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
+    const answer = await chatCompletion({
+      system: systemPrompt,
+      userMessage: userPrompt,
+      maxTokens: 300,
       temperature: 0.3,
-      max_tokens: 300,
     });
 
-    const answer = completion.choices[0]?.message?.content?.trim();
-
     return NextResponse.json({
-      answer: answer || null,
-      reason: answer ? 'answered' : 'no_answer',
+      answer: answer.trim() || null,
+      reason: answer.trim() ? 'answered' : 'no_answer',
     });
   } catch (error: any) {
     console.error('Answer question error:', error);

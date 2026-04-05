@@ -1,24 +1,57 @@
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 
-let _openai: OpenAI | null = null;
+let _client: Anthropic | null = null;
 
-export function getOpenAI(): OpenAI {
-  if (!_openai) {
-    const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+export function getAI(): Anthropic {
+  if (!_client) {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
-      throw new Error('Missing OpenAI API key. Set AI_INTEGRATIONS_OPENAI_API_KEY or OPENAI_API_KEY.');
+      throw new Error('Missing ANTHROPIC_API_KEY environment variable.');
     }
-    _openai = new OpenAI({
-      apiKey,
-      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-    });
+    _client = new Anthropic({ apiKey });
   }
-  return _openai;
+  return _client;
 }
 
-// Keep backward compat export — lazy getter
-export const openai = new Proxy({} as OpenAI, {
-  get(_, prop) {
-    return (getOpenAI() as any)[prop];
-  },
-});
+/**
+ * Helper to call Claude with a system prompt and user message, returning text.
+ */
+export async function chatCompletion(opts: {
+  system: string;
+  userMessage: string;
+  maxTokens?: number;
+  temperature?: number;
+}): Promise<string> {
+  const client = getAI();
+  const response = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: opts.maxTokens || 1024,
+    system: opts.system,
+    messages: [{ role: 'user', content: opts.userMessage }],
+    temperature: opts.temperature,
+  });
+
+  const block = response.content[0];
+  if (block.type === 'text') {
+    return block.text;
+  }
+  return '';
+}
+
+/**
+ * Helper to call Claude and get JSON back.
+ */
+export async function chatCompletionJSON<T = any>(opts: {
+  system: string;
+  userMessage: string;
+  maxTokens?: number;
+  temperature?: number;
+}): Promise<T> {
+  const text = await chatCompletion({
+    ...opts,
+    system: opts.system + '\n\nIMPORTANT: Return ONLY valid JSON. No markdown, no code fences, no extra text.',
+  });
+
+  const cleaned = text.replace(/^```json?\s*/i, '').replace(/\s*```$/i, '').trim();
+  return JSON.parse(cleaned);
+}

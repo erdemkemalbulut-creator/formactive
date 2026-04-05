@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { openai } from '@/lib/openai';
+import { chatCompletionJSON } from '@/lib/openai';
 import type { GenerateConversationRequest, GenerateConversationItem } from '@/lib/types';
 
 const SYSTEM_PROMPT = `You are an expert conversation designer for interactive forms.
@@ -113,33 +113,18 @@ export async function POST(request: NextRequest) {
 
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const messages: any[] = [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: userPrompt },
-        ];
-
+        let message = userPrompt;
         if (attempt === 1 && lastError) {
-          messages.push({
-            role: 'user',
-            content: `Your previous response was invalid. Please try again and return ONLY valid JSON with a "questions" array. Error: ${lastError}`,
-          });
+          message += `\n\nYour previous response was invalid. Please try again and return ONLY valid JSON with a "questions" array. Error: ${lastError}`;
         }
 
-        const completion = await openai.chat.completions.create({
-          model: 'gpt-4o',
-          messages,
+        const parsed = await chatCompletionJSON({
+          system: SYSTEM_PROMPT,
+          userMessage: message,
+          maxTokens: 4000,
           temperature: 0.7,
-          max_tokens: 4000,
-          response_format: { type: 'json_object' },
         });
 
-        const content = completion.choices[0]?.message?.content;
-        if (!content) {
-          lastError = 'Empty response from AI';
-          continue;
-        }
-
-        const parsed = JSON.parse(content);
         const questionsArray = parsed.questions || parsed.nodes || [];
 
         if (!Array.isArray(questionsArray) || questionsArray.length === 0) {

@@ -5,7 +5,7 @@
  * Uses deterministic checks first, then LLM for text fields
  */
 
-import { getOpenAI } from './openai';
+import { chatCompletionJSON } from './openai';
 import { ToneContract } from './tone';
 
 export interface SufficiencyInput {
@@ -209,27 +209,20 @@ Return JSON only with these fields:
 Is this sufficiently specific for the field intent? Respond with JSON only.`;
 
   try {
-    const response = await getOpenAI().chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-      response_format: { type: 'json_object' },
+    const result = await chatCompletionJSON<{
+      sufficient: boolean;
+      reason?: string;
+      clarification?: string;
+    }>({
+      system: systemPrompt,
+      userMessage: userPrompt,
+      maxTokens: 200,
       temperature: 0.3,
-      max_tokens: 200
     });
-
-    const content = response.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error('No response from LLM');
-    }
-
-    const result = JSON.parse(content);
 
     return {
       sufficient: result.sufficient === true,
-      reason: result.reason || undefined,
+      reason: (result.reason as SufficiencyResult['reason']) || undefined,
       clarification: result.clarification || undefined,
       normalized: result.sufficient ? input.userText.trim() : undefined
     };
