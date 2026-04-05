@@ -608,10 +608,10 @@ export default function FormBuilderPage() {
 
   if (authLoading || loadingForm) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-dark">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 mb-4" />
-          <p className="text-slate-600">Loading form...</p>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-white/10 border-t-indigo-400 mb-4" />
+          <p className="text-white/40">Loading form...</p>
         </div>
       </div>
     );
@@ -621,9 +621,9 @@ export default function FormBuilderPage() {
   const contextLength = currentConfig.aiContext?.context?.length || 0;
 
   return (
-    <div className="h-screen bg-slate-100 flex flex-col overflow-hidden">
+    <div className="h-screen bg-[#0d0d1a] flex flex-col overflow-hidden">
       {/* Top Bar */}
-      <header className="sticky top-0 z-50 bg-white border-b border-slate-200 px-4 py-2.5 flex-shrink-0">
+      <header className="sticky top-0 z-50 bg-[#0a0a1a]/80 backdrop-blur-2xl border-b border-white/5 px-4 py-2.5 flex-shrink-0">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <Button variant="ghost" size="icon" onClick={() => router.push('/dashboard')} className="h-8 w-8">
@@ -642,7 +642,7 @@ export default function FormBuilderPage() {
               />
             ) : (
               <h1
-                className="text-lg font-semibold text-slate-900 truncate cursor-pointer hover:text-slate-600 transition-colors"
+                className="text-lg font-semibold text-white truncate cursor-pointer hover:text-white/70 transition-colors"
                 onClick={() => {
                   setEditingTitle(true);
                   setTimeout(() => titleInputRef.current?.focus(), 0);
@@ -658,13 +658,13 @@ export default function FormBuilderPage() {
 
             <button
               onClick={() => setSettingsDialogOpen(true)}
-              className="flex items-center gap-1 px-2 py-1 text-xs text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-xs text-white/30 hover:text-white/60 hover:bg-white/5 rounded-md transition-colors"
             >
               <Settings className="w-3.5 h-3.5" />
               <span>Settings</span>
             </button>
 
-            {saving && <span className="text-xs text-slate-400 animate-pulse">Saving...</span>}
+            {saving && <span className="text-xs text-indigo-400 animate-pulse">Saving...</span>}
           </div>
 
           <div className="flex items-center gap-2">
@@ -690,21 +690,21 @@ export default function FormBuilderPage() {
                 <MoreVertical className="w-4 h-4" />
               </Button>
               {overflowOpen && (
-                <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-50">
+                <div className="absolute right-0 top-full mt-1 w-48 bg-[#16162a] border border-white/10 rounded-xl shadow-2xl py-1 z-50">
                   {status === 'live' && slug && (
-                    <button onClick={copyPublicUrl} className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 flex items-center gap-2">
+                    <button onClick={copyPublicUrl} className="w-full text-left px-4 py-2 text-sm text-white/60 hover:bg-white/5 flex items-center gap-2">
                       <Copy className="w-4 h-4" /> Copy public URL
                     </button>
                   )}
                   <button
                     onClick={() => { router.push(`/dashboard/forms/${formId}/results`); setOverflowOpen(false); }}
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 flex items-center gap-2"
+                    className="w-full text-left px-4 py-2 text-sm text-white/60 hover:bg-white/5 flex items-center gap-2"
                   >
                     <BarChart3 className="w-4 h-4" /> View submissions
                   </button>
                   <button
                     onClick={handleDelete}
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-600 flex items-center gap-2"
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-red-500/10 text-red-400 flex items-center gap-2"
                   >
                     <Trash2 className="w-4 h-4" /> Delete
                   </button>
@@ -718,33 +718,33 @@ export default function FormBuilderPage() {
       {/* Split Layout */}
       <div className="flex flex-1 overflow-hidden">
         {/* Builder Panel (Left) */}
-        <div className="w-[440px] flex-shrink-0 border-r border-slate-200 bg-white flex flex-col">
+        <div className="w-[440px] flex-shrink-0 border-r border-white/5 bg-[#0e0e1e] flex flex-col">
           {/* Editor / Analytics tabs */}
-          <div className="flex border-b border-slate-200 flex-shrink-0">
+          <div className="flex border-b border-white/5 flex-shrink-0">
             <button
               onClick={() => setActiveTab('editor')}
               className={`flex-1 py-2.5 text-sm font-medium text-center transition-colors relative ${
                 activeTab === 'editor'
-                  ? 'text-slate-900'
-                  : 'text-slate-400 hover:text-slate-600'
+                  ? 'text-white'
+                  : 'text-white/30 hover:text-white/60'
               }`}
             >
               Editor
               {activeTab === 'editor' && (
-                <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-slate-900 rounded-full" />
+                <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-indigo-500 rounded-full" />
               )}
             </button>
             <button
               onClick={() => setActiveTab('analytics')}
               className={`flex-1 py-2.5 text-sm font-medium text-center transition-colors relative ${
                 activeTab === 'analytics'
-                  ? 'text-slate-900'
-                  : 'text-slate-400 hover:text-slate-600'
+                  ? 'text-white'
+                  : 'text-white/30 hover:text-white/60'
               }`}
             >
               Analytics
               {activeTab === 'analytics' && (
-                <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-slate-900 rounded-full" />
+                <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-indigo-500 rounded-full" />
               )}
             </button>
           </div>
@@ -753,23 +753,23 @@ export default function FormBuilderPage() {
             <AnalyticsDashboard formId={formId} />
           ) : (
           <div className="flex-1 overflow-y-auto">
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-white/5">
 
               {/* 1. Overview */}
               <div>
                 <button
                   onClick={() => toggleSection(1)}
-                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/80 transition-colors"
+                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-white/5 transition-colors"
                 >
-                  <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">1</span>
-                  <span className="text-[13px] font-semibold text-slate-800 flex-1 text-left">Overview</span>
-                  <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${openSections.has(1) ? 'rotate-90' : ''}`} />
+                  <span className="w-6 h-6 rounded-full bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">1</span>
+                  <span className="text-[13px] font-semibold text-white/80 flex-1 text-left">Overview</span>
+                  <ChevronRight className={`w-4 h-4 text-white/20 transition-transform duration-200 ${openSections.has(1) ? 'rotate-90' : ''}`} />
                 </button>
                 {openSections.has(1) && (
                   <div className="px-5 pb-5 pt-1 pl-14 space-y-4">
                     <div>
-                      <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">What is this conversation about?</label>
-                      <p className="text-[11px] text-slate-400 mb-1.5">Describe the purpose and AI will build your form</p>
+                      <label className="text-[11px] font-medium text-white/40 uppercase tracking-wider mb-1 block">What is this conversation about?</label>
+                      <p className="text-[11px] text-white/30 mb-1.5">Describe the purpose and AI will build your form</p>
                       <div className="relative">
                         <Textarea
                           value={currentConfig.aiContext?.context || ''}
@@ -794,16 +794,16 @@ export default function FormBuilderPage() {
               <div>
                 <button
                   onClick={() => toggleSection(2)}
-                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/80 transition-colors"
+                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-white/5 transition-colors"
                 >
-                  <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">2</span>
-                  <span className="text-[13px] font-semibold text-slate-800 flex-1 text-left">Tone of voice</span>
-                  <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${openSections.has(2) ? 'rotate-90' : ''}`} />
+                  <span className="w-6 h-6 rounded-full bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">2</span>
+                  <span className="text-[13px] font-semibold text-white/80 flex-1 text-left">Tone of voice</span>
+                  <ChevronRight className={`w-4 h-4 text-white/20 transition-transform duration-200 ${openSections.has(2) ? 'rotate-90' : ''}`} />
                 </button>
                 {openSections.has(2) && (
                   <div className="px-5 pb-5 pt-1 pl-14 space-y-4">
                     <div>
-                      <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1.5 block">Custom tone</label>
+                      <label className="text-[11px] font-medium text-white/40 uppercase tracking-wider mb-1.5 block">Custom tone</label>
                       <Input
                         value={currentConfig.tone?.custom || ''}
                         onChange={(e) => updateTone({ custom: e.target.value })}
@@ -814,7 +814,7 @@ export default function FormBuilderPage() {
 
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Tone presets</label>
+                        <label className="text-[11px] font-medium text-white/40 uppercase tracking-wider">Tone presets</label>
                         <button
                           onClick={() => setShowTonePresets(!showTonePresets)}
                           className="text-[11px] text-blue-600 hover:text-blue-700 font-medium"
@@ -870,7 +870,7 @@ export default function FormBuilderPage() {
 
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Chattiness level</label>
+                        <label className="text-[11px] font-medium text-white/40 uppercase tracking-wider">Chattiness level</label>
                         {currentConfig.tone?.chattiness !== null && currentConfig.tone?.chattiness !== undefined && (
                           <button
                             onClick={() => updateTone({ chattiness: null })}
@@ -905,7 +905,7 @@ export default function FormBuilderPage() {
                     </div>
 
                     <div>
-                      <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1.5 block">Audience</label>
+                      <label className="text-[11px] font-medium text-white/40 uppercase tracking-wider mb-1.5 block">Audience</label>
                       <Input
                         value={currentConfig.aiContext?.audience || ''}
                         onChange={(e) => updateAIContext({ audience: e.target.value })}
@@ -921,17 +921,17 @@ export default function FormBuilderPage() {
               <div>
                 <button
                   onClick={() => toggleSection(3)}
-                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/80 transition-colors"
+                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-white/5 transition-colors"
                 >
-                  <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">3</span>
-                  <span className="text-[13px] font-semibold text-slate-800 flex-1 text-left">Welcome & End screens</span>
-                  <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${openSections.has(3) ? 'rotate-90' : ''}`} />
+                  <span className="w-6 h-6 rounded-full bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">3</span>
+                  <span className="text-[13px] font-semibold text-white/80 flex-1 text-left">Welcome & End screens</span>
+                  <ChevronRight className={`w-4 h-4 text-white/20 transition-transform duration-200 ${openSections.has(3) ? 'rotate-90' : ''}`} />
                 </button>
                 {openSections.has(3) && (
                   <div className="px-5 pb-5 pt-1 pl-14 space-y-5">
                     <div className="space-y-3" onClick={() => setPreviewTarget('welcome')}>
                       <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Welcome screen</label>
+                        <label className="text-[11px] font-medium text-white/40 uppercase tracking-wider">Welcome screen</label>
                         <Switch
                           checked={currentConfig.welcomeEnabled}
                           onCheckedChange={(checked) => { updateConfig({ welcomeEnabled: checked }); setPreviewTarget('welcome'); }}
@@ -965,7 +965,7 @@ export default function FormBuilderPage() {
                     </div>
                     <div className="border-t border-slate-100 pt-4 space-y-3" onClick={() => setPreviewTarget('end')}>
                       <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">End screen</label>
+                        <label className="text-[11px] font-medium text-white/40 uppercase tracking-wider">End screen</label>
                         <Switch
                           checked={currentConfig.endEnabled ?? true}
                           onCheckedChange={(checked) => { updateConfig({ endEnabled: checked }); setPreviewTarget('end'); }}
@@ -1007,16 +1007,16 @@ export default function FormBuilderPage() {
               <div>
                 <button
                   onClick={() => toggleSection(4)}
-                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/80 transition-colors"
+                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-white/5 transition-colors"
                 >
-                  <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">4</span>
-                  <span className="text-[13px] font-semibold text-slate-800 flex-1 text-left">
+                  <span className="w-6 h-6 rounded-full bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">4</span>
+                  <span className="text-[13px] font-semibold text-white/80 flex-1 text-left">
                     Journey
                     {currentConfig.questions.length > 0 && (
                       <span className="text-slate-400 font-normal ml-1">({currentConfig.questions.length})</span>
                     )}
                   </span>
-                  <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${openSections.has(4) ? 'rotate-90' : ''}`} />
+                  <ChevronRight className={`w-4 h-4 text-white/20 transition-transform duration-200 ${openSections.has(4) ? 'rotate-90' : ''}`} />
                 </button>
                 {openSections.has(4) && (
                   <div className="px-5 pb-5 pt-1 space-y-3">
@@ -1080,11 +1080,11 @@ export default function FormBuilderPage() {
               <div>
                 <button
                   onClick={() => toggleSection(5)}
-                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/80 transition-colors"
+                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-white/5 transition-colors"
                 >
-                  <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">5</span>
-                  <span className="text-[13px] font-semibold text-slate-800 flex-1 text-left">Visuals</span>
-                  <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${openSections.has(5) ? 'rotate-90' : ''}`} />
+                  <span className="w-6 h-6 rounded-full bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">5</span>
+                  <span className="text-[13px] font-semibold text-white/80 flex-1 text-left">Visuals</span>
+                  <ChevronRight className={`w-4 h-4 text-white/20 transition-transform duration-200 ${openSections.has(5) ? 'rotate-90' : ''}`} />
                 </button>
                 {openSections.has(5) && (
                   <div className="px-5 pb-5 pt-1 pl-14 space-y-5">
@@ -1105,15 +1105,15 @@ export default function FormBuilderPage() {
               <div>
                 <button
                   onClick={() => toggleSection(6)}
-                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/80 transition-colors"
+                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-white/5 transition-colors"
                 >
-                  <span className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">6</span>
-                  <span className="text-[13px] font-semibold text-slate-800 flex-1 text-left">About you</span>
-                  <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${openSections.has(6) ? 'rotate-90' : ''}`} />
+                  <span className="w-6 h-6 rounded-full bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center flex-shrink-0">6</span>
+                  <span className="text-[13px] font-semibold text-white/80 flex-1 text-left">About you</span>
+                  <ChevronRight className={`w-4 h-4 text-white/20 transition-transform duration-200 ${openSections.has(6) ? 'rotate-90' : ''}`} />
                 </button>
                 {openSections.has(6) && (
                   <div className="px-5 pb-5 pt-1 pl-14">
-                    <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1.5 block">Brand / company</label>
+                    <label className="text-[11px] font-medium text-white/40 uppercase tracking-wider mb-1.5 block">Brand / company</label>
                     <Textarea
                       value={currentConfig.aboutYou || ''}
                       onChange={(e) => updateConfig({ aboutYou: e.target.value })}
@@ -1128,12 +1128,12 @@ export default function FormBuilderPage() {
               <div>
                 <button
                   onClick={() => toggleSection(7)}
-                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/80 transition-colors"
+                  className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-white/5 transition-colors"
                 >
                   <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-500 text-xs font-semibold flex items-center justify-center flex-shrink-0">7</span>
-                  <span className="text-[13px] font-semibold text-slate-800 flex-1 text-left">Train AI</span>
+                  <span className="text-[13px] font-semibold text-white/80 flex-1 text-left">Train AI</span>
                   <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full mr-1">Optional</span>
-                  <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${openSections.has(7) ? 'rotate-90' : ''}`} />
+                  <ChevronRight className={`w-4 h-4 text-white/20 transition-transform duration-200 ${openSections.has(7) ? 'rotate-90' : ''}`} />
                 </button>
                 {openSections.has(7) && (
                   <div className="px-5 pb-5 pt-1 pl-14">
@@ -1662,7 +1662,7 @@ function StepVisualManager({
                 <p className="text-xs font-medium text-slate-700 truncate">{row.label}</p>
                 <p className="text-[10px] text-slate-400">{hasVis ? 'Visual set' : 'No visual — click to add'}</p>
               </div>
-              <ChevronRight className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+              <ChevronRight className={`w-3.5 h-3.5 text-white/20 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
             </button>
             {isExpanded && (
               <div className="mt-1 mb-2 ml-2">
