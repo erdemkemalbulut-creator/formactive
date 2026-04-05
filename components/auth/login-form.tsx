@@ -2,11 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/hooks/use-toast';
+import { Sparkles } from 'lucide-react';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
@@ -66,14 +64,17 @@ export function LoginForm() {
   };
 
   return (
-    <div className="w-full max-w-sm mx-auto">
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-semibold text-slate-900">
+    <div className="w-full">
+      <div className="text-center mb-8">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center mx-auto mb-4">
+          <Sparkles className="w-6 h-6 text-white" />
+        </div>
+        <h2 className="text-xl font-semibold text-white">
           {isSignUp ? 'Create your account' : 'Welcome back'}
         </h2>
-        <p className="text-sm text-slate-500 mt-1">
+        <p className="text-sm text-white/40 mt-1">
           {isSignUp
-            ? 'Get started with FormActive in seconds'
+            ? 'Get started with Formactive in seconds'
             : 'Sign in to continue to your dashboard'}
         </p>
       </div>
@@ -81,8 +82,8 @@ export function LoginForm() {
       <div className="space-y-4">
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-1.5">
-            <Label htmlFor="email" className="text-sm text-slate-600">Email</Label>
-            <Input
+            <label htmlFor="email" className="text-xs font-medium text-white/50 uppercase tracking-wider">Email</label>
+            <input
               id="email"
               type="email"
               placeholder="you@example.com"
@@ -90,13 +91,13 @@ export function LoginForm() {
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={isLoading}
-              className="h-10 border-slate-200"
               autoComplete="email"
+              className="w-full h-11 px-4 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-white/25 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/25 transition-all disabled:opacity-50"
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="password" className="text-sm text-slate-600">Password</Label>
-            <Input
+            <label htmlFor="password" className="text-xs font-medium text-white/50 uppercase tracking-wider">Password</label>
+            <input
               id="password"
               type="password"
               placeholder="At least 6 characters"
@@ -105,29 +106,29 @@ export function LoginForm() {
               required
               disabled={isLoading}
               minLength={6}
-              className="h-10 border-slate-200"
               autoComplete={isSignUp ? 'new-password' : 'current-password'}
+              className="w-full h-11 px-4 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-white/25 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/25 transition-all disabled:opacity-50"
             />
           </div>
-          <Button
+          <button
             type="submit"
-            className="w-full h-10 bg-slate-900 hover:bg-slate-800"
             disabled={isLoading}
+            className="w-full h-11 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white text-sm font-medium transition-all hover:shadow-lg hover:shadow-indigo-500/25 disabled:opacity-50 disabled:hover:bg-indigo-500 disabled:hover:shadow-none mt-1"
           >
             {isLoading ? (
-              <div className="w-4 h-4 border-2 border-slate-400 border-t-white rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
             ) : (
               <>{isSignUp ? 'Create account' : 'Sign in'}</>
             )}
-          </Button>
+          </button>
         </form>
 
-        <p className="text-center text-sm text-slate-500">
+        <p className="text-center text-sm text-white/30">
           {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
           <button
             type="button"
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-slate-900 font-medium hover:underline"
+            className="text-indigo-400 font-medium hover:text-indigo-300 transition-colors"
             disabled={isLoading}
           >
             {isSignUp ? 'Sign in' : 'Sign up'}

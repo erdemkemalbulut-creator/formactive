@@ -2,8 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 
 export function AuthActions() {
   const { user, loading, signOut } = useAuth();
@@ -15,7 +13,7 @@ export function AuthActions() {
   };
 
   if (loading) {
-    return <Skeleton className="h-8 w-24 rounded-lg" />;
+    return <div className="h-8 w-24 rounded-lg bg-white/5 animate-pulse" />;
   }
 
   if (!user) {
@@ -24,17 +22,15 @@ export function AuthActions() {
 
   return (
     <div className="flex items-center gap-4">
-      <span className="text-sm text-slate-500 hidden sm:inline truncate max-w-[200px]">
+      <span className="text-sm text-white/30 hidden sm:inline truncate max-w-[200px]">
         {user.email}
       </span>
-      <Button
-        variant="ghost"
-        size="sm"
+      <button
         onClick={handleSignOut}
-        className="text-sm text-slate-500 hover:text-slate-900"
+        className="text-sm text-white/40 hover:text-white/70 transition-colors"
       >
         Sign out
-      </Button>
+      </button>
     </div>
   );
 }
