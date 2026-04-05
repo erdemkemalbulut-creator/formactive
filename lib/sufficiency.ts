@@ -5,10 +5,8 @@
  * Uses deterministic checks first, then LLM for text fields
  */
 
-import OpenAI from 'openai';
+import { getOpenAI } from './openai';
 import { ToneContract } from './tone';
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export interface SufficiencyInput {
   fieldKey: string;
@@ -151,7 +149,7 @@ function deterministicCheck(input: SufficiencyInput): SufficiencyResult | null {
 
       const userLower = text;
       const matchedOptions = input.selectOptions.filter(opt =>
-        opt.toLowerCase().includes(userLower) || userLower.includes(opt.toLowerCase())
+        opt.toLowerCase() === userLower || opt.toLowerCase().startsWith(userLower) || userLower.startsWith(opt.toLowerCase())
       );
 
       if (matchedOptions.length === 0) {
@@ -211,7 +209,7 @@ Return JSON only with these fields:
 Is this sufficiently specific for the field intent? Respond with JSON only.`;
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: systemPrompt },

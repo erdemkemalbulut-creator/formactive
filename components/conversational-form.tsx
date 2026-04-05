@@ -91,6 +91,18 @@ const FONT_MAP: Record<string, string> = {
   'Serif': "'Georgia', 'Times New Roman', serif",
 };
 
+const QUESTION_PATTERNS = [
+  /^\?/,
+  /^(what|how|why|when|where|who|which|can|could|do|does|is|are|will|would)\b/i,
+  /\?$/,
+];
+
+function isUserQuestion(text: string): boolean {
+  const trimmed = text.trim();
+  if (trimmed.length < 8) return false;
+  return QUESTION_PATTERNS.some(p => p.test(trimmed));
+}
+
 function useTypewriter(text: string, speed: number = 25, enabled: boolean = true) {
   const [displayed, setDisplayed] = useState('');
   const [done, setDone] = useState(false);
@@ -144,6 +156,9 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
   const [fieldAttempts, setFieldAttempts] = useState<Record<string, number>>({});
   const [isAbandoned, setIsAbandoned] = useState(false);
   const [awaitingConfirmation, setAwaitingConfirmation] = useState<'skip' | 'end' | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [aiAnswer, setAiAnswer] = useState<string | null>(null);
+  const [aiAnswerLoading, setAiAnswerLoading] = useState(false);
   const reducedMotion = useReducedMotion();
 
   const toneContract = useMemo(() => {
@@ -201,7 +216,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
         setPhase('submitting');
         const doSubmit = async () => {
           if (onSubmit) {
-            try { await onSubmit({}); } catch {}
+            try { await onSubmit({}); } catch (err) { console.error('Submit failed:', err); setSubmitError('Something went wrong. Please try again.'); setPhase('done'); return; }
           }
           setPhase('done');
         };
@@ -295,6 +310,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
         setInputValue('');
         setMultiSelectValues([]);
         setError(null);
+        setAiAnswer(null);
         setTransitioning(false);
       }
     });
@@ -315,6 +331,37 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
     const valueStr = Array.isArray(value) ? value.join(', ') : String(value || '');
     const currentAttempts = fieldAttempts[q.key] || 0;
 
+    // Check if user is asking a question (AI mid-form answers)
+    const hasTrainingData = (config.aboutYou && config.aboutYou.trim()) || (config.trainAI && config.trainAI.trim());
+    if (hasTrainingData && isUserQuestion(valueStr) && !awaitingConfirmation) {
+      setAiAnswerLoading(true);
+      setAiAnswer(null);
+      setError(null);
+      try {
+        const res = await fetch('/api/ai/answer-question', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question: valueStr,
+            aboutYou: config.aboutYou || '',
+            trainAI: config.trainAI || '',
+            formName,
+            currentQuestion: q.label,
+          }),
+        });
+        const data = await res.json();
+        if (data.answer) {
+          setAiAnswer(data.answer);
+          setInputValue('');
+          setAiAnswerLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.error('AI answer failed:', err);
+      }
+      setAiAnswerLoading(false);
+    }
+
     // Handle confirmation states (skip/end)
     if (awaitingConfirmation === 'skip') {
       if (isSkipConfirmation(valueStr)) {
@@ -327,7 +374,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
             setPhase('submitting');
             const doSubmit = async () => {
               if (onSubmit) {
-                try { await onSubmit(answers); } catch {}
+                try { await onSubmit(answers); } catch (err) { console.error('Submit failed:', err); setSubmitError('Something went wrong. Please try again.'); setPhase('done'); return; }
               }
               setPhase('done');
             };
@@ -368,7 +415,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
           setPhase('submitting');
           const doSubmit = async () => {
             if (onSubmit) {
-              try { await onSubmit(answers); } catch {}
+              try { await onSubmit(answers); } catch (err) { console.error('Submit failed:', err); setSubmitError('Something went wrong. Please try again.'); setPhase('done'); return; }
             }
             setPhase('done');
           };
@@ -462,7 +509,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
         setPhase('submitting');
         const doSubmit = async () => {
           if (onSubmit) {
-            try { await onSubmit(newAnswers); } catch {}
+            try { await onSubmit(newAnswers); } catch (err) { console.error('Submit failed:', err); setSubmitError('Something went wrong. Please try again.'); setPhase('done'); return; }
           }
           setPhase('done');
         };
@@ -540,7 +587,7 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
         setPhase('submitting');
         const doSubmit = async () => {
           if (onSubmit) {
-            try { await onSubmit(newAnswers); } catch {}
+            try { await onSubmit(newAnswers); } catch (err) { console.error('Submit failed:', err); setSubmitError('Something went wrong. Please try again.'); setPhase('done'); return; }
           }
           setPhase('done');
         };
@@ -836,6 +883,23 @@ export function ConversationalForm({ config, formName, onSubmit, isPreview = fal
           {isPreview ? promptText : typedText}
           {!isPreview && !typingDone && <span className="inline-block w-[2px] h-[1em] bg-white/70 ml-0.5 animate-blink align-baseline" />}
         </p>
+        {aiAnswer && (
+          <div className="mt-4 mb-2 p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/15 animate-cinematic-fade">
+            <p className="text-sm text-white/90 leading-relaxed">{aiAnswer}</p>
+            <button
+              onClick={() => setAiAnswer(null)}
+              className="mt-2 text-xs text-white/40 hover:text-white/60 transition-colors"
+            >
+              Got it, continue with the form
+            </button>
+          </div>
+        )}
+        {aiAnswerLoading && (
+          <div className="mt-4 mb-2 p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/15 flex items-center gap-3">
+            <div className="w-4 h-4 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+            <p className="text-sm text-white/60">Thinking...</p>
+          </div>
+        )}
         {renderStepInput(q, typingDone)}
       </div>
     );

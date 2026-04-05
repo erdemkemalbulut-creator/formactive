@@ -148,9 +148,20 @@ export function SettingsDialog({
               </Select>
             </div>
 
+            <div>
+              <label className="text-[13px] font-medium text-slate-700 mb-1 block">Custom logo URL</label>
+              <p className="text-[11px] text-slate-400 mb-1.5">Add your brand logo to the form header</p>
+              <Input
+                value={config.theme?.logoUrl || ''}
+                onChange={(e) => onThemeChange({ logoUrl: e.target.value })}
+                placeholder="https://example.com/logo.png"
+                className="h-9 text-sm"
+              />
+            </div>
+
             <ToggleRow
-              label="Hide FormActive logo"
-              helper="Remove branding from your form"
+              label="Remove Formactive branding"
+              helper="Hide the 'Powered by Formactive' badge on your published form"
               checked={settings.hideBranding || false}
               onChange={(v) => onSettingsChange({ hideBranding: v })}
             />

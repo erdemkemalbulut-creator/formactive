@@ -21,48 +21,48 @@ export interface PhrasingVariants {
 const PHRASING_TEMPLATES: Record<QuestionType, PhrasingVariants> = {
   short_text: {
     low: '{label}',
-    medium: '{label}',
-    high: '{label}',
+    medium: 'What is your {label}?',
+    high: 'Could you share your {label} with me?',
   },
   long_text: {
     low: '{label}',
-    medium: '{label}',
-    high: '{label}',
+    medium: 'Tell me about {label}.',
+    high: 'I\'d love to hear more about {label}. Take your time.',
   },
   email: {
     low: '{label}',
-    medium: '{label}',
-    high: '{label}',
+    medium: 'What\'s your email address?',
+    high: 'Could you share your email so we can stay in touch?',
   },
   phone: {
     low: '{label}',
-    medium: '{label}',
-    high: '{label}',
+    medium: 'What\'s your phone number?',
+    high: 'Could you share a phone number where we can reach you?',
   },
   number: {
     low: '{label}',
-    medium: '{label}',
-    high: '{label}',
+    medium: 'What number for {label}?',
+    high: 'Could you give me a number for {label}?',
   },
   date: {
     low: '{label}',
-    medium: '{label}',
-    high: '{label}',
+    medium: 'What date for {label}?',
+    high: 'When would you like to set {label}?',
   },
   single_choice: {
     low: '{label}',
-    medium: '{label}',
-    high: '{label}',
+    medium: 'Which one would you pick for {label}?',
+    high: 'I have a few options for {label} — which one fits best?',
   },
   multiple_choice: {
     low: '{label}',
-    medium: '{label}',
-    high: '{label}',
+    medium: 'Select all that apply for {label}.',
+    high: 'Pick as many as you like for {label}.',
   },
   yes_no: {
     low: '{label}',
-    medium: '{label}',
-    high: '{label}',
+    medium: '{label} — yes or no?',
+    high: 'Quick one: {label}?',
   },
   cta: {
     low: '{label}',
@@ -76,8 +76,8 @@ const PHRASING_TEMPLATES: Record<QuestionType, PhrasingVariants> = {
   },
   file_upload: {
     low: '{label}',
-    medium: '{label}',
-    high: '{label}',
+    medium: 'Upload your {label}.',
+    high: 'Could you upload your {label}? I\'ll wait.',
   },
 };
 
@@ -114,44 +114,44 @@ const WRAPPER_PHRASES = {
   energetic: {
     prefix: {
       low: '',
-      medium: '',
-      high: 'Great! ',
+      medium: 'Awesome! ',
+      high: 'Love it! ',
     },
     suffix: {
       low: '',
       medium: '',
-      high: '',
+      high: ' Let\'s go!',
     },
   },
   sassy: {
     prefix: {
       low: '',
-      medium: '',
-      high: '',
+      medium: 'Alright, ',
+      high: 'Okay then — ',
     },
     suffix: {
       low: '',
       medium: '',
-      high: '',
+      high: ' Don\'t be shy.',
     },
   },
   witty: {
     prefix: {
       low: '',
-      medium: '',
-      high: '',
+      medium: 'So, ',
+      high: 'Here\'s a fun one — ',
     },
     suffix: {
       low: '',
       medium: '',
-      high: '',
+      high: ' No pressure.',
     },
   },
   casual: {
     prefix: {
       low: '',
       medium: '',
-      high: '',
+      high: 'Hey, ',
     },
     suffix: {
       low: '',
@@ -163,12 +163,12 @@ const WRAPPER_PHRASES = {
     prefix: {
       low: '',
       medium: '',
-      high: '',
+      high: 'Please provide ',
     },
     suffix: {
       low: '',
-      medium: '',
-      high: '',
+      medium: '.',
+      high: '.',
     },
   },
   concise: {
@@ -202,8 +202,9 @@ export function applyTonePhrasing(
     return message.trim();
   }
 
-  // Fall back to label with minimal tone adjustments
-  const baseText = label || 'Please provide your answer';
+  // Get template for this question type and verbosity tier
+  const template = PHRASING_TEMPLATES[questionType]?.[toneContract.verbosityTier] || '{label}';
+  const baseText = template.replace('{label}', label || 'your answer');
 
   // Get wrapper phrases for this preset and verbosity
   const preset = toneContract.preset;

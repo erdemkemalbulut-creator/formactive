@@ -16,6 +16,7 @@ import {
   BarChart3,
   MoreVertical,
   Trash2,
+  LayoutGrid,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -206,15 +207,26 @@ export default function DashboardPage() {
               <p className="text-sm text-slate-500 mb-8">
                 You'll design your questions, customize the look, and start collecting submissions.
               </p>
-              <Button
-                size="lg"
-                onClick={createNewForm}
-                disabled={isCreating}
-                className="bg-slate-900 hover:bg-slate-800 h-12 px-8 text-base"
-              >
-                {isCreating ? 'Creating...' : 'Create your first form'}
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Button
+                  size="lg"
+                  onClick={createNewForm}
+                  disabled={isCreating}
+                  className="bg-slate-900 hover:bg-slate-800 h-12 px-8 text-base"
+                >
+                  {isCreating ? 'Creating...' : 'Create from scratch'}
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => router.push('/dashboard/templates')}
+                  className="h-12 px-8 text-base"
+                >
+                  <LayoutGrid className="w-4 h-4 mr-2" />
+                  Browse templates
+                </Button>
+              </div>
             </div>
 
             <div className="grid sm:grid-cols-3 gap-4 max-w-2xl mx-auto mt-12">
@@ -252,10 +264,20 @@ export default function DashboardPage() {
                   {totalSubmissions > 0 && ` · ${totalSubmissions} submission${totalSubmissions !== 1 ? 's' : ''}`}
                 </p>
               </div>
-              <Button onClick={createNewForm} disabled={isCreating} className="bg-slate-900 hover:bg-slate-800 rounded-xl">
-                <Plus className="w-4 h-4 mr-2" />
-                {isCreating ? 'Creating...' : 'New form'}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => router.push('/dashboard/templates')}
+                  className="rounded-xl"
+                >
+                  <LayoutGrid className="w-4 h-4 mr-2" />
+                  Templates
+                </Button>
+                <Button onClick={createNewForm} disabled={isCreating} className="bg-slate-900 hover:bg-slate-800 rounded-xl">
+                  <Plus className="w-4 h-4 mr-2" />
+                  {isCreating ? 'Creating...' : 'New form'}
+                </Button>
+              </div>
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">

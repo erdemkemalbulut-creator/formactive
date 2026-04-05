@@ -250,6 +250,15 @@ export default function PublicFormPage() {
           overlayClass="bg-black/40"
         />
       </div>
+      {form.published_config.theme?.logoUrl && (
+        <div className="fixed top-5 left-6 z-20">
+          <img
+            src={form.published_config.theme.logoUrl}
+            alt="Logo"
+            className="h-8 w-auto object-contain drop-shadow-sm"
+          />
+        </div>
+      )}
       <div className="relative z-10 min-h-screen flex items-center justify-center">
         <ConversationalForm
           config={form.published_config}
@@ -259,6 +268,19 @@ export default function PublicFormPage() {
           onStepChange={handleStepChange}
         />
       </div>
+      {!form.published_config.settings?.hideBranding && (
+        <div className="fixed bottom-4 right-4 z-20">
+          <a
+            href="https://formactive.ai"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/30 backdrop-blur-sm border border-white/10 text-white/50 hover:text-white/70 text-xs font-medium transition-colors"
+          >
+            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+            Powered by Formactive
+          </a>
+        </div>
+      )}
     </div>
   );
 }

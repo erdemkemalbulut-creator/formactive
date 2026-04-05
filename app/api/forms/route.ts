@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { createDefaultConfig, generateSlug } from '@/lib/types';
+import { getTemplateById } from '@/lib/templates';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name } = body;
+    const { name, template_id } = body;
 
     if (!name || typeof name !== 'string' || !name.trim()) {
       return NextResponse.json(
@@ -34,7 +35,14 @@ export async function POST(request: NextRequest) {
     }
 
     const slug = generateSlug(name.trim());
-    const defaultConfig = createDefaultConfig();
+    let defaultConfig = createDefaultConfig();
+
+    if (template_id) {
+      const template = getTemplateById(template_id);
+      if (template) {
+        defaultConfig = { ...template.config };
+      }
+    }
 
     const { data: form, error: insertError } = await supabase
       .from('forms')

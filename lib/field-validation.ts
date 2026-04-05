@@ -48,7 +48,7 @@ const REFUSAL_BLOCKLIST = [
  */
 function isRefusal(text: string): boolean {
   const normalized = text.toLowerCase().trim();
-  return REFUSAL_BLOCKLIST.some(blocked => normalized === blocked || normalized.includes(blocked));
+  return REFUSAL_BLOCKLIST.some(blocked => normalized === blocked);
 }
 
 /**
@@ -316,5 +316,5 @@ export function isEndRequest(text: string): boolean {
  * Get attempt limit based on field requirement
  */
 export function getAttemptLimit(isRequired: boolean): number {
-  return isRequired ? 3 : 3; // Same limit, but different handling
+  return isRequired ? 3 : 2;
 }

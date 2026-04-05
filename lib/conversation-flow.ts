@@ -39,7 +39,7 @@ function mapQuestionTypeToFieldType(questionType: string): string {
     short_text: 'text',
     long_text: 'textarea',
     single_choice: 'select',
-    multiple_choice: 'select',
+    multiple_choice: 'multiple_choice',
     yes_no: 'select',
     date: 'date',
     number: 'number',
