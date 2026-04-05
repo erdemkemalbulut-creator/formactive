@@ -4,57 +4,31 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 228 10% 10%;
+    --background: 240 5% 98%;
+    --foreground: 0 0% 7%;
     --card: 0 0% 100%;
-    --card-foreground: 228 10% 10%;
+    --card-foreground: 0 0% 7%;
     --popover: 0 0% 100%;
-    --popover-foreground: 228 10% 10%;
-    --primary: 238 80% 62%;
+    --popover-foreground: 0 0% 7%;
+    --primary: 263 70% 50%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 228 14% 93%;
-    --secondary-foreground: 228 10% 10%;
-    --muted: 228 14% 95%;
-    --muted-foreground: 228 5% 45%;
-    --accent: 238 80% 96%;
-    --accent-foreground: 238 80% 50%;
+    --secondary: 240 5% 95%;
+    --secondary-foreground: 0 0% 7%;
+    --muted: 240 5% 95%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 263 70% 96%;
+    --accent-foreground: 263 70% 50%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 228 14% 90%;
-    --input: 228 14% 90%;
-    --ring: 238 80% 62%;
-    --chart-1: 238 80% 62%;
-    --chart-2: 280 70% 60%;
-    --chart-3: 200 80% 55%;
-    --chart-4: 160 60% 45%;
-    --chart-5: 340 75% 55%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 263 70% 50%;
+    --chart-1: 263 70% 50%;
+    --chart-2: 220 70% 55%;
+    --chart-3: 160 60% 45%;
+    --chart-4: 30 80% 55%;
+    --chart-5: 340 65% 55%;
     --radius: 0.75rem;
-  }
-  .dark {
-    --background: 228 20% 6%;
-    --foreground: 0 0% 96%;
-    --card: 228 18% 9%;
-    --card-foreground: 0 0% 96%;
-    --popover: 228 18% 9%;
-    --popover-foreground: 0 0% 96%;
-    --primary: 238 80% 65%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 228 15% 14%;
-    --secondary-foreground: 0 0% 96%;
-    --muted: 228 15% 14%;
-    --muted-foreground: 228 5% 55%;
-    --accent: 238 60% 15%;
-    --accent-foreground: 238 80% 75%;
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 228 15% 16%;
-    --input: 228 15% 16%;
-    --ring: 238 80% 65%;
-    --chart-1: 238 80% 65%;
-    --chart-2: 280 70% 60%;
-    --chart-3: 200 80% 55%;
-    --chart-4: 160 60% 45%;
-    --chart-5: 340 75% 55%;
   }
 }
 
@@ -64,84 +38,37 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 }
 
 @layer utilities {
   .text-gradient {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
+    background-image: linear-gradient(135deg, #7C3AED, #a78bfa);
   }
-  .text-gradient-blue {
-    @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  .bg-surface {
+    background-color: #FAFAFB;
   }
-  .bg-gradient-brand {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6, #a855f7);
+  .bg-surface-raised {
+    background-color: #FFFFFF;
   }
-  .bg-gradient-dark {
-    background: linear-gradient(180deg, #0a0a1a 0%, #111128 50%, #0d0d20 100%);
+  .shadow-soft {
+    box-shadow: 0 1px 3px 0 rgba(0,0,0,0.04), 0 1px 2px -1px rgba(0,0,0,0.03);
   }
-  .bg-gradient-mesh {
-    background:
-      radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 20%, rgba(168, 85, 247, 0.12) 0%, transparent 50%),
-      radial-gradient(ellipse at 60% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
+  .shadow-soft-md {
+    box-shadow: 0 4px 12px -2px rgba(0,0,0,0.06), 0 2px 4px -2px rgba(0,0,0,0.04);
   }
-  .bg-gradient-mesh-dark {
-    background:
-      radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 20%, rgba(168, 85, 247, 0.06) 0%, transparent 50%),
-      radial-gradient(ellipse at 60% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
+  .shadow-soft-lg {
+    box-shadow: 0 8px 24px -4px rgba(0,0,0,0.08), 0 4px 8px -4px rgba(0,0,0,0.04);
   }
-  .glass {
-    @apply bg-white/70 backdrop-blur-xl border border-white/20;
+  .ring-focus {
+    @apply ring-2 ring-[#7C3AED]/20 ring-offset-2;
   }
-  .glass-dark {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10;
-  }
-  .glow {
-    box-shadow: 0 0 60px -12px rgba(99, 102, 241, 0.4);
-  }
-  .glow-sm {
-    box-shadow: 0 0 30px -8px rgba(99, 102, 241, 0.3);
-  }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  33% { transform: translateY(-8px) rotate(1deg); }
-  66% { transform: translateY(4px) rotate(-1deg); }
-}
-
-@keyframes pulse-glow {
-  0%, 100% { opacity: 0.4; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(1.05); }
-}
-
-@keyframes orb-morph {
-  0% { border-radius: 40% 60% 60% 40% / 60% 30% 70% 40%; }
-  25% { border-radius: 50% 50% 40% 60% / 40% 60% 50% 50%; }
-  50% { border-radius: 60% 40% 50% 50% / 50% 50% 60% 40%; }
-  75% { border-radius: 40% 60% 50% 50% / 60% 40% 40% 60%; }
-  100% { border-radius: 40% 60% 60% 40% / 60% 30% 70% 40%; }
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.animate-float { animation: float 6s ease-in-out infinite; }
-.animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
-.animate-orb-morph { animation: orb-morph 8s ease-in-out infinite; }
-.animate-shimmer {
-  background-size: 200% 100%;
-  animation: shimmer 3s linear infinite;
 }
 
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
 }
 @keyframes fade-in {
@@ -155,11 +82,12 @@
 }
 @keyframes subtle-drift {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  25% { transform: translate(30px, -20px) scale(1.02); }
-  50% { transform: translate(-20px, 15px) scale(0.98); }
-  75% { transform: translate(15px, 25px) scale(1.01); }
+  25% { transform: translate(20px, -15px) scale(1.01); }
+  50% { transform: translate(-15px, 10px) scale(0.99); }
+  75% { transform: translate(10px, 18px) scale(1.005); }
 }
-.animate-fade-up { animation: fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.animate-fade-in { animation: fade-in 0.6s ease forwards; }
+
+.animate-fade-up { animation: fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-fade-in { animation: fade-in 0.5s ease forwards; }
 .animate-cursor-blink { animation: cursor-blink 1s infinite; }
-.animate-subtle-drift { animation: subtle-drift 20s ease-in-out infinite; }
+.animate-subtle-drift { animation: subtle-drift 25s ease-in-out infinite; }

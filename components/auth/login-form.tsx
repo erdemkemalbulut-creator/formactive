@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { Sparkles } from 'lucide-react';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
@@ -18,46 +17,23 @@ export function LoginForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
-      const { error } = isSignUp
-        ? await signUp(email, password)
-        : await signIn(email, password);
-
+      const { error } = isSignUp ? await signUp(email, password) : await signIn(email, password);
       if (error) {
-        let errorMessage = error.message;
-
+        let msg = error.message;
         if (isSignUp) {
-          if (errorMessage.toLowerCase().includes('already registered') ||
-              errorMessage.toLowerCase().includes('already exists') ||
-              errorMessage.toLowerCase().includes('duplicate')) {
-            errorMessage = 'This email is already registered. Try signing in instead.';
-          } else if (errorMessage.toLowerCase().includes('password')) {
-            errorMessage = 'Password must be at least 6 characters.';
-          } else if (errorMessage.toLowerCase().includes('email')) {
-            errorMessage = 'Please enter a valid email address.';
-          }
+          if (msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('already exists')) msg = 'This email is already registered. Try signing in instead.';
+          else if (msg.toLowerCase().includes('password')) msg = 'Password must be at least 6 characters.';
+          else if (msg.toLowerCase().includes('email')) msg = 'Please enter a valid email address.';
         } else {
-          if (errorMessage.toLowerCase().includes('invalid') ||
-              errorMessage.toLowerCase().includes('credentials')) {
-            errorMessage = 'Invalid email or password. Please try again.';
-          }
+          if (msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('credentials')) msg = 'Invalid email or password.';
         }
-
-        toast({
-          title: isSignUp ? 'Could not create account' : 'Could not sign in',
-          description: errorMessage,
-          variant: 'destructive',
-        });
+        toast({ title: isSignUp ? 'Could not create account' : 'Could not sign in', description: msg, variant: 'destructive' });
       } else {
         router.push('/dashboard');
       }
     } catch (error: any) {
-      toast({
-        title: 'Something went wrong',
-        description: error.message || 'Please try again in a moment.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Something went wrong', description: error.message || 'Please try again.', variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
@@ -65,76 +41,47 @@ export function LoginForm() {
 
   return (
     <div className="w-full">
-      <div className="text-center mb-8">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center mx-auto mb-4">
-          <Sparkles className="w-6 h-6 text-white" />
-        </div>
-        <h2 className="text-xl font-semibold text-white">
+      <div className="text-center mb-7">
+        <h2 className="text-xl font-semibold text-[#111111]">
           {isSignUp ? 'Create your account' : 'Welcome back'}
         </h2>
-        <p className="text-sm text-white/40 mt-1">
-          {isSignUp
-            ? 'Get started with Formactive in seconds'
-            : 'Sign in to continue to your dashboard'}
+        <p className="text-sm text-[#6B7280] mt-1">
+          {isSignUp ? 'Get started with Formactive' : 'Sign in to your dashboard'}
         </p>
       </div>
-
-      <div className="space-y-4">
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="space-y-1.5">
-            <label htmlFor="email" className="text-xs font-medium text-white/50 uppercase tracking-wider">Email</label>
-            <input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={isLoading}
-              autoComplete="email"
-              className="w-full h-11 px-4 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-white/25 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/25 transition-all disabled:opacity-50"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label htmlFor="password" className="text-xs font-medium text-white/50 uppercase tracking-wider">Password</label>
-            <input
-              id="password"
-              type="password"
-              placeholder="At least 6 characters"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={isLoading}
-              minLength={6}
-              autoComplete={isSignUp ? 'new-password' : 'current-password'}
-              className="w-full h-11 px-4 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-white/25 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/25 transition-all disabled:opacity-50"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full h-11 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white text-sm font-medium transition-all hover:shadow-lg hover:shadow-indigo-500/25 disabled:opacity-50 disabled:hover:bg-indigo-500 disabled:hover:shadow-none mt-1"
-          >
-            {isLoading ? (
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
-            ) : (
-              <>{isSignUp ? 'Create account' : 'Sign in'}</>
-            )}
-          </button>
-        </form>
-
-        <p className="text-center text-sm text-white/30">
-          {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
-          <button
-            type="button"
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="text-indigo-400 font-medium hover:text-indigo-300 transition-colors"
-            disabled={isLoading}
-          >
-            {isSignUp ? 'Sign in' : 'Sign up'}
-          </button>
-        </p>
-      </div>
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <div className="space-y-1.5">
+          <label htmlFor="email" className="text-xs font-medium text-[#6B7280]">Email</label>
+          <input
+            id="email" type="email" placeholder="you@example.com" value={email}
+            onChange={(e) => setEmail(e.target.value)} required disabled={isLoading} autoComplete="email"
+            className="w-full h-10 px-3.5 rounded-xl bg-[#FAFAFB] border border-[#E5E7EB] text-[#111111] text-sm placeholder-[#6B7280]/40 focus:outline-none focus:border-[#7C3AED]/40 focus:ring-2 focus:ring-[#7C3AED]/10 transition-all disabled:opacity-50"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label htmlFor="password" className="text-xs font-medium text-[#6B7280]">Password</label>
+          <input
+            id="password" type="password" placeholder="At least 6 characters" value={password}
+            onChange={(e) => setPassword(e.target.value)} required disabled={isLoading} minLength={6}
+            autoComplete={isSignUp ? 'new-password' : 'current-password'}
+            className="w-full h-10 px-3.5 rounded-xl bg-[#FAFAFB] border border-[#E5E7EB] text-[#111111] text-sm placeholder-[#6B7280]/40 focus:outline-none focus:border-[#7C3AED]/40 focus:ring-2 focus:ring-[#7C3AED]/10 transition-all disabled:opacity-50"
+          />
+        </div>
+        <button
+          type="submit" disabled={isLoading}
+          className="w-full h-10 rounded-xl bg-[#111111] hover:bg-[#222222] text-white text-sm font-medium transition-all shadow-soft hover:shadow-soft-md disabled:opacity-50 mt-1"
+        >
+          {isLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" /> : <>{isSignUp ? 'Create account' : 'Sign in'}</>}
+        </button>
+      </form>
+      <p className="text-center text-sm text-[#6B7280] mt-4">
+        {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
+        <button type="button" onClick={() => setIsSignUp(!isSignUp)} disabled={isLoading}
+          className="text-[#7C3AED] font-medium hover:text-[#6D28D9] transition-colors"
+        >
+          {isSignUp ? 'Sign in' : 'Sign up'}
+        </button>
+      </p>
     </div>
   );
 }
