@@ -1,29 +1,33 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { ArrowRight, Check, ChevronRight, Sparkles, Bot, BarChart3, Palette, Shield, MessageSquare } from 'lucide-react';
+import { ArrowRight, Check, ChevronRight, Sparkles, Bot, BarChart3, Zap, MessageSquare, Users, Send } from 'lucide-react';
 
 /* ─────────────────────────────────────────────────────
-   IMMERSIVE HERO — cinematic conversation on a calm canvas
+   USE CASE PILLS
    ───────────────────────────────────────────────────── */
 
-interface ConversationStep {
-  speaker: 'ai' | 'human';
-  text: string;
-  inputPlaceholder?: string;
-}
-
-const CONVERSATION: ConversationStep[] = [
-  { speaker: 'ai', text: "Hey there.\nWhat's your name?", inputPlaceholder: 'Type your name...' },
-  { speaker: 'human', text: 'Sarah' },
-  { speaker: 'ai', text: "Nice to meet you, Sarah.\nWhat brings you here today?", inputPlaceholder: 'Type your answer...' },
-  { speaker: 'human', text: 'I need a better way to collect leads' },
-  { speaker: 'ai', text: "I can help with that.\nWhat's the best email to reach you?", inputPlaceholder: 'your@email.com' },
-  { speaker: 'human', text: 'sarah@company.com' },
-  { speaker: 'ai', text: "Perfect.\nWe'll be in touch, Sarah." },
+const USE_CASES = [
+  'Lead capture',
+  'Customer feedback',
+  'Survey',
+  'Job application',
+  'Quiz',
 ];
+
+/* ─────────────────────────────────────────────────────
+   INTERACTIVE DEMO — mini conversational form
+   ───────────────────────────────────────────────────── */
+
+const DEMO_MESSAGES: { role: 'ai' | 'user'; text: string }[] = [
+  { role: 'ai', text: "Hey! What's your use case?" },
+];
+
+const DEMO_FOLLOW_UPS: Record<string, string> = {
+  default: "Interesting! Tell me more — who's the target audience for this?",
+};
 
 function useTypewriter(text: string, speed: number, active: boolean) {
   const [displayed, setDisplayed] = useState('');
@@ -42,111 +46,78 @@ function useTypewriter(text: string, speed: number, active: boolean) {
   return { displayed, done };
 }
 
-function ImmersiveHero({ onCTA }: { onCTA: () => void }) {
-  const [step, setStep] = useState(0);
-  const [phase, setPhase] = useState<'typing' | 'waiting' | 'transition'>('typing');
-  const current = CONVERSATION[step];
-  const isAI = current?.speaker === 'ai';
-  const { displayed, done } = useTypewriter(current?.text || '', isAI ? 30 : 20, phase === 'typing');
+function InteractiveDemo() {
+  const [messages, setMessages] = useState(DEMO_MESSAGES);
+  const [input, setInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!done) return;
-    if (step >= CONVERSATION.length - 1) {
-      const t = setTimeout(() => setPhase('waiting'), 2000);
-      return () => clearTimeout(t);
-    }
-    const delay = isAI ? 1800 : 800;
-    const t = setTimeout(() => {
-      setPhase('transition');
-      setTimeout(() => { setStep(s => s + 1); setPhase('typing'); }, 400);
-    }, delay);
-    return () => clearTimeout(t);
-  }, [done, step, isAI]);
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isTyping]);
 
-  useEffect(() => {
-    if (step >= CONVERSATION.length - 1 && phase === 'waiting') {
-      const t = setTimeout(() => {
-        setPhase('transition');
-        setTimeout(() => { setStep(0); setPhase('typing'); }, 500);
-      }, 4000);
-      return () => clearTimeout(t);
-    }
-  }, [step, phase]);
+  const handleSend = () => {
+    if (!input.trim() || isTyping) return;
+    const userMsg = input.trim();
+    setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+    setInput('');
+    setIsTyping(true);
 
-  const showInput = isAI && done && current?.inputPlaceholder && step < CONVERSATION.length - 1;
-  const showFinalCTA = step >= CONVERSATION.length - 1 && phase === 'waiting';
+    setTimeout(() => {
+      setMessages(prev => [...prev, { role: 'ai', text: DEMO_FOLLOW_UPS.default }]);
+      setIsTyping(false);
+    }, 1200);
+  };
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-surface">
-      {/* Subtle ambient */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/3 left-1/4 w-[500px] h-[500px] bg-[#7C3AED]/[0.04] rounded-full blur-[120px] animate-subtle-drift" />
-        <div className="absolute bottom-1/3 right-1/4 w-[400px] h-[400px] bg-[#7C3AED]/[0.03] rounded-full blur-[100px] animate-subtle-drift" style={{ animationDelay: '-8s' }} />
+    <div className="max-w-md mx-auto bg-white rounded-2xl shadow-soft-lg border border-[#E5E7EB] overflow-hidden">
+      <div className="px-5 py-3 border-b border-[#E5E7EB] flex items-center gap-2">
+        <div className="w-2 h-2 rounded-full bg-[#7C3AED]" />
+        <span className="text-xs font-medium text-[#6B7280]">Formactive Demo</span>
       </div>
-
-      <div className="relative z-10 w-full max-w-3xl mx-auto px-8 text-center">
-        {/* Speaker label */}
-        <div className={`mb-6 transition-opacity duration-400 ${phase === 'transition' ? 'opacity-0' : 'opacity-100'}`}>
-          <span className={`inline-flex items-center gap-2 text-xs font-medium tracking-widest uppercase ${
-            isAI ? 'text-[#7C3AED]/60' : 'text-[#6B7280]/40'
-          }`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${isAI ? 'bg-[#7C3AED]/60' : 'bg-[#6B7280]/30'}`} />
-            {isAI ? 'Formactive' : 'You'}
-          </span>
-        </div>
-
-        {/* Dialogue */}
-        <div className={`transition-all duration-400 ${phase === 'transition' ? 'opacity-0 translate-y-3' : 'opacity-100 translate-y-0'}`}>
-          <h1
-            className={`font-semibold leading-[1.2] tracking-tight whitespace-pre-line ${
-              isAI ? 'text-[#111111]' : 'text-[#6B7280]'
-            }`}
-            style={{ fontSize: 'clamp(2rem, 5vw, 3.2rem)' }}
-          >
-            {displayed}
-            {!done && phase === 'typing' && (
-              <span className="inline-block w-[2px] h-[0.85em] bg-[#7C3AED] ml-1 align-baseline animate-cursor-blink" />
-            )}
-          </h1>
-        </div>
-
-        {/* Input */}
-        {showInput && (
-          <div className="mt-10 animate-fade-up" style={{ animationDelay: '0.15s', opacity: 0, animationFillMode: 'forwards' }}>
-            <div className="max-w-sm mx-auto">
-              <input
-                type="text"
-                readOnly
-                placeholder={current.inputPlaceholder}
-                className="w-full bg-transparent border-0 border-b border-[#E5E7EB] text-[#111111] text-lg text-center py-3 placeholder-[#6B7280]/30 focus:outline-none focus:border-[#7C3AED]/40 transition-colors cursor-default"
-              />
-              <p className="mt-3 text-xs text-[#6B7280]/30">press Enter ↵</p>
+      <div className="h-64 overflow-y-auto px-5 py-4 space-y-3">
+        {messages.map((msg, i) => (
+          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+              msg.role === 'ai'
+                ? 'bg-[#F3F0FF] text-[#111111]'
+                : 'bg-[#111111] text-white'
+            }`}>
+              {msg.text}
+            </div>
+          </div>
+        ))}
+        {isTyping && (
+          <div className="flex justify-start">
+            <div className="bg-[#F3F0FF] px-4 py-2.5 rounded-2xl text-sm text-[#6B7280]">
+              <span className="inline-flex gap-1">
+                <span className="w-1.5 h-1.5 bg-[#7C3AED]/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-1.5 h-1.5 bg-[#7C3AED]/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-1.5 h-1.5 bg-[#7C3AED]/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              </span>
             </div>
           </div>
         )}
-
-        {/* CTA */}
-        {showFinalCTA && (
-          <div className="mt-14 animate-fade-up" style={{ opacity: 0, animationFillMode: 'forwards' }}>
-            <button
-              onClick={onCTA}
-              className="group inline-flex items-center justify-center h-12 px-7 text-[15px] font-medium text-white bg-[#111111] hover:bg-[#222222] rounded-xl transition-all shadow-soft-md hover:shadow-soft-lg gap-2"
-            >
-              Create your first form
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-            </button>
-            <p className="mt-4 text-sm text-[#6B7280]/50">Free to start. No credit card.</p>
-          </div>
-        )}
+        <div ref={bottomRef} />
       </div>
-
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-fade-in" style={{ animationDelay: '3s', opacity: 0, animationFillMode: 'forwards' }}>
-        <div className="flex flex-col items-center gap-2 text-[#6B7280]/20">
-          <span className="text-[10px] uppercase tracking-widest">Scroll</span>
-          <div className="w-px h-6 bg-gradient-to-b from-[#6B7280]/20 to-transparent" />
-        </div>
+      <div className="px-4 py-3 border-t border-[#E5E7EB] flex items-center gap-2">
+        <input
+          type="text"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleSend()}
+          placeholder="Type your answer..."
+          className="flex-1 text-sm bg-transparent outline-none placeholder-[#6B7280]/40 text-[#111111]"
+        />
+        <button
+          onClick={handleSend}
+          disabled={!input.trim() || isTyping}
+          className="w-8 h-8 rounded-lg bg-[#111111] text-white flex items-center justify-center hover:bg-[#222222] transition-colors disabled:opacity-30"
+        >
+          <Send className="w-3.5 h-3.5" />
+        </button>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -154,36 +125,54 @@ function ImmersiveHero({ onCTA }: { onCTA: () => void }) {
    DATA
    ───────────────────────────────────────────────────── */
 
-const FEATURES = [
-  { icon: Bot, title: 'AI Conversations', desc: 'Natural, adaptive dialogue that validates and follows up in real time.' },
-  { icon: Sparkles, title: 'Instant Generation', desc: 'Describe your goal. AI builds the entire form in seconds.' },
-  { icon: MessageSquare, title: 'Two-Way Dialogue', desc: 'Respondents ask questions mid-form and get instant AI answers.' },
-  { icon: Palette, title: 'Brand Customization', desc: '6 tones, custom colors, fonts, logos. Every form is yours.' },
-  { icon: BarChart3, title: 'Live Analytics', desc: 'Track views, completions, engagement. Export with one click.' },
-  { icon: Shield, title: 'Smart Validation', desc: 'Semantic checks ensure meaningful answers. No garbage data.' },
+const STEPS = [
+  { n: '01', title: 'Describe your goal', desc: 'Tell us what you want to collect and who it\'s for.' },
+  { n: '02', title: 'AI builds your form', desc: 'Smart questions, follow-ups, and logic — instantly.' },
+  { n: '03', title: 'Customize your experience', desc: 'Tone, branding, and behavior — all adjustable.' },
+  { n: '04', title: 'Launch and collect insights', desc: 'Engage users and capture richer, more meaningful data.' },
 ];
 
-const STEPS = [
-  { n: '01', title: 'Describe', desc: 'Tell the AI what you need — audience, tone, goals.' },
-  { n: '02', title: 'Generate', desc: 'Get a complete conversational form with smart questions.' },
-  { n: '03', title: 'Customize', desc: 'Adjust tone, visuals, brand. Publish with one click.' },
-  { n: '04', title: 'Collect', desc: 'Watch responses flow in. Export data, track engagement.' },
+const TRADITIONAL = [
+  'Static fields',
+  'High drop-off',
+  'Shallow answers',
+];
+
+const FORMACTIVE_BENEFITS = [
+  'Dynamic conversation',
+  'AI follow-ups',
+  'Deeper insights',
+];
+
+const WHY_SWITCH = [
+  { icon: MessageSquare, title: 'Conversations, not checkboxes', desc: 'Forms adapt in real time. Ask better questions automatically.' },
+  { icon: Users, title: 'Higher completion rates', desc: 'People respond more when it feels human.' },
+  { icon: BarChart3, title: 'Better data, instantly', desc: 'No more useless answers. AI validates and digs deeper.' },
+  { icon: Zap, title: 'Built in seconds', desc: 'No logic trees. No manual setup. Just describe and go.' },
+];
+
+const BUILD_LIST = [
+  'Lead qualification flows',
+  'Customer feedback forms',
+  'Research interviews',
+  'Onboarding experiences',
+  'Surveys that actually get completed',
 ];
 
 const PLANS = [
   {
-    name: 'Free', price: '$0', period: 'forever', desc: 'Get started with AI forms',
-    features: ['3 active forms', '50 responses/mo', 'AI engine', 'Basic analytics', 'Formactive badge'],
-    cta: 'Get started free', hl: false,
+    name: 'Free', price: '$0', period: '', desc: '',
+    features: ['3 forms', '50 responses/month', 'AI-powered conversations'],
+    cta: 'Try it free', hl: false,
   },
   {
-    name: 'Pro', price: '$29', period: '/month', desc: 'For growing teams',
-    features: ['Unlimited forms', '1,000 responses/mo', 'AI engine', 'Advanced analytics', 'Custom branding', 'Remove badge', 'Priority support'],
+    name: 'Pro', price: '$29', period: '/month', desc: '',
+    features: ['Unlimited forms', '1,000 responses', 'Advanced analytics', 'Custom branding'],
     cta: 'Start free trial', hl: true,
   },
   {
-    name: 'Business', price: '$79', period: '/month', desc: 'Scale without limits',
-    features: ['Everything in Pro', '10,000 responses/mo', 'Team (5 seats)', 'Custom domain', 'Webhooks', 'Dedicated support'],
+    name: 'Business', price: '$79', period: '/month', desc: '',
+    features: ['10,000 responses', 'Team collaboration', 'Webhooks + integrations'],
     cta: 'Contact us', hl: false,
   },
 ];
@@ -195,6 +184,7 @@ const PLANS = [
 export default function Home() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [prompt, setPrompt] = useState('');
 
   useEffect(() => {
     if (!loading && user) router.push('/dashboard');
@@ -208,6 +198,10 @@ export default function Home() {
     );
   }
 
+  const handleGenerate = () => {
+    router.push('/signin');
+  };
+
   return (
     <div className="min-h-screen bg-surface text-[#111111]">
       {/* Nav */}
@@ -215,8 +209,8 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <span className="text-lg font-bold tracking-tight text-[#111111]">formactive</span>
           <div className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-sm text-[#6B7280] hover:text-[#111111] transition-colors">Features</a>
             <a href="#how-it-works" className="text-sm text-[#6B7280] hover:text-[#111111] transition-colors">How it works</a>
+            <a href="#features" className="text-sm text-[#6B7280] hover:text-[#111111] transition-colors">Features</a>
             <a href="#pricing" className="text-sm text-[#6B7280] hover:text-[#111111] transition-colors">Pricing</a>
           </div>
           <div className="flex items-center gap-3">
@@ -229,39 +223,79 @@ export default function Home() {
       </nav>
 
       {/* Hero */}
-      <ImmersiveHero onCTA={() => router.push('/signin')} />
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-surface pt-14">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/3 left-1/4 w-[500px] h-[500px] bg-[#7C3AED]/[0.04] rounded-full blur-[120px] animate-subtle-drift" />
+          <div className="absolute bottom-1/3 right-1/4 w-[400px] h-[400px] bg-[#7C3AED]/[0.03] rounded-full blur-[100px] animate-subtle-drift" style={{ animationDelay: '-8s' }} />
+        </div>
 
-      {/* Statement */}
-      <section className="py-28 px-6">
-        <div className="max-w-2xl mx-auto text-center">
-          <h2 className="font-semibold tracking-tight leading-snug text-[#111111]" style={{ fontSize: 'clamp(1.6rem, 3.5vw, 2.5rem)' }}>
-            Forms shouldn't feel like forms.{' '}
-            <span className="text-[#7C3AED]">They should feel like conversations.</span>
-          </h2>
-          <p className="mt-5 text-[#6B7280] leading-relaxed max-w-lg mx-auto">
-            Formactive replaces static fields with AI-powered dialogue. Respondents engage naturally. You get better data.
+        <div className="relative z-10 w-full max-w-3xl mx-auto px-6 text-center">
+          <h1
+            className="font-semibold tracking-tight leading-[1.15] text-[#111111]"
+            style={{ fontSize: 'clamp(2rem, 5vw, 3.4rem)' }}
+          >
+            Build AI forms that actually{' '}
+            <span className="text-gradient">talk to your users</span>
+          </h1>
+          <p className="mt-5 text-lg text-[#6B7280] leading-relaxed max-w-xl mx-auto">
+            Turn boring forms into real conversations. Ask better questions, follow up automatically, and get deeper answers — without writing a single field.
           </p>
+
+          {/* Use case pills */}
+          <div className="mt-8 flex flex-wrap justify-center gap-2">
+            {USE_CASES.map((uc) => (
+              <button
+                key={uc}
+                onClick={handleGenerate}
+                className="px-4 py-2 text-sm font-medium rounded-full border border-[#E5E7EB] bg-white text-[#6B7280] hover:border-[#7C3AED]/40 hover:text-[#7C3AED] transition-all shadow-soft"
+              >
+                {uc}
+              </button>
+            ))}
+          </div>
+
+          <p className="mt-6 text-sm text-[#6B7280]/60">or</p>
+
+          {/* Prompt input */}
+          <div className="mt-4 max-w-lg mx-auto">
+            <p className="text-sm font-medium text-[#111111] mb-3">
+              Describe your form
+            </p>
+            <div className="flex items-center gap-2 bg-white border border-[#E5E7EB] rounded-xl px-4 py-2.5 shadow-soft focus-within:border-[#7C3AED]/40 focus-within:shadow-soft-md transition-all">
+              <input
+                type="text"
+                value={prompt}
+                onChange={e => setPrompt(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleGenerate()}
+                placeholder='"I want to qualify inbound leads for my SaaS"'
+                className="flex-1 text-sm bg-transparent outline-none placeholder-[#6B7280]/40 text-[#111111]"
+              />
+              <button
+                onClick={handleGenerate}
+                className="shrink-0 inline-flex items-center gap-2 h-9 px-5 text-sm font-medium text-white bg-[#111111] hover:bg-[#222222] rounded-lg transition-all"
+              >
+                Generate my form
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          <p className="mt-5 text-xs text-[#6B7280]/50">No signup required · Try it in 30 seconds</p>
         </div>
       </section>
 
-      {/* Features */}
-      <section id="features" className="py-24 px-6">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center max-w-xl mx-auto mb-14">
-            <p className="text-xs font-medium text-[#7C3AED] uppercase tracking-widest mb-3">Capabilities</p>
-            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#111111]">Everything you need</h2>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-14">
-            {FEATURES.map((f, i) => (
-              <div key={i} className="group">
-                <div className="w-10 h-10 rounded-xl bg-[#7C3AED]/8 flex items-center justify-center mb-4 group-hover:bg-[#7C3AED]/12 transition-colors">
-                  <f.icon className="w-5 h-5 text-[#7C3AED]" />
-                </div>
-                <h3 className="text-[15px] font-semibold text-[#111111] mb-1.5">{f.title}</h3>
-                <p className="text-sm text-[#6B7280] leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
-          </div>
+      {/* Social Proof */}
+      <section className="py-20 px-6 border-t border-[#E5E7EB]/60">
+        <div className="max-w-2xl mx-auto text-center">
+          <p className="text-sm text-[#6B7280] leading-relaxed">
+            Used by product teams, marketers, and researchers to capture better data.
+          </p>
+          <blockquote className="mt-8">
+            <p className="text-lg font-medium text-[#111111] italic leading-relaxed">
+              &ldquo;Formactive doubled our form completion rate and gave us way better insights.&rdquo;
+            </p>
+            <cite className="mt-3 block text-sm text-[#6B7280] not-italic">— Early user</cite>
+          </blockquote>
         </div>
       </section>
 
@@ -269,8 +303,10 @@ export default function Home() {
       <section id="how-it-works" className="py-24 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center max-w-xl mx-auto mb-14">
-            <p className="text-xs font-medium text-[#7C3AED] uppercase tracking-widest mb-3">Process</p>
-            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#111111]">Four steps. Zero complexity.</h2>
+            <p className="text-xs font-medium text-[#7C3AED] uppercase tracking-widest mb-3">How it works</p>
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#111111]">
+              From idea to live conversational form in seconds
+            </h2>
           </div>
           <div className="grid md:grid-cols-4 gap-8">
             {STEPS.map((s, i) => (
@@ -287,30 +323,116 @@ export default function Home() {
         </div>
       </section>
 
+      {/* See the difference */}
+      <section className="py-24 px-6 bg-white">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-14">
+            <p className="text-xs font-medium text-[#7C3AED] uppercase tracking-widest mb-3">Compare</p>
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#111111]">See the difference</h2>
+          </div>
+          <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
+            {/* Traditional */}
+            <div className="rounded-2xl border border-[#E5E7EB] p-8">
+              <h3 className="text-base font-semibold text-[#6B7280] mb-5">Traditional forms</h3>
+              <ul className="space-y-3">
+                {TRADITIONAL.map((item, i) => (
+                  <li key={i} className="flex items-center gap-3 text-sm text-[#6B7280]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#D1D5DB]" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            {/* Formactive */}
+            <div className="rounded-2xl border-2 border-[#7C3AED]/20 bg-[#F3F0FF]/30 p-8">
+              <h3 className="text-base font-semibold text-[#7C3AED] mb-5">Formactive</h3>
+              <ul className="space-y-3">
+                {FORMACTIVE_BENEFITS.map((item, i) => (
+                  <li key={i} className="flex items-center gap-3 text-sm text-[#111111]">
+                    <Check className="w-4 h-4 text-[#7C3AED] shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Why teams switch */}
+      <section id="features" className="py-24 px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center max-w-xl mx-auto mb-14">
+            <p className="text-xs font-medium text-[#7C3AED] uppercase tracking-widest mb-3">Why Formactive</p>
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#111111]">Why teams switch to Formactive</h2>
+          </div>
+          <div className="grid md:grid-cols-2 gap-x-12 gap-y-14 max-w-3xl mx-auto">
+            {WHY_SWITCH.map((f, i) => (
+              <div key={i} className="group">
+                <div className="w-10 h-10 rounded-xl bg-[#7C3AED]/8 flex items-center justify-center mb-4 group-hover:bg-[#7C3AED]/12 transition-colors">
+                  <f.icon className="w-5 h-5 text-[#7C3AED]" />
+                </div>
+                <h3 className="text-[15px] font-semibold text-[#111111] mb-1.5">{f.title}</h3>
+                <p className="text-sm text-[#6B7280] leading-relaxed">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* What you can build */}
+      <section className="py-24 px-6 bg-white">
+        <div className="max-w-2xl mx-auto text-center">
+          <p className="text-xs font-medium text-[#7C3AED] uppercase tracking-widest mb-3">Use cases</p>
+          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#111111] mb-10">What you can build</h2>
+          <ul className="space-y-3">
+            {BUILD_LIST.map((item, i) => (
+              <li key={i} className="inline-flex items-center gap-2 text-[#111111] text-base">
+                <Check className="w-4 h-4 text-[#7C3AED] shrink-0" />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* Interactive Demo */}
+      <section className="py-24 px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center max-w-xl mx-auto mb-12">
+            <p className="text-xs font-medium text-[#7C3AED] uppercase tracking-widest mb-3">Try it</p>
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#111111]">Try a conversational form</h2>
+            <p className="mt-3 text-sm text-[#6B7280]">See how Formactive feels from the respondent&apos;s side.</p>
+          </div>
+          <InteractiveDemo />
+        </div>
+      </section>
+
       {/* Pricing */}
-      <section id="pricing" className="py-24 px-6">
+      <section id="pricing" className="py-24 px-6 bg-white">
         <div className="max-w-5xl mx-auto">
           <div className="text-center max-w-xl mx-auto mb-14">
             <p className="text-xs font-medium text-[#7C3AED] uppercase tracking-widest mb-3">Pricing</p>
-            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#111111]">Simple, transparent pricing</h2>
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#111111]">Start free. Scale when you need.</h2>
           </div>
-          <div className="grid md:grid-cols-3 gap-12 max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
             {PLANS.map((p, i) => (
-              <div key={i} className={`relative ${p.hl ? 'md:-mt-4 md:mb-4' : ''}`}>
+              <div key={i} className={`rounded-2xl border p-8 ${
+                p.hl ? 'border-[#7C3AED]/30 bg-[#F3F0FF]/20 shadow-soft-md' : 'border-[#E5E7EB]'
+              }`}>
                 {p.hl && (
-                  <div className="mb-4">
+                  <div className="mb-3">
                     <span className="text-[11px] font-medium text-[#7C3AED] uppercase tracking-widest">Most popular</span>
                   </div>
                 )}
-                <h3 className="text-base font-semibold text-[#111111]">{p.name}</h3>
-                <p className="text-sm text-[#6B7280] mt-0.5">{p.desc}</p>
-                <div className="mt-4 mb-5">
+                <h3 className="text-lg font-semibold text-[#111111]">{p.name}</h3>
+                <div className="mt-3 mb-5">
                   <span className="text-3xl font-bold text-[#111111]">{p.price}</span>
-                  <span className="text-sm text-[#6B7280] ml-1">{p.period}</span>
+                  {p.period && <span className="text-sm text-[#6B7280] ml-1">{p.period}</span>}
                 </div>
-                <ul className="space-y-2 mb-6">
+                <ul className="space-y-2.5 mb-7">
                   {p.features.map((f, j) => (
-                    <li key={j} className="flex items-start gap-2 text-sm text-[#6B7280]">
+                    <li key={j} className="flex items-start gap-2.5 text-sm text-[#6B7280]">
                       <Check className="w-3.5 h-3.5 text-[#7C3AED] shrink-0 mt-0.5" />
                       {f}
                     </li>
@@ -318,10 +440,10 @@ export default function Home() {
                 </ul>
                 <button
                   onClick={() => router.push('/signin')}
-                  className={`w-full h-10 rounded-xl text-sm font-medium transition-all ${
+                  className={`w-full h-11 rounded-xl text-sm font-medium transition-all ${
                     p.hl
                       ? 'bg-[#111111] text-white hover:bg-[#222222] shadow-soft hover:shadow-soft-md'
-                      : 'text-[#111111] hover:text-[#7C3AED] underline underline-offset-4 decoration-[#E5E7EB] hover:decoration-[#7C3AED]/30'
+                      : 'border border-[#E5E7EB] text-[#111111] hover:border-[#7C3AED]/40 hover:text-[#7C3AED]'
                   }`}
                 >
                   {p.cta}
@@ -336,17 +458,19 @@ export default function Home() {
       <section className="py-28 px-6">
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="font-semibold tracking-tight text-[#111111]" style={{ fontSize: 'clamp(1.6rem, 3.5vw, 2.4rem)' }}>
-            Ready to build forms people{' '}
-            <span className="text-[#7C3AED]">actually enjoy</span>?
+            Build your first conversational form in{' '}
+            <span className="text-gradient">30 seconds</span>
           </h2>
+          <p className="mt-4 text-[#6B7280] leading-relaxed">
+            No setup. No credit card. Just describe what you need.
+          </p>
           <button
             onClick={() => router.push('/signin')}
             className="mt-8 group inline-flex items-center justify-center h-12 px-7 text-[15px] font-medium text-white bg-[#111111] hover:bg-[#222222] rounded-xl transition-all shadow-soft-md hover:shadow-soft-lg gap-2"
           >
-            Get started for free
+            Generate my form
             <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
           </button>
-          <p className="mt-4 text-sm text-[#6B7280]/60">No credit card. No setup fee.</p>
         </div>
       </section>
 
